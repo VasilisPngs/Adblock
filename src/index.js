@@ -277,7 +277,7 @@ async function handleDevices(request, env) {
 }
 
 function mobileconfig(host, token, name) {
-  const endpoint = `https://${host}/${token}/dns-query`;
+  const endpoint = `https://${host}/dns-query/${token}`;
   const identifier = `gr.adblock.${token.slice(0, 12)}`;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -348,7 +348,7 @@ const API = {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const dns = url.pathname.match(/^(?:\/([0-9a-f]{8,64}))?\/dns-query$/);
+    const dns = url.pathname.match(/^\/dns-query(?:\/([0-9a-f]{8,64}))?$/);
     if (dns) {
       if (request.method !== "GET" && request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
       try {

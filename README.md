@@ -25,9 +25,9 @@ is bundled into the Worker and searched with a binary search over the sorted tex
 2. Create the database and put its id in `wrangler.jsonc`:
    `npx wrangler d1 create adblock`
 3. `npm run deploy` — builds the lists, applies migrations, deploys.
-4. Put the app behind Cloudflare Access, then add a **Bypass** policy for
-   `/*/dns-query` and `/dns-query`. Devices cannot log in through a browser, so the DoH
-   endpoint is protected by the secret token in its path instead.
+4. Put the app behind Cloudflare Access, then add a second Access application for the
+   path `/dns-query` with a **Bypass** policy. Devices cannot log in through a browser,
+   so the DoH endpoint is protected by the secret token in its path instead.
 5. Open the app and add a device to get its DoH URL and profile. It already resolves
    through `https://cloudflare-dns.com/dns-query`; change or extend that list in Settings
    whenever you want.

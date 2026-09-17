@@ -87,7 +87,7 @@ function deviceCard(state) {
   ]);
   const list = el("div", { class: "list" });
   for (const device of state.devices) {
-    const url = `https://${state.host}/${device.token}/dns-query`;
+    const url = `https://${state.host}/dns-query/${device.token}`;
     list.append(
       el("div", { class: "list-item" }, [
         el("span", { class: "grow" }, [
