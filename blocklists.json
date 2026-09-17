@@ -1,0 +1,9 @@
+{
+  "sources": [
+    {
+      "name": "AdGuard DNS filter",
+      "url": "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt",
+      "enabled": true
+    }
+  ]
+}

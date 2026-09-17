@@ -1,0 +1,13 @@
+{
+  "builtAt": "2026-09-17T19:45:08.017Z",
+  "domains": 179438,
+  "bytes": 3757356,
+  "sources": [
+    {
+      "name": "AdGuard DNS filter",
+      "domains": 179443,
+      "exceptions": 11,
+      "skipped": 753
+    }
+  ]
+}
