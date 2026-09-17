@@ -1,7 +1,7 @@
 CREATE TABLE settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   enabled INTEGER NOT NULL DEFAULT 1,
-  resolvers TEXT NOT NULL DEFAULT '[]',
+  resolvers TEXT NOT NULL DEFAULT '["https://cloudflare-dns.com/dns-query"]',
   block_mode TEXT NOT NULL DEFAULT 'zero',
   log_enabled INTEGER NOT NULL DEFAULT 1,
   log_days INTEGER NOT NULL DEFAULT 7,
@@ -9,7 +9,7 @@ CREATE TABLE settings (
 );
 
 INSERT INTO settings (id, enabled, resolvers, block_mode, log_enabled, log_days, updated_at)
-VALUES (1, 1, '[]', 'zero', 1, 7, 0);
+VALUES (1, 1, '["https://cloudflare-dns.com/dns-query"]', 'zero', 1, 7, 0);
 
 CREATE TABLE rules (
   host TEXT PRIMARY KEY,

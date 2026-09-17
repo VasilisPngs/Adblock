@@ -28,8 +28,9 @@ is bundled into the Worker and searched with a binary search over the sorted tex
 4. Put the app behind Cloudflare Access, then add a **Bypass** policy for
    `/*/dns-query` and `/dns-query`. Devices cannot log in through a browser, so the DoH
    endpoint is protected by the secret token in its path instead.
-5. Open the app, add your upstream resolvers in Settings (the field is empty on purpose),
-   then add a device to get its DoH URL and profile.
+5. Open the app and add a device to get its DoH URL and profile. It already resolves
+   through `https://cloudflare-dns.com/dns-query`; change or extend that list in Settings
+   whenever you want.
 
 ## Devices
 
@@ -42,7 +43,9 @@ is bundled into the Worker and searched with a binary search over the sorted tex
 
 ## Upstream resolvers
 
-Anything you type, in order, first one that answers wins:
+`https://cloudflare-dns.com/dns-query` ships as the default so the resolver works the
+moment it is deployed. Replace it with anything you type, in order, first one that
+answers wins:
 
 - a DoH URL, for example `https://dns.example.net/dns-query`
 - a plain IPv4 or IPv6 address, queried over TCP port 53
