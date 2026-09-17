@@ -15,7 +15,7 @@
     {
       "binding": "DB",
       "database_name": "adblock",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "610933f0-be9a-488d-a7a8-6f9014b2b95d",
       "migrations_dir": "migrations"
     }
   ],

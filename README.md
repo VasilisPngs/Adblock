@@ -22,8 +22,7 @@ is bundled into the Worker and searched with a binary search over the sorted tex
 ## Setup
 
 1. `npm install`
-2. Create the database and put its id in `wrangler.jsonc`:
-   `npx wrangler d1 create adblock`
+2. The database id in `wrangler.jsonc` points at the `adblock` D1 database.
 3. `npm run deploy` — builds the lists, applies migrations, deploys.
 4. Put the app behind Cloudflare Access, then add a second Access application for the
    path `/dns-query` with a **Bypass** policy. Devices cannot log in through a browser,
