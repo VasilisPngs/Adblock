@@ -70,7 +70,8 @@ function collapse(hosts) {
 }
 
 async function configuredSources() {
-  const endpoint = process.env.SOURCES_URL;
+  const config = JSON.parse(readFileSync(join(root, "blocklists.json"), "utf8"));
+  const endpoint = process.env.SOURCES_URL || config.endpoint;
   if (endpoint) {
     try {
       const response = await fetch(endpoint, { headers: { "user-agent": "adblock-list-builder" } });
@@ -78,7 +79,7 @@ async function configuredSources() {
       const payload = await response.json();
       const sources = (payload.sources || []).filter((source) => typeof source.url === "string");
       if (sources.length > 0) {
-        writeFileSync(join(root, "blocklists.json"), `${JSON.stringify({ sources }, null, 2)}\n`);
+        writeFileSync(join(root, "blocklists.json"), `${JSON.stringify({ endpoint: config.endpoint, sources }, null, 2)}\n`);
         console.log(`sources: ${sources.length} from ${endpoint}`);
         return sources;
       }
@@ -87,7 +88,6 @@ async function configuredSources() {
       console.log(`sources: ${endpoint} unreachable (${error.message}), keeping blocklists.json`);
     }
   }
-  const config = JSON.parse(readFileSync(join(root, "blocklists.json"), "utf8"));
   return (config.sources || []).filter((source) => source.enabled !== false);
 }
 

@@ -21,8 +21,10 @@ needs. `npm run lists` reads the source URLs, merges and sorts them, and writes
 over the sorted text.
 
 The sources themselves are edited in the app, on the Protection tab, and stored in D1.
-The nightly job reads them from `GET /api/sources`, writes them back into
-`blocklists.json`, and rebuilds. That endpoint is the only unauthenticated read in the
+Every build reads them from `GET /api/sources`, writes them back into `blocklists.json`,
+and recompiles. Save a Cloudflare deploy hook in the app and a change to the sources
+fires a build immediately, two to four minutes, rather than waiting for the nightly one;
+the hook is stored in D1 and never sent back to the browser. That endpoint is the only unauthenticated read in the
 app: it returns public blocklist URLs and nothing else. A source added in the app
 therefore takes effect at the next build, which the app says plainly rather than
 pretending the change is live.

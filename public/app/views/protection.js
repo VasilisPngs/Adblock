@@ -1,6 +1,6 @@
 import { el, clear, toast } from "../dom.js";
 import { t, relativeTime } from "../i18n.js";
-import { currentState, loadRules, setRule, saveSettings, setSource, removeSource } from "../api.js";
+import { currentState, loadRules, setRule, saveSettings, setSource, removeSource, rebuildNow } from "../api.js";
 
 function sourceCard(state) {
   const compiled = new Map((state.list.compiled || []).map((entry) => [entry.url, entry]));
@@ -25,7 +25,9 @@ function sourceCard(state) {
           el("div", {
             class: "tiny",
             style: built ? "" : "color:var(--accent)",
-            text: built ? t("sourceDomains", { count: built.domains.toLocaleString() }) : t("sourcePending")
+            text: built
+              ? t("sourceDomains", { count: built.domains.toLocaleString() })
+              : t(state.settings.deployHookSet ? "sourceBuilding" : "sourcePending")
           })
         ]),
         el("button", {
@@ -91,6 +93,56 @@ function sourceCard(state) {
   );
   card.append(el("div", { class: "tiny", text: t("sourcesNote") }));
   return card;
+}
+
+function rebuildCard() {
+  let hook = "";
+  const input = el("input", {
+    type: "password",
+    autocomplete: "off",
+    placeholder: t("deployHook"),
+    oninput: (event) => {
+      hook = event.target.value;
+    }
+  });
+  const save = async () => {
+    input.blur();
+    try {
+      await saveSettings({ deployHook: hook.trim() });
+      input.value = "";
+      hook = "";
+      toast(t("deployHookSaved"));
+    } catch (error) {
+      toast(error.code === "invalid_url" ? t("invalidUrl") : t("requestFailed"));
+    }
+  };
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") save();
+  });
+
+  return el("div", { class: "card" }, [
+    el("div", { class: "row between" }, [
+      el("h2", { text: t("rebuildTitle") }),
+      el("button", {
+        class: "btn small primary",
+        type: "button",
+        text: t("rebuildNow"),
+        onclick: async () => {
+          try {
+            const { started } = await rebuildNow();
+            toast(started ? t("rebuildStarted") : t("rebuildNoHook"));
+          } catch {
+            toast(t("requestFailed"));
+          }
+        }
+      })
+    ]),
+    el("div", { class: "resolver-row" }, [
+      input,
+      el("button", { class: "btn small", type: "button", text: t("save"), onclick: save })
+    ]),
+    el("div", { class: "tiny", text: t("deployHookNote") })
+  ]);
 }
 
 function resolverCard(settings) {
@@ -258,4 +310,5 @@ export function renderProtection(container) {
   container.append(sourceCard(state));
   container.append(ruleCard());
   container.append(resolverCard(state.settings));
+  container.append(rebuildCard());
 }

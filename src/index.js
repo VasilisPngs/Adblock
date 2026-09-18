@@ -48,7 +48,7 @@ async function loadState(env) {
   if (cache.settings && Date.now() - cache.at < CACHE_TTL_MS) return cache;
   const [settings, rules, devices] = await Promise.all([
     env.DB.prepare(
-      "SELECT enabled, resolvers, block_mode, log_enabled, log_days, password_hash, setup_code FROM settings WHERE id = 1"
+      "SELECT enabled, resolvers, block_mode, log_enabled, log_days, password_hash, setup_code, deploy_hook FROM settings WHERE id = 1"
     ).first(),
     env.DB.prepare("SELECT host, action FROM rules").all(),
     env.DB.prepare("SELECT token FROM devices").all()
@@ -63,8 +63,10 @@ async function loadState(env) {
       resolvers: JSON.parse(settings?.resolvers || "[]"),
       blockMode: settings?.block_mode || "zero",
       logEnabled: Boolean(settings?.log_enabled),
-      logDays: settings?.log_days ?? 7
+      logDays: settings?.log_days ?? 7,
+      deployHookSet: Boolean(settings?.deploy_hook)
     },
+    deployHook: settings?.deploy_hook || null,
     rules: { allow, block },
     tokens: new Set((devices.results || []).map((row) => row.token)),
     auth: { hash: settings?.password_hash || null, setupCode: settings?.setup_code || null }
@@ -326,6 +328,12 @@ async function handleSettings(request, env) {
   const logEnabled = payload.logEnabled === undefined ? current.logEnabled : Boolean(payload.logEnabled);
   const logDays = Number.isInteger(payload.logDays) ? Math.max(1, Math.min(90, payload.logDays)) : current.logDays;
 
+  if (typeof payload.deployHook === "string") {
+    const hook = payload.deployHook.trim();
+    if (hook && !/^https:\/\//.test(hook)) return json({ error: "invalid_url" }, 400);
+    await env.DB.prepare("UPDATE settings SET deploy_hook = ?1 WHERE id = 1").bind(hook || null).run();
+  }
+
   await env.DB.prepare(
     "UPDATE settings SET enabled = ?1, resolvers = ?2, block_mode = ?3, log_enabled = ?4, log_days = ?5, updated_at = ?6 WHERE id = 1"
   )
@@ -397,13 +405,24 @@ async function listTitle(url) {
   }
 }
 
-async function handleSources(request, env) {
+async function rebuild(env, ctx) {
+  const { deployHook } = await loadState(env);
+  if (!deployHook) return false;
+  ctx.waitUntil(fetch(deployHook, { method: "POST" }).catch(() => {}));
+  return true;
+}
+
+async function handleRebuild(request, env, ctx) {
+  return json({ started: await rebuild(env, ctx) });
+}
+
+async function handleSources(request, env, ctx) {
   const payload = await request.json().catch(() => null);
   if (!payload) return json({ error: "invalid_json" }, 400);
   const url = String(payload.url || "").trim();
   if (payload.action === "remove") {
     await env.DB.prepare("DELETE FROM sources WHERE url = ?1").bind(url).run();
-    return json({ ok: true });
+    return json({ ok: true, rebuilding: await rebuild(env, ctx) });
   }
   let parsed;
   try {
@@ -419,7 +438,7 @@ async function handleSources(request, env) {
   )
     .bind(parsed.toString(), name, Date.now())
     .run();
-  return json({ ok: true });
+  return json({ ok: true, rebuilding: await rebuild(env, ctx) });
 }
 
 async function handleLog(request, env) {
@@ -535,7 +554,8 @@ const API = {
   "/api/top": { method: "GET", handler: handleTop },
   "/api/devices": { method: "POST", handler: handleDevices },
   "/api/password": { method: "POST", handler: handlePassword },
-  "/api/sources": { method: "POST", handler: handleSources }
+  "/api/sources": { method: "POST", handler: handleSources },
+  "/api/rebuild": { method: "POST", handler: handleRebuild }
 };
 
 const OPEN = { "/api/login": handleLogin, "/api/setup": handleSetup, "/api/logout": () => handleLogout() };
@@ -577,7 +597,7 @@ export default {
         return json({ error: "method_not_allowed" }, 405);
       }
       try {
-        return await route.handler(request, env);
+        return await route.handler(request, env, ctx);
       } catch (error) {
         return json({ error: "request_failed", detail: String(error && error.message).slice(0, 160) }, 500);
       }

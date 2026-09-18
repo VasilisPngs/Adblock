@@ -1,4 +1,5 @@
 {
+  "endpoint": "https://adblock.vasilispngs.workers.dev/api/sources",
   "sources": [
     {
       "url": "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt",

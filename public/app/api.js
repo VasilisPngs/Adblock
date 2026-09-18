@@ -75,6 +75,10 @@ export async function removeSource(url) {
   await refresh();
 }
 
+export function rebuildNow() {
+  return call("/api/rebuild", { method: "POST", body: "{}" });
+}
+
 export function loadTop() {
   return call("/api/top");
 }

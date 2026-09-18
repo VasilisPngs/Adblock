@@ -91,13 +91,24 @@ const STRINGS = {
   sourceUrl: ["https://… list URL", "https://… URL λίστας"],
   sourceName: ["Name, or leave it to the list", "Όνομα, ή άσ'το στη λίστα"],
   addSource: ["Add list", "Πρόσθεσε λίστα"],
-  sourcePending: ["Applies on the next build", "Ισχύει στο επόμενο build"],
+  sourcePending: ["Applies on the next nightly build", "Ισχύει στο επόμενο νυχτερινό build"],
+  sourceBuilding: ["Building now", "Χτίζεται τώρα"],
+  rebuildTitle: ["Rebuild", "Ξαναχτίσιμο"],
+  deployHook: ["Deploy hook URL", "Deploy hook URL"],
+  deployHookNote: [
+    "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Once it is saved, changing a list starts a build at once instead of waiting for the nightly one. A build takes two to four minutes, and the list already compiled keeps blocking until it lands.",
+    "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Μόλις αποθηκευτεί, κάθε αλλαγή λίστας ξεκινά build αμέσως αντί να περιμένει το νυχτερινό. Το build θέλει δύο με τέσσερα λεπτά, και μέχρι να βγει συνεχίζει να μπλοκάρει η ήδη χτισμένη λίστα."
+  ],
+  deployHookSaved: ["Deploy hook saved", "Το deploy hook αποθηκεύτηκε"],
+  rebuildNow: ["Rebuild now", "Ξαναχτίσε τώρα"],
+  rebuildStarted: ["Build started", "Το build ξεκίνησε"],
+  rebuildNoHook: ["Save a deploy hook first.", "Αποθήκευσε πρώτα ένα deploy hook."],
   invalidUrl: ["That is not an https URL.", "Δεν είναι https URL."],
   sourcesTitle: ["Sources", "Πηγές"],
   sourceDomains: ["{count} domains", "{count} domains"],
   sourcesNote: [
-    "Lists are compiled into the Worker every night at 03:40 UTC, because the free plan allows 10 ms of CPU per request and parsing 180 000 rules needs far more. A change here applies at the next build.",
-    "Οι λίστες χτίζονται μέσα στον Worker κάθε νύχτα στις 03:40 UTC, επειδή το δωρεάν πλάνο δίνει 10 ms CPU ανά αίτημα και το parsing 180.000 κανόνων θέλει πολύ περισσότερο. Μια αλλαγή εδώ ισχύει στο επόμενο build."
+    "Lists are compiled into the Worker, not read at run time: the free plan allows 10 ms of CPU per request and parsing 180 000 rules needs far more. Until a build lands the list already compiled keeps blocking, so a change here never leaves you unprotected.",
+    "Οι λίστες χτίζονται μέσα στον Worker, δεν διαβάζονται σε πραγματικό χρόνο: το δωρεάν πλάνο δίνει 10 ms CPU ανά αίτημα και το parsing 180.000 κανόνων θέλει πολύ περισσότερο. Μέχρι να βγει το build συνεχίζει να μπλοκάρει η ήδη χτισμένη λίστα, οπότε καμία αλλαγή εδώ δεν σε αφήνει απροστάτευτο."
   ],
   myRules: ["Your rules", "Οι κανόνες σου"],
   noRules: ["Nothing of your own yet.", "Τίποτα δικό σου ακόμα."],
