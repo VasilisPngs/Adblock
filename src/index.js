@@ -22,6 +22,7 @@ const HOUR_MS = 3600000;
 const SEEN_INTERVAL_MS = 300000;
 const TOP_TTL_MS = 300000;
 const COUNTER_DAYS = 30;
+const PRUNE_LIMIT = 20000;
 
 const seen = new Map();
 let topCache = { at: 0, rows: null };
@@ -575,9 +576,9 @@ export default {
     const { settings } = await loadState(env);
     ctx.waitUntil(
       env.DB.batch([
-        env.DB.prepare("DELETE FROM queries WHERE at < ?1").bind(
-          controller.scheduledTime - settings.logDays * 86400000
-        ),
+        env.DB.prepare(
+          `DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY at LIMIT ${PRUNE_LIMIT})`
+        ).bind(controller.scheduledTime - settings.logDays * 86400000),
         env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS),
         env.DB.prepare("DELETE FROM counters WHERE hour < ?1").bind(
           Math.floor((controller.scheduledTime - COUNTER_DAYS * 86400000) / HOUR_MS)
