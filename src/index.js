@@ -400,6 +400,8 @@ export default {
       }
     }
 
+    if (url.pathname.startsWith("/api/")) return json({ error: "not_found" }, 404);
+
     return env.ASSETS.fetch(request);
   },
 
