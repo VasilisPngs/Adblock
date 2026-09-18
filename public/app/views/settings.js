@@ -166,7 +166,7 @@ export function renderSettings(container) {
           ]
         )
       ),
-      el("div", { class: "switch" }, [
+      el("div", { class: "switch boxed" }, [
         el("span", { class: "grow", text: t("logging") }),
         el(
           "button",

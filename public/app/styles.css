@@ -723,6 +723,13 @@ input.setup-note {
   padding: 16px 18px;
 }
 
+.switch.boxed {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 8px 12px;
+}
+
 .switch-label {
   font-size: 17px;
   font-weight: 640;
