@@ -8,6 +8,8 @@ const CACHE_TTL_MS = 20000;
 const BLOCK_TTL = 60;
 const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
+const LOGIN_WINDOW_MS = 600000;
+const LOGIN_ATTEMPTS = 10;
 
 let cache = { at: 0, settings: null, rules: null, tokens: null };
 
@@ -146,9 +148,21 @@ async function handleDns(request, env, ctx, url, token) {
 
 async function handleLogin(request, env) {
   if (!env.DASHBOARD_PASSWORD) return json({ error: "setup_required" }, 503);
+
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const failures = await env.DB.prepare("SELECT COUNT(*) AS total FROM login_attempts WHERE ip = ?1 AND at >= ?2")
+    .bind(ip, Date.now() - LOGIN_WINDOW_MS)
+    .first();
+  const remaining = LOGIN_ATTEMPTS - (failures?.total || 0);
+  if (remaining <= 0) return json({ error: "too_many_attempts" }, 429);
+
   const payload = await request.json().catch(() => null);
   const password = payload && typeof payload.password === "string" ? payload.password : "";
-  if (!(await checkPassword(password, env.DASHBOARD_PASSWORD))) return json({ error: "wrong_password" }, 401);
+  if (!(await checkPassword(password, env.DASHBOARD_PASSWORD))) {
+    await env.DB.prepare("INSERT INTO login_attempts (at, ip) VALUES (?1, ?2)").bind(Date.now(), ip).run();
+    return json({ error: "wrong_password", remaining: remaining - 1 }, 401);
+  }
+  await env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?1").bind(ip).run();
   return new Response(JSON.stringify({ ok: true }), {
     headers: {
       "content-type": "application/json; charset=utf-8",
@@ -408,10 +422,12 @@ export default {
   async scheduled(controller, env, ctx) {
     const { settings } = await loadState(env);
     ctx.waitUntil(
-      env.DB.prepare("DELETE FROM queries WHERE at < ?1")
-        .bind(controller.scheduledTime - settings.logDays * 86400000)
-        .run()
-        .catch(() => {})
+      env.DB.batch([
+        env.DB.prepare("DELETE FROM queries WHERE at < ?1").bind(
+          controller.scheduledTime - settings.logDays * 86400000
+        ),
+        env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS)
+      ]).catch(() => {})
     );
   }
 };

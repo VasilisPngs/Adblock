@@ -33,6 +33,7 @@ async function call(path, { expectAuthError = false, ...options } = {}) {
     const error = new Error(payload.error || `http_${response.status}`);
     error.code = payload.error || `http_${response.status}`;
     error.detail = payload.detail;
+    error.remaining = payload.remaining;
     throw error;
   }
   return payload;

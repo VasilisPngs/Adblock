@@ -48,7 +48,10 @@ function loginCard() {
     } catch (error) {
       input.value = "";
       password = "";
-      toast(error.code === "setup_required" ? t("passwordMissing") : t("wrongPassword"));
+      if (error.code === "setup_required") toast(t("passwordMissing"));
+      else if (error.code === "too_many_attempts") toast(t("tooManyAttempts"));
+      else if (Number.isInteger(error.remaining)) toast(t("wrongPasswordLeft", { count: error.remaining }));
+      else toast(t("wrongPassword"));
     }
   };
   input.addEventListener("keydown", (event) => {

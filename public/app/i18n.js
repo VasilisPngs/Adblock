@@ -20,6 +20,14 @@ const STRINGS = {
   ],
   passwordLabel: ["Password", "Κωδικός"],
   wrongPassword: ["Wrong password.", "Λάθος κωδικός."],
+  wrongPasswordLeft: [
+    "Wrong password. {count} attempts left before a pause.",
+    "Λάθος κωδικός. Απομένουν {count} προσπάθειες πριν την παύση."
+  ],
+  tooManyAttempts: [
+    "Too many wrong attempts. Try again in a few minutes.",
+    "Πολλές λάθος προσπάθειες. Δοκίμασε ξανά σε λίγα λεπτά."
+  ],
   passwordMissing: [
     "No password is set yet. Add DASHBOARD_PASSWORD as a secret on the Worker.",
     "Δεν έχει οριστεί κωδικός. Πρόσθεσε το DASHBOARD_PASSWORD ως secret στον Worker."
