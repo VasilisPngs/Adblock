@@ -468,6 +468,7 @@ textarea {
 
 .list-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -808,6 +809,25 @@ input.setup-note {
 
 .card .list-item {
   background: var(--surface-2);
+}
+
+.list-item > .grow {
+  min-width: 12rem;
+}
+
+.list-item > .row {
+  margin-left: auto;
+}
+
+@media (max-width: 619px) {
+  .list-item > .row {
+    flex-basis: 100%;
+    justify-content: space-between;
+  }
+
+  .list-item > .row > .btn.small {
+    padding: 7px 8px;
+  }
 }
 
 .resolver-row input {
