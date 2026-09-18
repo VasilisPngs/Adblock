@@ -89,7 +89,7 @@ const STRINGS = {
   protectionTitle: ["Protection", "Προστασία"],
   noSources: ["No list is set, so only your own rules apply.", "Καμία λίστα, άρα ισχύουν μόνο οι δικοί σου κανόνες."],
   sourceUrl: ["https://… list URL", "https://… URL λίστας"],
-  sourceName: ["Name (optional)", "Όνομα (προαιρετικό)"],
+  sourceName: ["Name, or leave it to the list", "Όνομα, ή άσ'το στη λίστα"],
   addSource: ["Add list", "Πρόσθεσε λίστα"],
   sourcePending: ["Applies on the next build", "Ισχύει στο επόμενο build"],
   invalidUrl: ["That is not an https URL.", "Δεν είναι https URL."],

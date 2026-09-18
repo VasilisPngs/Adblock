@@ -382,6 +382,21 @@ async function handleSourcesRead(env) {
   return json({ sources: rows.results || [] });
 }
 
+async function listTitle(url) {
+  try {
+    const response = await fetch(url, { headers: { range: "bytes=0-4095", "user-agent": "adblock-list-builder" } });
+    if (!response.ok || !response.body) return "";
+    const reader = response.body.getReader();
+    const { value } = await reader.read();
+    await reader.cancel().catch(() => {});
+    const match = new TextDecoder().decode(value || new Uint8Array()).match(/^[!#]\s*Title:\s*(.+)$/m);
+    const title = match ? match[1].trim() : "";
+    return title.length > 0 && title.length <= 120 ? title : "";
+  } catch {
+    return "";
+  }
+}
+
 async function handleSources(request, env) {
   const payload = await request.json().catch(() => null);
   if (!payload) return json({ error: "invalid_json" }, 400);
@@ -397,7 +412,8 @@ async function handleSources(request, env) {
     return json({ error: "invalid_url" }, 400);
   }
   if (parsed.protocol !== "https:") return json({ error: "invalid_url" }, 400);
-  const name = String(payload.name || "").trim();
+  const typed = String(payload.name || "").trim();
+  const name = typed || (await listTitle(parsed.toString()));
   await env.DB.prepare(
     "INSERT INTO sources (url, name, created_at) VALUES (?1, ?2, ?3) ON CONFLICT(url) DO UPDATE SET name = excluded.name"
   )
