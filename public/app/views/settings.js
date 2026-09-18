@@ -235,21 +235,24 @@ export function renderSettings(container) {
             el("option", { value: code, text: code === "el" ? "Ελληνικά" : "English", selected: code === language() })
           )
         )
-      ),
-      el("button", {
-        class: "btn ghost",
-        type: "button",
-        text: t("signOut"),
-        onclick: async () => {
-          try {
-            await signOut();
-          } catch {
-            toast(t("requestFailed"));
-          }
-        }
-      })
+      )
     ])
   );
 
   container.append(passwordCard());
+
+  container.append(
+    el("button", {
+      class: "btn ghost",
+      type: "button",
+      text: t("signOut"),
+      onclick: async () => {
+        try {
+          await signOut();
+        } catch {
+          toast(t("requestFailed"));
+        }
+      }
+    })
+  );
 }
