@@ -209,7 +209,6 @@ export function renderSettings(container) {
   );
 
   container.append(deviceCard(state));
-  container.append(passwordCard());
 
   container.append(
     el("div", { class: "card" }, [
@@ -251,4 +250,6 @@ export function renderSettings(container) {
       })
     ])
   );
+
+  container.append(passwordCard());
 }
