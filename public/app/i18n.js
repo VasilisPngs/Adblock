@@ -101,8 +101,8 @@ const STRINGS = {
   ],
   deployHookSaved: ["Deploy hook saved", "Το deploy hook αποθηκεύτηκε"],
   deployHookReady: [
-    "Changing a list starts a build on its own. Use this to pull the newest rules from the sources without changing anything.",
-    "Κάθε αλλαγή λίστας ξεκινά build μόνη της. Αυτό τραβά τους νεότερους κανόνες από τις πηγές χωρίς να αλλάξεις τίποτα."
+    "The lists rebuild by themselves every three hours, and again whenever you change one. This button is only for when you do not want to wait.",
+    "Οι λίστες ξαναχτίζονται μόνες τους κάθε τρεις ώρες, και ξανά όποτε αλλάξεις κάποια. Αυτό το κουμπί είναι μόνο για όταν δεν θες να περιμένεις."
   ],
   changeHook: ["Change hook", "Αλλαγή hook"],
   rebuildNow: ["Rebuild now", "Ξαναχτίσε τώρα"],

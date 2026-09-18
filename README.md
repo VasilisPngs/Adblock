@@ -22,9 +22,12 @@ over the sorted text.
 
 The sources themselves are edited in the app, on the Protection tab, and stored in D1.
 Every build reads them from `GET /api/sources`, writes them back into `blocklists.json`,
-and recompiles. Save a Cloudflare deploy hook in the app and a change to the sources
-fires a build immediately, two to four minutes, rather than waiting for the nightly one;
-the hook is stored in D1 and never sent back to the browser. That endpoint is the only unauthenticated read in the
+and recompiles. With a Cloudflare deploy hook saved in the app, the Worker's own cron fires
+a build every three hours, and a change to the sources fires one immediately. Nothing
+has to be pressed: the upstream filters publish several times a day and the list follows
+them within three hours. Eight builds a day at roughly two minutes each is under a fifth
+of the 3,000 free build minutes a month. The hook is stored in D1 and never sent back to
+the browser. That endpoint is the only unauthenticated read in the
 app: it returns public blocklist URLs and nothing else. A source added in the app
 therefore takes effect at the next build, which the app says plainly rather than
 pretending the change is live.

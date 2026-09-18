@@ -22,7 +22,7 @@ const HOUR_MS = 3600000;
 const SEEN_INTERVAL_MS = 300000;
 const TOP_TTL_MS = 300000;
 const COUNTER_DAYS = 30;
-const PRUNE_LIMIT = 20000;
+const PRUNE_LIMIT = 5000;
 
 const seen = new Map();
 let topCache = { at: 0, rows: null };
@@ -610,6 +610,7 @@ export default {
 
   async scheduled(controller, env, ctx) {
     const { settings } = await loadState(env);
+    await rebuild(env, ctx);
     ctx.waitUntil(
       env.DB.batch([
         env.DB.prepare(
