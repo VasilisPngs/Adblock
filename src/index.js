@@ -1,6 +1,7 @@
 import { readQuestion, blockedResponse, servfail, base64UrlDecode, minimumTtl, QUERY_TYPES } from "./dns.js";
 import { decide, bundledSize } from "./blocklist.js";
 import { parseResolver, resolve, isCloudflareAddress } from "./upstream.js";
+import { checkPassword, issueSession, validSession, sessionCookie } from "./auth.js";
 import meta from "./blocklist-meta.json";
 
 const CACHE_TTL_MS = 20000;
@@ -8,7 +9,7 @@ const BLOCK_TTL = 60;
 const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
 
-let cache = { at: 0, settings: null, rules: null };
+let cache = { at: 0, settings: null, rules: null, tokens: null };
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -27,9 +28,10 @@ const dnsResponse = (body, ttl) =>
 
 async function loadState(env) {
   if (cache.settings && Date.now() - cache.at < CACHE_TTL_MS) return cache;
-  const [settings, rules] = await Promise.all([
+  const [settings, rules, devices] = await Promise.all([
     env.DB.prepare("SELECT enabled, resolvers, block_mode, log_enabled, log_days FROM settings WHERE id = 1").first(),
-    env.DB.prepare("SELECT host, action FROM rules").all()
+    env.DB.prepare("SELECT host, action FROM rules").all(),
+    env.DB.prepare("SELECT token FROM devices").all()
   ]);
   const allow = new Set();
   const block = new Set();
@@ -43,13 +45,14 @@ async function loadState(env) {
       logEnabled: Boolean(settings?.log_enabled),
       logDays: settings?.log_days ?? 7
     },
-    rules: { allow, block }
+    rules: { allow, block },
+    tokens: new Set((devices.results || []).map((row) => row.token))
   };
   return cache;
 }
 
 function invalidate() {
-  cache = { at: 0, settings: null, rules: null };
+  cache = { at: 0, settings: null, rules: null, tokens: null };
 }
 
 async function readMessage(request, url) {
@@ -78,13 +81,15 @@ function logQuery(env, entry) {
 }
 
 async function handleDns(request, env, ctx, url, token) {
+  const started = Date.now();
+  const { settings, rules, tokens } = await loadState(env);
+  if (!tokens.has(token)) return json({ error: "unknown_device" }, 403);
+
   const message = await readMessage(request, url);
   if (!message) return json({ error: "bad_request" }, 400);
   const question = readQuestion(message);
   if (!question) return json({ error: "bad_query" }, 400);
 
-  const started = Date.now();
-  const { settings, rules } = await loadState(env);
   const verdict = settings.enabled ? decide(question.name, rules) : { action: "allow", rule: null, source: "off" };
 
   let body;
@@ -132,23 +137,35 @@ async function handleDns(request, env, ctx, url, token) {
       })
     );
   }
-  if (token) {
-    ctx.waitUntil(
-      env.DB.prepare("UPDATE devices SET last_seen_at = ?2 WHERE token = ?1").bind(token, started).run().catch(() => {})
-    );
-  }
+  ctx.waitUntil(
+    env.DB.prepare("UPDATE devices SET last_seen_at = ?2 WHERE token = ?1").bind(token, started).run().catch(() => {})
+  );
 
   return dnsResponse(body, ttl);
 }
 
-async function behindAccess(request, url, ctx) {
-  if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return true;
-  if (request.headers.has("cf-access-jwt-assertion")) return true;
-  try {
-    const identity = ctx && ctx.access ? await ctx.access.getIdentity() : null;
-    if (identity && identity.email) return true;
-  } catch {}
-  return false;
+async function handleLogin(request, env) {
+  if (!env.DASHBOARD_PASSWORD) return json({ error: "setup_required" }, 503);
+  const payload = await request.json().catch(() => null);
+  const password = payload && typeof payload.password === "string" ? payload.password : "";
+  if (!(await checkPassword(password, env.DASHBOARD_PASSWORD))) return json({ error: "wrong_password" }, 401);
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "set-cookie": sessionCookie(await issueSession(env.DASHBOARD_PASSWORD))
+    }
+  });
+}
+
+function handleLogout() {
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "set-cookie": sessionCookie("", 0)
+    }
+  });
 }
 
 async function handleState(request, env) {
@@ -267,12 +284,14 @@ async function handleDevices(request, env) {
   if (!payload) return json({ error: "invalid_json" }, 400);
   if (payload.action === "remove") {
     await env.DB.prepare("DELETE FROM devices WHERE token = ?1").bind(String(payload.token || "")).run();
+    invalidate();
     return json({ ok: true });
   }
   const name = String(payload.name || "").trim().slice(0, 40);
   if (!name) return json({ error: "invalid_name" }, 400);
   const token = crypto.randomUUID().replace(/-/g, "");
   await env.DB.prepare("INSERT INTO devices (token, name, created_at) VALUES (?1, ?2, ?3)").bind(token, name, Date.now()).run();
+  invalidate();
   return json({ ok: true, token });
 }
 
@@ -348,19 +367,28 @@ const API = {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const dns = url.pathname.match(/^\/dns-query(?:\/([0-9a-f]{8,64}))?$/);
+    const dns = url.pathname.match(/^\/dns-query\/([0-9a-f]{8,64})$/);
     if (dns) {
       if (request.method !== "GET" && request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
       try {
-        return await handleDns(request, env, ctx, url, dns[1] || null);
+        return await handleDns(request, env, ctx, url, dns[1]);
       } catch (error) {
         return json({ error: "dns_failed", detail: String(error && error.message).slice(0, 120) }, 500);
       }
     }
 
+    if (url.pathname === "/dns-query" || url.pathname.startsWith("/dns-query/")) {
+      return json({ error: "unknown_device" }, 403);
+    }
+
+    if (url.pathname === "/api/login" || url.pathname === "/api/logout") {
+      if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+      return url.pathname === "/api/login" ? handleLogin(request, env) : handleLogout();
+    }
+
     const route = API[url.pathname];
     if (route || url.pathname === "/profile.mobileconfig") {
-      if (!(await behindAccess(request, url, ctx))) return json({ error: "forbidden" }, 403);
+      if (!(await validSession(request, env.DASHBOARD_PASSWORD))) return json({ error: "unauthorized" }, 401);
       if (url.pathname === "/profile.mobileconfig") return handleProfile(request, env, url);
       if (route.method !== "ANY" && request.method !== route.method && !(route.method === "POST" && request.method === "DELETE")) {
         return json({ error: "method_not_allowed" }, 405);

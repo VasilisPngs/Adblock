@@ -1,7 +1,7 @@
 import { el, clear, toast, confirmSheet } from "../dom.js";
 import { t, relativeTime, languages, language, setLanguage } from "../i18n.js";
 import { themeMode, themeModes, setTheme } from "../theme.js";
-import { currentState, saveSettings, addDevice, removeDevice } from "../api.js";
+import { currentState, saveSettings, addDevice, removeDevice, signOut } from "../api.js";
 
 function field(label, control) {
   return el("label", { class: "field" }, [el("span", { class: "tiny", text: label }), control]);
@@ -64,7 +64,7 @@ function resolverCard(settings) {
   paint();
   card.append(rows);
   card.append(
-    el("div", { class: "row", style: "padding:0 14px 14px;gap:8px" }, [
+    el("div", { class: "row", style: "gap:8px" }, [
       el("button", {
         class: "btn small grow",
         type: "button",
@@ -263,7 +263,19 @@ export function renderSettings(container) {
             el("option", { value: code, text: code === "el" ? "Ελληνικά" : "English", selected: code === language() })
           )
         )
-      )
+      ),
+      el("button", {
+        class: "btn ghost",
+        type: "button",
+        text: t("signOut"),
+        onclick: async () => {
+          try {
+            await signOut();
+          } catch {
+            toast(t("requestFailed"));
+          }
+        }
+      })
     ])
   );
 }

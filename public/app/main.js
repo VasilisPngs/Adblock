@@ -1,7 +1,7 @@
-import { el, clear } from "./dom.js";
+import { el, clear, toast } from "./dom.js";
 import { t, applyLanguage, i18nEvents } from "./i18n.js";
 import { applyTheme, themeEvents } from "./theme.js";
-import { currentRoute, startRouter, navigate } from "./router.js";
+import { currentRoute, startRouter } from "./router.js";
 import { apiEvents, currentStatus, refresh, signIn } from "./api.js";
 import { renderHome } from "./views/home.js";
 import { renderLog } from "./views/log.js";
@@ -30,6 +30,40 @@ function paintPill() {
   pill.dataset.status = PILL_STATE[status] || "idle";
 }
 
+function loginCard() {
+  let password = "";
+  const input = el("input", {
+    type: "password",
+    autocomplete: "current-password",
+    placeholder: t("passwordLabel"),
+    oninput: (event) => {
+      password = event.target.value;
+    }
+  });
+  const submit = async () => {
+    if (!password) return;
+    input.blur();
+    try {
+      await signIn(password);
+    } catch (error) {
+      input.value = "";
+      password = "";
+      toast(error.code === "setup_required" ? t("passwordMissing") : t("wrongPassword"));
+    }
+  };
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") submit();
+  });
+  return el("div", { class: "card" }, [
+    el("h2", { text: t("signInTitle") }),
+    el("div", { class: "tiny", text: t("signInNote") }),
+    el("div", { class: "resolver-row" }, [
+      input,
+      el("button", { class: "btn small primary", type: "button", text: t("statusSignIn"), onclick: submit })
+    ])
+  ]);
+}
+
 function render() {
   if (isEditing()) return;
   const route = currentRoute();
@@ -40,12 +74,7 @@ function render() {
   }
   clear(view);
   if (currentStatus() === "auth") {
-    view.append(
-      el("div", { class: "empty" }, [
-        el("p", { text: t("statusSignIn") }),
-        el("button", { class: "btn primary", type: "button", text: t("statusSignIn"), onclick: signIn })
-      ])
-    );
+    view.append(loginCard());
     return;
   }
   (VIEWS[route.name] || renderHome)(view, route.params);
@@ -59,8 +88,7 @@ function render() {
 }
 
 pill.addEventListener("click", () => {
-  if (currentStatus() === "auth") signIn();
-  else refresh().catch(() => {});
+  refresh().catch(() => {});
 });
 
 document.addEventListener("visibilitychange", () => {
@@ -68,7 +96,6 @@ document.addEventListener("visibilitychange", () => {
 });
 
 async function boot() {
-  if (new URL(location.href).searchParams.has("signin")) history.replaceState({}, "", location.pathname);
   applyLanguage();
   applyTheme();
   apiEvents.addEventListener("changed", render);
@@ -87,7 +114,6 @@ async function boot() {
   setInterval(() => {
     if (document.visibilityState === "visible" && currentRoute().name === "home") refresh().catch(() => {});
   }, 30000);
-  void navigate;
 }
 
 boot();

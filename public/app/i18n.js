@@ -13,6 +13,19 @@ const STRINGS = {
   statusFailed: ["Not reachable", "Χωρίς σύνδεση"],
   statusSignIn: ["Sign in", "Σύνδεση"],
 
+  signInTitle: ["Sign in", "Σύνδεση"],
+  signInNote: [
+    "The dashboard is private. Your devices keep resolving either way.",
+    "Ο πίνακας είναι ιδιωτικός. Οι συσκευές σου συνεχίζουν να λύνουν DNS κανονικά."
+  ],
+  passwordLabel: ["Password", "Κωδικός"],
+  wrongPassword: ["Wrong password.", "Λάθος κωδικός."],
+  passwordMissing: [
+    "No password is set yet. Add DASHBOARD_PASSWORD as a secret on the Worker.",
+    "Δεν έχει οριστεί κωδικός. Πρόσθεσε το DASHBOARD_PASSWORD ως secret στον Worker."
+  ],
+  signOut: ["Sign out", "Αποσύνδεση"],
+
   blockingTitle: ["Blocking", "Μπλοκάρισμα"],
   blockingOn: ["Everything on the lists is blocked.", "Μπλοκάρεται ό,τι υπάρχει στις λίστες."],
   blockingOff: ["Every request passes through untouched.", "Κάθε αίτημα περνά ανέπαφο."],

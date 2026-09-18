@@ -398,6 +398,7 @@ input[type="text"],
 input[type="date"],
 input[type="number"],
 input[type="search"],
+input[type="password"],
 select,
 textarea {
   width: 100%;
@@ -802,7 +803,10 @@ input.setup-note {
   display: flex;
   gap: 8px;
   align-items: center;
-  padding: 0 14px 10px;
+}
+
+.card .list-item {
+  background: var(--surface-2);
 }
 
 .resolver-row input {

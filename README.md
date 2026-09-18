@@ -24,15 +24,27 @@ is bundled into the Worker and searched with a binary search over the sorted tex
 1. `npm install`
 2. The database id in `wrangler.jsonc` points at the `adblock` D1 database.
 3. `npm run deploy` — builds the lists, applies migrations, deploys.
-4. Put the app behind Cloudflare Access, then add a second Access application for the
-   path `/dns-query` with a **Bypass** policy. Devices cannot log in through a browser,
-   so the DoH endpoint is protected by the secret token in its path instead.
-5. Open the app and add a device to get its DoH URL and profile. It already resolves
-   through `https://cloudflare-dns.com/dns-query`; change or extend that list in Settings
-   whenever you want.
+4. Set the dashboard password: Worker → Settings → Variables and Secrets → add
+   `DASHBOARD_PASSWORD` as a **Secret**. Until it is set, the dashboard refuses every
+   request; there is no default and no way in without it.
+5. Open the app, sign in, and add a device to get its DoH URL and profile. It already
+   resolves through `https://cloudflare-dns.com/dns-query`; change or extend that list in
+   Settings whenever you want.
 
 A GitHub Action rebuilds the lists every night and commits them when they changed,
 which makes Workers Builds deploy the fresh list. `npm run lists` does the same by hand.
+
+## Who can reach what
+
+| Path | Who |
+| --- | --- |
+| `/dns-query/<device token>` | open by design: DoH clients cannot log in. The 32-character token is the credential, and a request without a known token is refused, so the resolver cannot be used by strangers. |
+| everything else | the dashboard password. A successful sign-in sets an HMAC-signed, `HttpOnly` `Secure` cookie for 30 days; changing the password invalidates every cookie ever issued. |
+
+No Cloudflare Access, no Zero Trust, no third-party login: Access cannot exclude a single
+path on a Worker, and its hostname-level policies need a Zero Trust plan with payment
+details on file. The password check costs 0.2 ms of the 10 ms CPU budget and never runs
+on a DNS query.
 
 ## Devices
 
