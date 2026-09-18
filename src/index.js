@@ -369,7 +369,7 @@ async function handleSources(request, env) {
     return json({ error: "invalid_url" }, 400);
   }
   if (parsed.protocol !== "https:") return json({ error: "invalid_url" }, 400);
-  const name = String(payload.name || "").trim().slice(0, 60) || parsed.hostname;
+  const name = String(payload.name || "").trim();
   await env.DB.prepare(
     "INSERT INTO sources (url, name, created_at) VALUES (?1, ?2, ?3) ON CONFLICT(url) DO UPDATE SET name = excluded.name"
   )
@@ -413,7 +413,7 @@ async function handleDevices(request, env) {
     invalidate();
     return json({ ok: true });
   }
-  const name = String(payload.name || "").trim().slice(0, 40);
+  const name = String(payload.name || "").trim();
   if (!name) return json({ error: "invalid_name" }, 400);
   const token = crypto.randomUUID().replace(/-/g, "");
   await env.DB.prepare("INSERT INTO devices (token, name, created_at) VALUES (?1, ?2, ?3)").bind(token, name, Date.now()).run();

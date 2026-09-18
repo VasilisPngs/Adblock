@@ -790,6 +790,7 @@ input.setup-note {
   grid-column: 1;
   color: var(--muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .log-actions {

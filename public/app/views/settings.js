@@ -63,7 +63,7 @@ function deviceCard(state) {
     list.append(
       el("div", { class: "list-item" }, [
         el("span", { class: "grow" }, [
-          el("div", { text: device.name }),
+          el("div", { style: "overflow-wrap:anywhere", text: device.name }),
           el("div", {
             class: "tiny",
             text: device.last_seen_at ? t("lastSeen", { when: relativeTime(device.last_seen_at) }) : t("neverSeen")
