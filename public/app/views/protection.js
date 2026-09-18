@@ -95,7 +95,7 @@ function sourceCard(state) {
   return card;
 }
 
-function rebuildCard() {
+function rebuildCard(settings) {
   let hook = "";
   const input = el("input", {
     type: "password",
@@ -120,7 +120,11 @@ function rebuildCard() {
     if (event.key === "Enter") save();
   });
 
-  return el("div", { class: "card" }, [
+  const field = el("div", { class: "resolver-row" }, [
+    input,
+    el("button", { class: "btn small", type: "button", text: t("save"), onclick: save })
+  ]);
+  const card = el("div", { class: "card" }, [
     el("div", { class: "row between" }, [
       el("h2", { text: t("rebuildTitle") }),
       el("button", {
@@ -136,13 +140,29 @@ function rebuildCard() {
           }
         }
       })
-    ]),
-    el("div", { class: "resolver-row" }, [
-      input,
-      el("button", { class: "btn small", type: "button", text: t("save"), onclick: save })
-    ]),
-    el("div", { class: "tiny", text: t("deployHookNote") })
+    ])
   ]);
+
+  if (settings.deployHookSet) {
+    card.append(el("div", { class: "tiny", text: t("deployHookReady") }));
+    card.append(
+      el("button", {
+        class: "btn small ghost",
+        type: "button",
+        text: t("changeHook"),
+        onclick: (event) => {
+          event.currentTarget.remove();
+          card.append(field);
+          input.focus();
+        }
+      })
+    );
+    return card;
+  }
+
+  card.append(field);
+  card.append(el("div", { class: "tiny", text: t("deployHookNote") }));
+  return card;
 }
 
 function resolverCard(settings) {
@@ -310,5 +330,5 @@ export function renderProtection(container) {
   container.append(sourceCard(state));
   container.append(ruleCard());
   container.append(resolverCard(state.settings));
-  container.append(rebuildCard());
+  container.append(rebuildCard(state.settings));
 }

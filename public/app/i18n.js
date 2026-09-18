@@ -100,6 +100,11 @@ const STRINGS = {
     "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Μόλις αποθηκευτεί, κάθε αλλαγή λίστας ξεκινά build αμέσως αντί να περιμένει το νυχτερινό. Το build θέλει δύο με τέσσερα λεπτά, και μέχρι να βγει συνεχίζει να μπλοκάρει η ήδη χτισμένη λίστα."
   ],
   deployHookSaved: ["Deploy hook saved", "Το deploy hook αποθηκεύτηκε"],
+  deployHookReady: [
+    "Changing a list starts a build on its own. Use this to pull the newest rules from the sources without changing anything.",
+    "Κάθε αλλαγή λίστας ξεκινά build μόνη της. Αυτό τραβά τους νεότερους κανόνες από τις πηγές χωρίς να αλλάξεις τίποτα."
+  ],
+  changeHook: ["Change hook", "Αλλαγή hook"],
   rebuildNow: ["Rebuild now", "Ξαναχτίσε τώρα"],
   rebuildStarted: ["Build started", "Το build ξεκίνησε"],
   rebuildNoHook: ["Save a deploy hook first.", "Αποθήκευσε πρώτα ένα deploy hook."],
