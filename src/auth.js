@@ -1,7 +1,7 @@
 const encoder = new TextEncoder();
 
-export const SESSION_COOKIE = "adblock_session";
-export const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+const SESSION_COOKIE = "adblock_session";
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
 export const MIN_PASSWORD_LENGTH = 12;
 
 async function digest(value) {

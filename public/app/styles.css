@@ -422,44 +422,6 @@ textarea {
   min-height: 72px;
 }
 
-.badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--surface-3);
-  color: var(--muted);
-}
-
-.hint {
-  margin: 0 14px 10px;
-  padding: 8px 11px;
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 12.5px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.set-grid.header {
-  color: var(--muted);
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding-bottom: 2px;
-}
-
-.set-grid.done {
-  background: color-mix(in srgb, var(--success) 8%, transparent);
-}
-
-.set-grid.warmup .set-index {
-  color: var(--warning);
-}
-
 .list {
   display: flex;
   flex-direction: column;
@@ -514,11 +476,6 @@ textarea {
   font-weight: 650;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-}
-
-.spark .area {
-  fill: var(--accent-soft);
-  stroke: none;
 }
 
 @keyframes rise {
@@ -644,7 +601,6 @@ textarea {
     padding: 20px 16px 60px;
   }
 
-  .timer-bar,
   .toast-host {
     bottom: 24px;
   }
@@ -666,53 +622,6 @@ textarea {
 
 .field > .tiny {
   padding-left: 2px;
-}
-
-@media (min-width: 620px) {
-  .program-fields {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.prog-tab.current {
-  background: var(--surface);
-  color: var(--text);
-}
-
-.prog-tab.add {
-  padding: 10px 14px;
-  font-size: 16px;
-  background: transparent;
-  border-color: transparent;
-}
-
-.prog-tabs + .card {
-  border-top-left-radius: 0;
-}
-
-input.setup-note {
-  display: block;
-  width: calc(100% - 28px);
-  margin: 0 14px 10px;
-  background: var(--surface-2);
-  font-size: 13px;
-}
-
-.prog-tab-name {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.prog-tab-when {
-  font-size: 11px;
-  font-weight: 500;
-  opacity: 0.75;
-}
-
-.prog-tab.add {
-  justify-content: center;
-  align-items: center;
 }
 
 .switch {

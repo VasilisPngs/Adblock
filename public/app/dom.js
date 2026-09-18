@@ -1,4 +1,4 @@
-import { locale, t, tn } from "./i18n.js";
+import { t } from "./i18n.js";
 
 export function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
@@ -15,21 +15,11 @@ export function el(tag, props = {}, children = []) {
   return node;
 }
 
-export function append(node, children) {
+function append(node, children) {
   for (const child of [].concat(children)) {
     if (child === null || child === undefined || child === false || child === "") continue;
     node.append(child.nodeType ? child : document.createTextNode(String(child)));
   }
-  return node;
-}
-
-export function svg(tag, props = {}, children = []) {
-  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-  for (const [key, value] of Object.entries(props)) {
-    if (value === null || value === undefined) continue;
-    node.setAttribute(key, value);
-  }
-  for (const child of [].concat(children)) if (child) node.append(child);
   return node;
 }
 
@@ -38,32 +28,10 @@ export function clear(node) {
   return node;
 }
 
-const formatters = new Map();
-
-function dateFormatter(long) {
-  const key = `${locale()}:${long}`;
-  if (!formatters.has(key)) {
-    formatters.set(
-      key,
-      new Intl.DateTimeFormat(
-        locale(),
-        long
-          ? { weekday: "long", day: "numeric", month: "long", year: "numeric" }
-          : { weekday: "short", day: "numeric", month: "short" }
-      )
-    );
-  }
-  return formatters.get(key);
-}
-
 export function formatNumber(value, digits = 1) {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
   const rounded = Math.round(value * 10 ** digits) / 10 ** digits;
   return String(rounded);
-}
-
-export function plural(count, key) {
-  return tn(count, key);
 }
 
 export function toast(message) {
@@ -77,7 +45,7 @@ export function toast(message) {
   }, 2200);
 }
 
-export function openSheet(build, onClose) {
+function openSheet(build, onClose) {
   const host = document.getElementById("sheet-host");
   const sheet = el("div", { class: "sheet" });
   const backdrop = el("div", { class: "sheet-backdrop" }, sheet);

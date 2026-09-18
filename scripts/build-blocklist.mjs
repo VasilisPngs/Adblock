@@ -12,7 +12,7 @@ function normalize(value) {
   return DOMAIN.test(host) ? host : null;
 }
 
-export function parseList(text) {
+function parseList(text) {
   const block = new Set();
   const allow = new Set();
   let skipped = 0;

@@ -41,7 +41,6 @@ const STRINGS = {
     "At least {count} characters, and nothing anyone could guess about you.",
     "Τουλάχιστον {count} χαρακτήρες, και τίποτα που να μαντεύεται για σένα."
   ],
-  alreadyConfigured: ["A password is already set.", "Υπάρχει ήδη κωδικός."],
   passwordTitle: ["Dashboard password", "Κωδικός πίνακα"],
   currentPassword: ["Current password", "Τρέχων κωδικός"],
   changePassword: ["Change password", "Άλλαξε κωδικό"],
@@ -115,7 +114,6 @@ const STRINGS = {
   ],
   myRules: ["Your rules", "Οι κανόνες σου"],
   noRules: ["Nothing of your own yet.", "Τίποτα δικό σου ακόμα."],
-  addRule: ["Add", "Πρόσθεσε"],
   hostPlaceholder: ["domain.com", "domain.com"],
 
   settingsTitle: ["Settings", "Ρυθμίσεις"],
@@ -174,12 +172,6 @@ const STRINGS = {
   daysAgo: ["{count} days ago", "πριν {count} μέρες"]
 };
 
-const PLURALS = {
-  query: [["query", "queries"], ["ερώτημα", "ερωτήματα"]],
-  rule: [["rule", "rules"], ["κανόνας", "κανόνες"]],
-  device: [["device", "devices"], ["συσκευή", "συσκευές"]]
-};
-
 export const i18nEvents = new EventTarget();
 
 function detect() {
@@ -218,13 +210,6 @@ export function t(key, params) {
   const value = entry[index] || entry[0];
   if (!params) return value;
   return value.replace(/\{(\w+)\}/g, (match, name) => (params[name] === undefined ? match : String(params[name])));
-}
-
-export function tn(count, key) {
-  const entry = PLURALS[key];
-  if (!entry) return `${count} ${key}`;
-  const forms = entry[index] || entry[0];
-  return `${count} ${count === 1 ? forms[0] : forms[1]}`;
 }
 
 export function relativeTime(value) {
