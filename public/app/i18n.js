@@ -138,7 +138,7 @@ const STRINGS = {
   themeSystem: ["System", "Σύστημα"],
   themeLight: ["Light", "Φωτεινό"],
   themeDark: ["Dark", "Σκούρο"],
-  themeBlack: ["True black", "Απόλυτο μαύρο"],
+  themeBlack: ["Black", "Μαύρο"],
   languageLabel: ["Language", "Γλώσσα"],
   save: ["Save", "Αποθήκευση"],
   saved: ["Saved", "Αποθηκεύτηκε"],
