@@ -61,9 +61,7 @@ const STRINGS = {
   blockRate: ["Blocked share", "Ποσοστό μπλοκαρίσματος"],
   errorsToday: ["Failures", "Αποτυχίες"],
 
-  listSummary: ["{domains} domains in the list", "{domains} domains στη λίστα"],
   listBuilt: ["Built {when}", "Χτίστηκε {when}"],
-  customRules: ["{count} of your own rules", "{count} δικοί σου κανόνες"],
 
   topDomains: ["Most asked, 24 hours", "Τα πιο ζητημένα, 24 ώρες"],
   noActivity: ["No queries yet.", "Κανένα ερώτημα ακόμα."],

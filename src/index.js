@@ -1,5 +1,5 @@
 import { readQuestion, blockedResponse, servfail, base64UrlDecode, minimumTtl, QUERY_TYPES } from "./dns.js";
-import { decide, bundledSize } from "./blocklist.js";
+import { decide } from "./blocklist.js";
 import { parseResolver, resolve, isCloudflareAddress } from "./upstream.js";
 import {
   checkPassword,
@@ -282,28 +282,20 @@ async function handleState(request, env) {
   const { settings } = await loadState(env);
   const now = Date.now();
   const since = now - 86400000;
-  const [counts, devices, rules, sources] = await Promise.all([
+  const [counts, devices, sources] = await Promise.all([
     env.DB.prepare("SELECT action, SUM(total) AS total FROM counters WHERE hour >= ?1 GROUP BY action")
       .bind(Math.floor(since / HOUR_MS))
       .all(),
     env.DB.prepare("SELECT token, name, created_at, last_seen_at FROM devices ORDER BY created_at").all(),
-    env.DB.prepare("SELECT COUNT(*) AS total FROM rules").first(),
     listSources(env)
   ]);
   const totals = { allow: 0, block: 0, error: 0 };
   for (const row of counts.results || []) totals[row.action] = row.total;
   return json({
     settings,
-    list: {
-      domains: meta.domains,
-      builtAt: meta.builtAt,
-      compiled: meta.sources,
-      sources: sources.results || [],
-      bundled: bundledSize()
-    },
+    list: { builtAt: meta.builtAt, compiled: meta.sources, sources: sources.results || [] },
     today: totals,
     devices: devices.results || [],
-    customRules: rules?.total || 0,
     host: new URL(request.url).host
   });
 }

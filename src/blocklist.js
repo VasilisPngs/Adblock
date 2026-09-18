@@ -38,10 +38,6 @@ export function* ancestors(name) {
   }
 }
 
-export function bundledSize() {
-  return bundled.length === 0 ? 0 : bundled.split("\n").length;
-}
-
 export function decide(name, rules) {
   for (const host of ancestors(name)) {
     if (rules.allow.has(host)) return { action: "allow", rule: host, source: "allow" };

@@ -1,5 +1,5 @@
 import { el, clear, formatNumber, toast } from "../dom.js";
-import { t, relativeTime, sourceLabel } from "../i18n.js";
+import { t, sourceLabel } from "../i18n.js";
 import { currentState, saveSettings, loadTop } from "../api.js";
 import { navigate } from "../router.js";
 
@@ -37,7 +37,7 @@ function masterSwitch(enabled) {
 export function renderHome(container) {
   const state = currentState();
   if (!state) return;
-  const { today, list, settings } = state;
+  const { today, settings } = state;
   const total = today.allow + today.block;
   const share = total > 0 ? (today.block / total) * 100 : 0;
 
@@ -70,16 +70,6 @@ export function renderHome(container) {
         el("b", { class: "num", text: today.error.toLocaleString() }),
         el("span", { class: "tiny", text: t("errorsToday") })
       ])
-    ])
-  );
-
-  container.append(
-    el("div", { class: "card" }, [
-      el("div", { class: "row between" }, [
-        el("span", { text: t("listSummary", { domains: list.domains.toLocaleString() }) }),
-        el("span", { class: "tiny", text: t("customRules", { count: state.customRules }) })
-      ]),
-      el("div", { class: "tiny", text: t("listBuilt", { when: relativeTime(Date.parse(list.builtAt)) }) })
     ])
   );
 
