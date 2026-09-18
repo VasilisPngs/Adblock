@@ -65,6 +65,16 @@ export function loadLog(params) {
   return call(`/api/log?${query.toString()}`);
 }
 
+export async function setSource(url, name) {
+  await call("/api/sources", { method: "POST", body: JSON.stringify({ url, name }) });
+  await refresh();
+}
+
+export async function removeSource(url) {
+  await call("/api/sources", { method: "POST", body: JSON.stringify({ action: "remove", url }) });
+  await refresh();
+}
+
 export function loadRules() {
   return call("/api/rules");
 }

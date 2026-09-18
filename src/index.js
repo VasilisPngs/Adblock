@@ -259,7 +259,7 @@ async function handleState(request, env) {
   const { settings } = await loadState(env);
   const now = Date.now();
   const since = now - 86400000;
-  const [counts, top, devices, rules] = await Promise.all([
+  const [counts, top, devices, rules, sources] = await Promise.all([
     env.DB.prepare(
       "SELECT action, COUNT(*) AS total FROM queries WHERE at >= ?1 GROUP BY action"
     ).bind(since).all(),
@@ -267,13 +267,20 @@ async function handleState(request, env) {
       "SELECT name, action, COUNT(*) AS total FROM queries WHERE at >= ?1 GROUP BY name, action ORDER BY total DESC LIMIT 20"
     ).bind(since).all(),
     env.DB.prepare("SELECT token, name, created_at, last_seen_at FROM devices ORDER BY created_at").all(),
-    env.DB.prepare("SELECT COUNT(*) AS total FROM rules").first()
+    env.DB.prepare("SELECT COUNT(*) AS total FROM rules").first(),
+    listSources(env)
   ]);
   const totals = { allow: 0, block: 0, error: 0 };
   for (const row of counts.results || []) totals[row.action] = row.total;
   return json({
     settings,
-    list: { domains: meta.domains, builtAt: meta.builtAt, sources: meta.sources, bundled: bundledSize() },
+    list: {
+      domains: meta.domains,
+      builtAt: meta.builtAt,
+      compiled: meta.sources,
+      sources: sources.results || [],
+      bundled: bundledSize()
+    },
     today: totals,
     top: top.results || [],
     devices: devices.results || [],
@@ -336,6 +343,38 @@ async function handleRules(request, env) {
   }
   invalidate();
   void url;
+  return json({ ok: true });
+}
+
+const listSources = (env) =>
+  env.DB.prepare("SELECT url, name FROM sources ORDER BY created_at, url").all();
+
+async function handleSourcesRead(env) {
+  const rows = await listSources(env);
+  return json({ sources: rows.results || [] });
+}
+
+async function handleSources(request, env) {
+  const payload = await request.json().catch(() => null);
+  if (!payload) return json({ error: "invalid_json" }, 400);
+  const url = String(payload.url || "").trim();
+  if (payload.action === "remove") {
+    await env.DB.prepare("DELETE FROM sources WHERE url = ?1").bind(url).run();
+    return json({ ok: true });
+  }
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return json({ error: "invalid_url" }, 400);
+  }
+  if (parsed.protocol !== "https:") return json({ error: "invalid_url" }, 400);
+  const name = String(payload.name || "").trim().slice(0, 60) || parsed.hostname;
+  await env.DB.prepare(
+    "INSERT INTO sources (url, name, created_at) VALUES (?1, ?2, ?3) ON CONFLICT(url) DO UPDATE SET name = excluded.name"
+  )
+    .bind(parsed.toString(), name, Date.now())
+    .run();
   return json({ ok: true });
 }
 
@@ -449,7 +488,8 @@ const API = {
   "/api/rules": { method: "ANY", handler: handleRules },
   "/api/log": { method: "GET", handler: handleLog },
   "/api/devices": { method: "POST", handler: handleDevices },
-  "/api/password": { method: "POST", handler: handlePassword }
+  "/api/password": { method: "POST", handler: handlePassword },
+  "/api/sources": { method: "POST", handler: handleSources }
 };
 
 const OPEN = { "/api/login": handleLogin, "/api/setup": handleSetup, "/api/logout": () => handleLogout() };
@@ -480,6 +520,8 @@ export default {
         return json({ error: "request_failed", detail: String(error && error.message).slice(0, 160) }, 500);
       }
     }
+
+    if (url.pathname === "/api/sources" && request.method === "GET") return handleSourcesRead(env);
 
     const route = API[url.pathname];
     if (route || url.pathname === "/profile.mobileconfig") {

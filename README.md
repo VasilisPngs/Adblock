@@ -14,10 +14,18 @@ device ──DoH──▶ Worker ──▶ blocklist lookup (in memory, bundled)
 ```
 
 Blocklists are compiled at build time, not at runtime: the Workers free plan allows
-10 ms CPU per invocation, which is nowhere near enough to download and parse a
-180 000-line filter, but is 6 000× more than a lookup needs. `npm run lists` reads the
-URLs in `blocklists.json`, merges and sorts them, and writes `src/blocklist.txt`, which
-is bundled into the Worker and searched with a binary search over the sorted text.
+10 ms CPU per invocation — and the same 10 ms for a Cron Trigger — which is nowhere near
+enough to download and parse a 180 000-line filter, but is 6 000× more than a lookup
+needs. `npm run lists` reads the source URLs, merges and sorts them, and writes
+`src/blocklist.txt`, which is bundled into the Worker and searched with a binary search
+over the sorted text.
+
+The sources themselves are edited in the app, on the Protection tab, and stored in D1.
+The nightly job reads them from `GET /api/sources`, writes them back into
+`blocklists.json`, and rebuilds. That endpoint is the only unauthenticated read in the
+app: it returns public blocklist URLs and nothing else. A source added in the app
+therefore takes effect at the next build, which the app says plainly rather than
+pretending the change is live.
 
 ## Setup
 

@@ -23,16 +23,18 @@ jobs:
           node-version-file: .nvmrc
 
       - run: node scripts/build-blocklist.mjs
+        env:
+          SOURCES_URL: https://adblock.vasilispngs.workers.dev/api/sources
 
       - name: Commit when the list changed
         run: |
-          if git diff --quiet -- src/blocklist.txt; then
+          if git diff --quiet -- blocklists.json src/blocklist.txt; then
             echo "no change"
             exit 0
           fi
           domains=$(node -e "process.stdout.write(String(require('./src/blocklist-meta.json').domains))")
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/blocklist.txt src/blocklist-meta.json
+          git add blocklists.json src/blocklist.txt src/blocklist-meta.json
           git commit -m "Refresh blocklists to $domains domains"
           git push

@@ -1,11 +1,12 @@
 {
-  "builtAt": "2026-09-17T19:45:08.017Z",
-  "domains": 179438,
-  "bytes": 3757356,
+  "builtAt": "2026-09-18T08:01:12.891Z",
+  "domains": 179633,
+  "bytes": 3761047,
   "sources": [
     {
       "name": "AdGuard DNS filter",
-      "domains": 179443,
+      "url": "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt",
+      "domains": 179638,
       "exceptions": 11,
       "skipped": 753
     }

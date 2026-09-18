@@ -1,83 +1,10 @@
-import { el, clear, toast, confirmSheet } from "../dom.js";
+import { el, toast, confirmSheet } from "../dom.js";
 import { t, relativeTime, languages, language, setLanguage } from "../i18n.js";
 import { themeMode, themeModes, setTheme } from "../theme.js";
 import { currentState, saveSettings, addDevice, removeDevice, signOut, changePassword } from "../api.js";
 
 function field(label, control) {
   return el("label", { class: "field" }, [el("span", { class: "tiny", text: label }), control]);
-}
-
-function resolverCard(settings) {
-  const card = el("div", { class: "card" }, [
-    el("h2", { text: t("resolversTitle") }),
-    el("div", { class: "tiny", text: t("resolversNote") })
-  ]);
-  let values = settings.resolvers.length > 0 ? [...settings.resolvers] : [""];
-  const rows = el("div", {});
-
-  const commit = async () => {
-    const resolvers = values.map((value) => value.trim()).filter(Boolean);
-    try {
-      const saved = await saveSettings({ resolvers });
-      values = saved.resolvers.length > 0 ? [...saved.resolvers] : [""];
-      paint();
-      toast(t("saved"));
-    } catch (error) {
-      const detail = Array.isArray(error.detail) ? error.detail.join(", ") : error.detail || "";
-      if (error.code === "cloudflare_ip_needs_doh") toast(t("cloudflareNeedsDoh", { detail }));
-      else if (error.code === "invalid_resolver") toast(t("invalidResolver", { detail }));
-      else toast(t("requestFailed"));
-    }
-  };
-
-  const paint = () => {
-    clear(rows);
-    values.forEach((value, index) => {
-      rows.append(
-        el("div", { class: "resolver-row" }, [
-          el("input", {
-            type: "text",
-            inputMode: "url",
-            autocapitalize: "none",
-            spellcheck: "false",
-            placeholder: t("resolverPlaceholder"),
-            value,
-            oninput: (event) => {
-              values[index] = event.target.value;
-            }
-          }),
-          el("button", {
-            class: "btn small ghost",
-            type: "button",
-            text: t("remove"),
-            onclick: () => {
-              values.splice(index, 1);
-              if (values.length === 0) values.push("");
-              paint();
-            }
-          })
-        ])
-      );
-    });
-  };
-
-  paint();
-  card.append(rows);
-  card.append(
-    el("div", { class: "row", style: "gap:8px" }, [
-      el("button", {
-        class: "btn small grow",
-        type: "button",
-        text: t("addResolver"),
-        onclick: () => {
-          values.push("");
-          paint();
-        }
-      }),
-      el("button", { class: "btn small primary grow", type: "button", text: t("save"), onclick: commit })
-    ])
-  );
-  return card;
 }
 
 function passwordCard() {
@@ -181,6 +108,7 @@ function deviceCard(state) {
   let name = "";
   const input = el("input", {
     type: "text",
+    autocomplete: "off",
     placeholder: t("deviceName"),
     oninput: (event) => {
       name = event.target.value;
@@ -215,7 +143,6 @@ export function renderSettings(container) {
   const { settings } = state;
 
   container.append(el("h1", { text: t("settingsTitle") }));
-  container.append(resolverCard(settings));
 
   container.append(
     el("div", { class: "card" }, [

@@ -69,10 +69,31 @@ function collapse(hosts) {
   return kept;
 }
 
-async function main() {
+async function configuredSources() {
+  const endpoint = process.env.SOURCES_URL;
+  if (endpoint) {
+    try {
+      const response = await fetch(endpoint, { headers: { "user-agent": "adblock-list-builder" } });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const sources = (payload.sources || []).filter((source) => typeof source.url === "string");
+      if (sources.length > 0) {
+        writeFileSync(join(root, "blocklists.json"), `${JSON.stringify({ sources }, null, 2)}\n`);
+        console.log(`sources: ${sources.length} from ${endpoint}`);
+        return sources;
+      }
+      console.log(`sources: ${endpoint} returned none, keeping blocklists.json`);
+    } catch (error) {
+      console.log(`sources: ${endpoint} unreachable (${error.message}), keeping blocklists.json`);
+    }
+  }
   const config = JSON.parse(readFileSync(join(root, "blocklists.json"), "utf8"));
-  const sources = (config.sources || []).filter((source) => source.enabled !== false);
-  if (sources.length === 0) throw new Error("no enabled sources in blocklists.json");
+  return (config.sources || []).filter((source) => source.enabled !== false);
+}
+
+async function main() {
+  const sources = await configuredSources();
+  if (sources.length === 0) throw new Error("no sources configured");
 
   const block = new Set();
   const allow = new Set();
@@ -85,7 +106,13 @@ async function main() {
     const parsed = parseList(text);
     for (const host of parsed.block) block.add(host);
     for (const host of parsed.allow) allow.add(host);
-    report.push({ name: source.name || source.url, domains: parsed.block.size, exceptions: parsed.allow.size, skipped: parsed.skipped });
+    report.push({
+      name: source.name || source.url,
+      url: source.url,
+      domains: parsed.block.size,
+      exceptions: parsed.allow.size,
+      skipped: parsed.skipped
+    });
   }
 
   for (const host of allow) block.delete(host);

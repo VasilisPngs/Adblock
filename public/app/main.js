@@ -5,15 +5,15 @@ import { currentRoute, startRouter } from "./router.js";
 import { apiEvents, currentStatus, refresh, signIn, setUpPassword } from "./api.js";
 import { renderHome } from "./views/home.js";
 import { renderLog } from "./views/log.js";
-import { renderLists } from "./views/lists.js";
+import { renderProtection } from "./views/protection.js";
 import { renderSettings } from "./views/settings.js";
 
 const view = document.getElementById("view");
 const pill = document.getElementById("state-pill");
 const tabs = [...document.querySelectorAll(".tab")];
 
-const VIEWS = { home: renderHome, log: renderLog, lists: renderLists, settings: renderSettings };
-const TAB_LABELS = { home: "tabHome", log: "tabLog", lists: "tabLists", settings: "tabSettings" };
+const VIEWS = { home: renderHome, log: renderLog, protection: renderProtection, settings: renderSettings };
+const TAB_LABELS = { home: "tabHome", log: "tabLog", protection: "tabProtection", settings: "tabSettings" };
 const PILL_LABELS = { on: "statusOn", off: "statusOff", loading: "statusLoading", failed: "statusFailed", auth: "statusSignIn" };
 const PILL_STATE = { on: "idle", off: "pending", loading: "syncing", failed: "error", auth: "auth" };
 
@@ -34,7 +34,7 @@ let authMode = "login";
 
 function setAuthMode(mode) {
   authMode = mode;
-  render();
+  render(true);
 }
 
 function loginCard() {
@@ -124,8 +124,8 @@ function setupCard() {
   ]);
 }
 
-function render() {
-  if (isEditing()) return;
+function render(force = false) {
+  if (!force && isEditing()) return;
   const route = currentRoute();
   for (const tab of tabs) {
     tab.setAttribute("aria-current", tab.dataset.route === route.name ? "page" : "false");
@@ -158,17 +158,17 @@ document.addEventListener("visibilitychange", () => {
 async function boot() {
   applyLanguage();
   applyTheme();
-  apiEvents.addEventListener("changed", render);
+  apiEvents.addEventListener("changed", () => render());
   apiEvents.addEventListener("status", () => {
     paintPill();
     render();
   });
   i18nEvents.addEventListener("changed", () => {
     paintPill();
-    render();
+    render(true);
   });
-  themeEvents.addEventListener("changed", render);
-  startRouter(render);
+  themeEvents.addEventListener("changed", () => render(true));
+  startRouter(() => render());
   paintPill();
   await refresh().catch(() => {});
   setInterval(() => {

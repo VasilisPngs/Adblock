@@ -4,10 +4,10 @@ const LANGUAGES = ["en", "el"];
 const STRINGS = {
   tabHome: ["Home", "Αρχική"],
   tabLog: ["Activity", "Κινήσεις"],
-  tabLists: ["Lists", "Λίστες"],
+  tabProtection: ["Protection", "Προστασία"],
   tabSettings: ["Settings", "Ρυθμίσεις"],
 
-  statusOn: ["Protected", "Προστασία"],
+  statusOn: ["Active", "Ενεργό"],
   statusOff: ["Paused", "Σε παύση"],
   statusLoading: ["Loading", "Φόρτωση"],
   statusFailed: ["Not reachable", "Χωρίς σύνδεση"],
@@ -86,12 +86,18 @@ const STRINGS = {
   viaNone: ["Passed", "Πέρασε"],
   viaOff: ["Blocking paused", "Μπλοκάρισμα σε παύση"],
 
-  listsTitle: ["Lists", "Λίστες"],
+  protectionTitle: ["Protection", "Προστασία"],
+  noSources: ["No list is set, so only your own rules apply.", "Καμία λίστα, άρα ισχύουν μόνο οι δικοί σου κανόνες."],
+  sourceUrl: ["https://… list URL", "https://… URL λίστας"],
+  sourceName: ["Name (optional)", "Όνομα (προαιρετικό)"],
+  addSource: ["Add list", "Πρόσθεσε λίστα"],
+  sourcePending: ["Applies on the next build", "Ισχύει στο επόμενο build"],
+  invalidUrl: ["That is not an https URL.", "Δεν είναι https URL."],
   sourcesTitle: ["Sources", "Πηγές"],
   sourceDomains: ["{count} domains", "{count} domains"],
   sourcesNote: [
-    "Sources live in blocklists.json and are compiled on every deploy.",
-    "Οι πηγές ζουν στο blocklists.json και χτίζονται σε κάθε deploy."
+    "Lists are compiled into the Worker every night at 03:40 UTC, because the free plan allows 10 ms of CPU per request and parsing 180 000 rules needs far more. A change here applies at the next build.",
+    "Οι λίστες χτίζονται μέσα στον Worker κάθε νύχτα στις 03:40 UTC, επειδή το δωρεάν πλάνο δίνει 10 ms CPU ανά αίτημα και το parsing 180.000 κανόνων θέλει πολύ περισσότερο. Μια αλλαγή εδώ ισχύει στο επόμενο build."
   ],
   myRules: ["Your rules", "Οι κανόνες σου"],
   noRules: ["Nothing of your own yet.", "Τίποτα δικό σου ακόμα."],
