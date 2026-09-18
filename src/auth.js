@@ -2,9 +2,16 @@ const encoder = new TextEncoder();
 
 export const SESSION_COOKIE = "adblock_session";
 export const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+export const MIN_PASSWORD_LENGTH = 12;
 
 async function digest(value) {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value)));
+}
+
+function hex(bytes) {
+  let value = "";
+  for (const byte of bytes) value += byte.toString(16).padStart(2, "0");
+  return value;
 }
 
 function equalBytes(a, b) {
@@ -41,10 +48,18 @@ async function sign(secret, payload) {
   return base64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(payload))));
 }
 
-export async function checkPassword(password, secret) {
-  if (!secret || !password) return false;
-  const [given, expected] = await Promise.all([digest(password), digest(secret)]);
-  return equalBytes(given, expected);
+export async function hashPassword(password) {
+  return hex(await digest(password));
+}
+
+export function equalText(given, expected) {
+  if (!given || !expected) return false;
+  return equalBytes(encoder.encode(given), encoder.encode(expected));
+}
+
+export async function checkPassword(password, hash) {
+  if (!hash || !password) return false;
+  return equalText(await hashPassword(password), hash);
 }
 
 export async function issueSession(secret) {
@@ -61,8 +76,7 @@ export async function validSession(request, secret) {
   const payload = token.slice(0, split);
   const expires = Number(payload);
   if (!Number.isFinite(expires) || expires <= Date.now()) return false;
-  const expected = await sign(secret, payload);
-  return equalBytes(encoder.encode(token.slice(split + 1)), encoder.encode(expected));
+  return equalText(token.slice(split + 1), await sign(secret, payload));
 }
 
 export function sessionCookie(token, maxAge = SESSION_MAX_AGE) {

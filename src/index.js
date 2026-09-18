@@ -1,7 +1,15 @@
 import { readQuestion, blockedResponse, servfail, base64UrlDecode, minimumTtl, QUERY_TYPES } from "./dns.js";
 import { decide, bundledSize } from "./blocklist.js";
 import { parseResolver, resolve, isCloudflareAddress } from "./upstream.js";
-import { checkPassword, issueSession, validSession, sessionCookie } from "./auth.js";
+import {
+  checkPassword,
+  hashPassword,
+  equalText,
+  issueSession,
+  validSession,
+  sessionCookie,
+  MIN_PASSWORD_LENGTH
+} from "./auth.js";
 import meta from "./blocklist-meta.json";
 
 const CACHE_TTL_MS = 20000;
@@ -11,7 +19,7 @@ const LOG_LIMIT = 200;
 const LOGIN_WINDOW_MS = 600000;
 const LOGIN_ATTEMPTS = 10;
 
-let cache = { at: 0, settings: null, rules: null, tokens: null };
+let cache = { at: 0, settings: null, rules: null, tokens: null, auth: null };
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -31,7 +39,9 @@ const dnsResponse = (body, ttl) =>
 async function loadState(env) {
   if (cache.settings && Date.now() - cache.at < CACHE_TTL_MS) return cache;
   const [settings, rules, devices] = await Promise.all([
-    env.DB.prepare("SELECT enabled, resolvers, block_mode, log_enabled, log_days FROM settings WHERE id = 1").first(),
+    env.DB.prepare(
+      "SELECT enabled, resolvers, block_mode, log_enabled, log_days, password_hash, setup_code FROM settings WHERE id = 1"
+    ).first(),
     env.DB.prepare("SELECT host, action FROM rules").all(),
     env.DB.prepare("SELECT token FROM devices").all()
   ]);
@@ -48,13 +58,14 @@ async function loadState(env) {
       logDays: settings?.log_days ?? 7
     },
     rules: { allow, block },
-    tokens: new Set((devices.results || []).map((row) => row.token))
+    tokens: new Set((devices.results || []).map((row) => row.token)),
+    auth: { hash: settings?.password_hash || null, setupCode: settings?.setup_code || null }
   };
   return cache;
 }
 
 function invalidate() {
-  cache = { at: 0, settings: null, rules: null, tokens: null };
+  cache = { at: 0, settings: null, rules: null, tokens: null, auth: null };
 }
 
 async function readMessage(request, url) {
@@ -146,30 +157,92 @@ async function handleDns(request, env, ctx, url, token) {
   return dnsResponse(body, ttl);
 }
 
-async function handleLogin(request, env) {
-  if (!env.DASHBOARD_PASSWORD) return json({ error: "setup_required" }, 503);
+async function sessionSecret(env) {
+  if (env.DASHBOARD_PASSWORD) return hashPassword(env.DASHBOARD_PASSWORD);
+  return (await loadState(env)).auth.hash;
+}
 
-  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+const signedIn = (token) =>
+  new Response(JSON.stringify({ ok: true }), {
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "set-cookie": sessionCookie(token)
+    }
+  });
+
+function clientIp(request) {
+  return request.headers.get("cf-connecting-ip") || "unknown";
+}
+
+async function attemptsLeft(env, ip) {
   const failures = await env.DB.prepare("SELECT COUNT(*) AS total FROM login_attempts WHERE ip = ?1 AND at >= ?2")
     .bind(ip, Date.now() - LOGIN_WINDOW_MS)
     .first();
-  const remaining = LOGIN_ATTEMPTS - (failures?.total || 0);
+  return LOGIN_ATTEMPTS - (failures?.total || 0);
+}
+
+const recordFailure = (env, ip) =>
+  env.DB.prepare("INSERT INTO login_attempts (at, ip) VALUES (?1, ?2)").bind(Date.now(), ip).run();
+
+const clearFailures = (env, ip) =>
+  env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?1").bind(ip).run();
+
+async function handleLogin(request, env) {
+  const secret = await sessionSecret(env);
+  if (!secret) return json({ error: "setup_required" }, 503);
+
+  const ip = clientIp(request);
+  const remaining = await attemptsLeft(env, ip);
   if (remaining <= 0) return json({ error: "too_many_attempts" }, 429);
 
   const payload = await request.json().catch(() => null);
   const password = payload && typeof payload.password === "string" ? payload.password : "";
-  if (!(await checkPassword(password, env.DASHBOARD_PASSWORD))) {
-    await env.DB.prepare("INSERT INTO login_attempts (at, ip) VALUES (?1, ?2)").bind(Date.now(), ip).run();
+  if (!(await checkPassword(password, secret))) {
+    await recordFailure(env, ip);
     return json({ error: "wrong_password", remaining: remaining - 1 }, 401);
   }
-  await env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?1").bind(ip).run();
-  return new Response(JSON.stringify({ ok: true }), {
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "set-cookie": sessionCookie(await issueSession(env.DASHBOARD_PASSWORD))
-    }
-  });
+  await clearFailures(env, ip);
+  return signedIn(await issueSession(secret));
+}
+
+async function handleSetup(request, env) {
+  if (await sessionSecret(env)) return json({ error: "already_configured" }, 409);
+
+  const ip = clientIp(request);
+  const remaining = await attemptsLeft(env, ip);
+  if (remaining <= 0) return json({ error: "too_many_attempts" }, 429);
+
+  const payload = await request.json().catch(() => null);
+  const code = payload && typeof payload.code === "string" ? payload.code.trim().toLowerCase() : "";
+  const password = payload && typeof payload.password === "string" ? payload.password : "";
+  const { auth } = await loadState(env);
+  if (!equalText(code, auth.setupCode)) {
+    await recordFailure(env, ip);
+    return json({ error: "wrong_code", remaining: remaining - 1 }, 401);
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) return json({ error: "weak_password", detail: MIN_PASSWORD_LENGTH }, 400);
+
+  const hash = await hashPassword(password);
+  await env.DB.prepare("UPDATE settings SET password_hash = ?1, setup_code = NULL WHERE id = 1").bind(hash).run();
+  invalidate();
+  await clearFailures(env, ip);
+  return signedIn(await issueSession(hash));
+}
+
+async function handlePassword(request, env) {
+  if (env.DASHBOARD_PASSWORD) return json({ error: "managed_by_secret" }, 409);
+  const payload = await request.json().catch(() => null);
+  const current = payload && typeof payload.current === "string" ? payload.current : "";
+  const next = payload && typeof payload.next === "string" ? payload.next : "";
+  const { auth } = await loadState(env);
+  if (!(await checkPassword(current, auth.hash))) return json({ error: "wrong_password" }, 401);
+  if (next.length < MIN_PASSWORD_LENGTH) return json({ error: "weak_password", detail: MIN_PASSWORD_LENGTH }, 400);
+
+  const hash = await hashPassword(next);
+  await env.DB.prepare("UPDATE settings SET password_hash = ?1 WHERE id = 1").bind(hash).run();
+  invalidate();
+  return signedIn(await issueSession(hash));
 }
 
 function handleLogout() {
@@ -375,8 +448,11 @@ const API = {
   "/api/settings": { method: "POST", handler: handleSettings },
   "/api/rules": { method: "ANY", handler: handleRules },
   "/api/log": { method: "GET", handler: handleLog },
-  "/api/devices": { method: "POST", handler: handleDevices }
+  "/api/devices": { method: "POST", handler: handleDevices },
+  "/api/password": { method: "POST", handler: handlePassword }
 };
+
+const OPEN = { "/api/login": handleLogin, "/api/setup": handleSetup, "/api/logout": () => handleLogout() };
 
 export default {
   async fetch(request, env, ctx) {
@@ -395,14 +471,19 @@ export default {
       return json({ error: "unknown_device" }, 403);
     }
 
-    if (url.pathname === "/api/login" || url.pathname === "/api/logout") {
+    const open = OPEN[url.pathname];
+    if (open) {
       if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-      return url.pathname === "/api/login" ? handleLogin(request, env) : handleLogout();
+      try {
+        return await open(request, env);
+      } catch (error) {
+        return json({ error: "request_failed", detail: String(error && error.message).slice(0, 160) }, 500);
+      }
     }
 
     const route = API[url.pathname];
     if (route || url.pathname === "/profile.mobileconfig") {
-      if (!(await validSession(request, env.DASHBOARD_PASSWORD))) return json({ error: "unauthorized" }, 401);
+      if (!(await validSession(request, await sessionSecret(env)))) return json({ error: "unauthorized" }, 401);
       if (url.pathname === "/profile.mobileconfig") return handleProfile(request, env, url);
       if (route.method !== "ANY" && request.method !== route.method && !(route.method === "POST" && request.method === "DELETE")) {
         return json({ error: "method_not_allowed" }, 405);

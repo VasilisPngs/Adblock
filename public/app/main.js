@@ -2,7 +2,7 @@ import { el, clear, toast } from "./dom.js";
 import { t, applyLanguage, i18nEvents } from "./i18n.js";
 import { applyTheme, themeEvents } from "./theme.js";
 import { currentRoute, startRouter } from "./router.js";
-import { apiEvents, currentStatus, refresh, signIn } from "./api.js";
+import { apiEvents, currentStatus, refresh, signIn, setUpPassword } from "./api.js";
 import { renderHome } from "./views/home.js";
 import { renderLog } from "./views/log.js";
 import { renderLists } from "./views/lists.js";
@@ -30,6 +30,13 @@ function paintPill() {
   pill.dataset.status = PILL_STATE[status] || "idle";
 }
 
+let authMode = "login";
+
+function setAuthMode(mode) {
+  authMode = mode;
+  render();
+}
+
 function loginCard() {
   let password = "";
   const input = el("input", {
@@ -48,7 +55,7 @@ function loginCard() {
     } catch (error) {
       input.value = "";
       password = "";
-      if (error.code === "setup_required") toast(t("passwordMissing"));
+      if (error.code === "setup_required") setAuthMode("setup");
       else if (error.code === "too_many_attempts") toast(t("tooManyAttempts"));
       else if (Number.isInteger(error.remaining)) toast(t("wrongPasswordLeft", { count: error.remaining }));
       else toast(t("wrongPassword"));
@@ -63,7 +70,57 @@ function loginCard() {
     el("div", { class: "resolver-row" }, [
       input,
       el("button", { class: "btn small primary", type: "button", text: t("statusSignIn"), onclick: submit })
-    ])
+    ]),
+    el("button", { class: "btn small ghost", type: "button", text: t("setupTitle"), onclick: () => setAuthMode("setup") })
+  ]);
+}
+
+function setupCard() {
+  let code = "";
+  let password = "";
+  const codeInput = el("input", {
+    type: "text",
+    autocapitalize: "none",
+    spellcheck: "false",
+    placeholder: t("setupCode"),
+    oninput: (event) => {
+      code = event.target.value;
+    }
+  });
+  const passwordInput = el("input", {
+    type: "password",
+    autocomplete: "new-password",
+    placeholder: t("newPassword"),
+    oninput: (event) => {
+      password = event.target.value;
+    }
+  });
+  const submit = async () => {
+    if (!code.trim() || !password) return;
+    codeInput.blur();
+    passwordInput.blur();
+    try {
+      await setUpPassword(code.trim(), password);
+    } catch (error) {
+      passwordInput.value = "";
+      password = "";
+      if (error.code === "wrong_code") toast(t("wrongCode"));
+      else if (error.code === "weak_password") toast(t("weakPassword", { count: error.detail }));
+      else if (error.code === "already_configured") setAuthMode("login");
+      else if (error.code === "too_many_attempts") toast(t("tooManyAttempts"));
+      else toast(t("requestFailed"));
+    }
+  };
+  passwordInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") submit();
+  });
+  return el("div", { class: "card" }, [
+    el("h2", { text: t("setupTitle") }),
+    el("div", { class: "tiny", text: t("setupNote") }),
+    codeInput,
+    passwordInput,
+    el("button", { class: "btn primary", type: "button", text: t("setupSubmit"), onclick: submit }),
+    el("button", { class: "btn small ghost", type: "button", text: t("statusSignIn"), onclick: () => setAuthMode("login") })
   ]);
 }
 
@@ -77,7 +134,7 @@ function render() {
   }
   clear(view);
   if (currentStatus() === "auth") {
-    view.append(loginCard());
+    view.append(authMode === "setup" ? setupCard() : loginCard());
     return;
   }
   (VIEWS[route.name] || renderHome)(view, route.params);

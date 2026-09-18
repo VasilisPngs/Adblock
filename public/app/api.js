@@ -90,6 +90,15 @@ export async function signIn(password) {
   await refresh();
 }
 
+export async function setUpPassword(code, password) {
+  await call("/api/setup", { method: "POST", body: JSON.stringify({ code, password }), expectAuthError: true });
+  await refresh();
+}
+
+export function changePassword(current, next) {
+  return call("/api/password", { method: "POST", body: JSON.stringify({ current, next }), expectAuthError: true });
+}
+
 export async function signOut() {
   await call("/api/logout", { method: "POST", body: "{}", expectAuthError: true });
   state = null;

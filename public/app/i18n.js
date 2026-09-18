@@ -28,9 +28,27 @@ const STRINGS = {
     "Too many wrong attempts. Try again in a few minutes.",
     "Πολλές λάθος προσπάθειες. Δοκίμασε ξανά σε λίγα λεπτά."
   ],
-  passwordMissing: [
-    "No password is set yet. Add DASHBOARD_PASSWORD as a secret on the Worker.",
-    "Δεν έχει οριστεί κωδικός. Πρόσθεσε το DASHBOARD_PASSWORD ως secret στον Worker."
+  setupTitle: ["First run", "Πρώτη εκκίνηση"],
+  setupNote: [
+    "Read the setup code from the D1 console with: SELECT setup_code FROM settings;",
+    "Διάβασε τον κωδικό εγκατάστασης από την κονσόλα D1 με: SELECT setup_code FROM settings;"
+  ],
+  setupCode: ["Setup code", "Κωδικός εγκατάστασης"],
+  newPassword: ["New password", "Νέος κωδικός"],
+  setupSubmit: ["Set the password", "Όρισε τον κωδικό"],
+  wrongCode: ["Wrong setup code.", "Λάθος κωδικός εγκατάστασης."],
+  weakPassword: [
+    "At least {count} characters, and nothing anyone could guess about you.",
+    "Τουλάχιστον {count} χαρακτήρες, και τίποτα που να μαντεύεται για σένα."
+  ],
+  alreadyConfigured: ["A password is already set.", "Υπάρχει ήδη κωδικός."],
+  passwordTitle: ["Dashboard password", "Κωδικός πίνακα"],
+  currentPassword: ["Current password", "Τρέχων κωδικός"],
+  changePassword: ["Change password", "Άλλαξε κωδικό"],
+  passwordChanged: ["Password changed. Other devices are signed out.", "Ο κωδικός άλλαξε. Οι άλλες συσκευές αποσυνδέθηκαν."],
+  managedBySecret: [
+    "The password comes from the DASHBOARD_PASSWORD secret, so change it there.",
+    "Ο κωδικός έρχεται από το secret DASHBOARD_PASSWORD, άλλαξέ τον εκεί."
   ],
   signOut: ["Sign out", "Αποσύνδεση"],
 

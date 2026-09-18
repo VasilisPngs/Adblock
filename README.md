@@ -24,9 +24,14 @@ is bundled into the Worker and searched with a binary search over the sorted tex
 1. `npm install`
 2. The database id in `wrangler.jsonc` points at the `adblock` D1 database.
 3. `npm run deploy` — builds the lists, applies migrations, deploys.
-4. Set the dashboard password: Worker → Settings → Variables and Secrets → add
-   `DASHBOARD_PASSWORD` as a **Secret**. Until it is set, the dashboard refuses every
-   request; there is no default and no way in without it.
+4. Set the dashboard password on first run. Read the one-time setup code from the D1
+   console with `SELECT setup_code FROM settings;`, open the app, and enter that code
+   together with the password you want. The Worker stores only its SHA-256 hash and
+   clears the setup code, so the screen cannot be used twice. Until a password exists the
+   dashboard refuses every request, and the code is the only way to set one, so nobody
+   who finds the URL first can claim it.
+   A `DASHBOARD_PASSWORD` secret on the Worker still wins if one is set, which is the
+   better place for it when the dashboard lets you save it.
 5. Open the app, sign in, and add a device to get its DoH URL and profile. It already
    resolves through `https://cloudflare-dns.com/dns-query`; change or extend that list in
    Settings whenever you want.
@@ -39,7 +44,7 @@ which makes Workers Builds deploy the fresh list. `npm run lists` does the same 
 | Path | Who |
 | --- | --- |
 | `/dns-query/<device token>` | open by design: DoH clients cannot log in. The 32-character token is the credential, and a request without a known token is refused, so the resolver cannot be used by strangers. |
-| everything else | the dashboard password. A successful sign-in sets an HMAC-signed, `HttpOnly` `Secure` cookie for 30 days; changing the password invalidates every cookie ever issued. |
+| everything else | the dashboard password, at least 12 characters. A successful sign-in sets an HMAC-signed, `HttpOnly` `Secure` cookie for 30 days; the signing key is derived from the password, so changing it invalidates every cookie ever issued. Wrong guesses are counted per client IP, ten per ten minutes, which stops a script without letting anyone lock the owner out of their own dashboard. |
 
 No Cloudflare Access, no Zero Trust, no third-party login: Access cannot exclude a single
 path on a Worker, and its hostname-level policies need a Zero Trust plan with payment

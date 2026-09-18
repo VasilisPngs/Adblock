@@ -1,7 +1,7 @@
 import { el, clear, toast, confirmSheet } from "../dom.js";
 import { t, relativeTime, languages, language, setLanguage } from "../i18n.js";
 import { themeMode, themeModes, setTheme } from "../theme.js";
-import { currentState, saveSettings, addDevice, removeDevice, signOut } from "../api.js";
+import { currentState, saveSettings, addDevice, removeDevice, signOut, changePassword } from "../api.js";
 
 function field(label, control) {
   return el("label", { class: "field" }, [el("span", { class: "tiny", text: label }), control]);
@@ -78,6 +78,51 @@ function resolverCard(settings) {
     ])
   );
   return card;
+}
+
+function passwordCard() {
+  let current = "";
+  let next = "";
+  const currentInput = el("input", {
+    type: "password",
+    autocomplete: "current-password",
+    placeholder: t("currentPassword"),
+    oninput: (event) => {
+      current = event.target.value;
+    }
+  });
+  const nextInput = el("input", {
+    type: "password",
+    autocomplete: "new-password",
+    placeholder: t("newPassword"),
+    oninput: (event) => {
+      next = event.target.value;
+    }
+  });
+  const submit = async () => {
+    if (!current || !next) return;
+    currentInput.blur();
+    nextInput.blur();
+    try {
+      await changePassword(current, next);
+      currentInput.value = "";
+      nextInput.value = "";
+      current = "";
+      next = "";
+      toast(t("passwordChanged"));
+    } catch (error) {
+      if (error.code === "weak_password") toast(t("weakPassword", { count: error.detail }));
+      else if (error.code === "managed_by_secret") toast(t("managedBySecret"));
+      else if (error.code === "wrong_password") toast(t("wrongPassword"));
+      else toast(t("requestFailed"));
+    }
+  };
+  return el("div", { class: "card" }, [
+    el("h2", { text: t("passwordTitle") }),
+    currentInput,
+    nextInput,
+    el("button", { class: "btn small primary", type: "button", text: t("changePassword"), onclick: submit })
+  ]);
 }
 
 function deviceCard(state) {
@@ -237,6 +282,7 @@ export function renderSettings(container) {
   );
 
   container.append(deviceCard(state));
+  container.append(passwordCard());
 
   container.append(
     el("div", { class: "card" }, [
