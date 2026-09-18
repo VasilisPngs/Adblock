@@ -31,6 +31,9 @@ is bundled into the Worker and searched with a binary search over the sorted tex
    through `https://cloudflare-dns.com/dns-query`; change or extend that list in Settings
    whenever you want.
 
+A GitHub Action rebuilds the lists every night and commits them when they changed,
+which makes Workers Builds deploy the fresh list. `npm run lists` does the same by hand.
+
 ## Devices
 
 | Device | How |
