@@ -18,6 +18,13 @@ const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
 const LOGIN_WINDOW_MS = 600000;
 const LOGIN_ATTEMPTS = 10;
+const HOUR_MS = 3600000;
+const SEEN_INTERVAL_MS = 300000;
+const TOP_TTL_MS = 300000;
+const COUNTER_DAYS = 30;
+
+const seen = new Map();
+let topCache = { at: 0, rows: null };
 
 let cache = { at: 0, settings: null, rules: null, tokens: null, auth: null };
 
@@ -136,6 +143,16 @@ async function handleDns(request, env, ctx, url, token) {
     }
   }
 
+  const action = failure ? "error" : verdict.action;
+  ctx.waitUntil(
+    env.DB.prepare(
+      "INSERT INTO counters (hour, action, total) VALUES (?1, ?2, 1) ON CONFLICT(hour, action) DO UPDATE SET total = total + 1"
+    )
+      .bind(Math.floor(started / HOUR_MS), action)
+      .run()
+      .catch(() => {})
+  );
+
   if (settings.logEnabled) {
     ctx.waitUntil(
       logQuery(env, {
@@ -143,16 +160,19 @@ async function handleDns(request, env, ctx, url, token) {
         token,
         name: question.name,
         type: QUERY_TYPES[question.type] || String(question.type),
-        action: failure ? "error" : verdict.action,
+        action,
         source: failure || verdict.source,
         rule: verdict.rule,
         ms: Date.now() - started
       })
     );
   }
-  ctx.waitUntil(
-    env.DB.prepare("UPDATE devices SET last_seen_at = ?2 WHERE token = ?1").bind(token, started).run().catch(() => {})
-  );
+  if (started - (seen.get(token) || 0) >= SEEN_INTERVAL_MS) {
+    seen.set(token, started);
+    ctx.waitUntil(
+      env.DB.prepare("UPDATE devices SET last_seen_at = ?2 WHERE token = ?1").bind(token, started).run().catch(() => {})
+    );
+  }
 
   return dnsResponse(body, ttl);
 }
@@ -259,13 +279,10 @@ async function handleState(request, env) {
   const { settings } = await loadState(env);
   const now = Date.now();
   const since = now - 86400000;
-  const [counts, top, devices, rules, sources] = await Promise.all([
-    env.DB.prepare(
-      "SELECT action, COUNT(*) AS total FROM queries WHERE at >= ?1 GROUP BY action"
-    ).bind(since).all(),
-    env.DB.prepare(
-      "SELECT name, action, COUNT(*) AS total FROM queries WHERE at >= ?1 GROUP BY name, action ORDER BY total DESC LIMIT 20"
-    ).bind(since).all(),
+  const [counts, devices, rules, sources] = await Promise.all([
+    env.DB.prepare("SELECT action, SUM(total) AS total FROM counters WHERE hour >= ?1 GROUP BY action")
+      .bind(Math.floor(since / HOUR_MS))
+      .all(),
     env.DB.prepare("SELECT token, name, created_at, last_seen_at FROM devices ORDER BY created_at").all(),
     env.DB.prepare("SELECT COUNT(*) AS total FROM rules").first(),
     listSources(env)
@@ -282,7 +299,6 @@ async function handleState(request, env) {
       bundled: bundledSize()
     },
     today: totals,
-    top: top.results || [],
     devices: devices.results || [],
     customRules: rules?.total || 0,
     host: new URL(request.url).host
@@ -346,6 +362,17 @@ async function handleRules(request, env) {
   return json({ ok: true });
 }
 
+async function handleTop(request, env) {
+  if (topCache.rows && Date.now() - topCache.at < TOP_TTL_MS) return json({ top: topCache.rows });
+  const rows = await env.DB.prepare(
+    "SELECT name, action, COUNT(*) AS total FROM queries WHERE at >= ?1 GROUP BY name, action ORDER BY total DESC LIMIT 20"
+  )
+    .bind(Date.now() - 86400000)
+    .all();
+  topCache = { at: Date.now(), rows: rows.results || [] };
+  return json({ top: topCache.rows });
+}
+
 const listSources = (env) =>
   env.DB.prepare("SELECT url, name FROM sources ORDER BY created_at, url").all();
 
@@ -383,8 +410,9 @@ async function handleLog(request, env) {
   const action = url.searchParams.get("action");
   const query = (url.searchParams.get("q") || "").trim().toLowerCase();
   const token = url.searchParams.get("token");
+  const { settings } = await loadState(env);
   const clauses = ["at >= ?1"];
-  const binds = [Date.now() - 86400000 * 7];
+  const binds = [Date.now() - 86400000 * settings.logDays];
   if (action === "block" || action === "allow" || action === "error") {
     clauses.push(`action = ?${binds.length + 1}`);
     binds.push(action);
@@ -487,6 +515,7 @@ const API = {
   "/api/settings": { method: "POST", handler: handleSettings },
   "/api/rules": { method: "ANY", handler: handleRules },
   "/api/log": { method: "GET", handler: handleLog },
+  "/api/top": { method: "GET", handler: handleTop },
   "/api/devices": { method: "POST", handler: handleDevices },
   "/api/password": { method: "POST", handler: handlePassword },
   "/api/sources": { method: "POST", handler: handleSources }
@@ -549,7 +578,10 @@ export default {
         env.DB.prepare("DELETE FROM queries WHERE at < ?1").bind(
           controller.scheduledTime - settings.logDays * 86400000
         ),
-        env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS)
+        env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS),
+        env.DB.prepare("DELETE FROM counters WHERE hour < ?1").bind(
+          Math.floor((controller.scheduledTime - COUNTER_DAYS * 86400000) / HOUR_MS)
+        )
       ]).catch(() => {})
     );
   }

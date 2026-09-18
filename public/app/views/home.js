@@ -1,6 +1,6 @@
 import { el, clear, formatNumber, toast } from "../dom.js";
 import { t, relativeTime, sourceLabel } from "../i18n.js";
-import { currentState, saveSettings } from "../api.js";
+import { currentState, saveSettings, loadTop } from "../api.js";
 import { navigate } from "../router.js";
 
 function masterSwitch(enabled) {
@@ -83,25 +83,33 @@ export function renderHome(container) {
     ])
   );
 
-  const top = state.top || [];
   const card = el("div", { class: "card" }, [el("h2", { text: t("topDomains") })]);
-  if (top.length === 0) {
-    card.append(el("div", { class: "empty", text: t("noActivity") }));
-  } else {
-    const list_ = el("div", { class: "list" });
-    for (const row of top.slice(0, 12)) {
-      list_.append(
-        el("div", { class: "list-item" }, [
-          el("span", { class: "grow" }, [
-            el("div", { style: row.action === "block" ? "color:var(--danger)" : "", text: row.name }),
-            el("div", { class: "tiny", text: sourceLabel(row.action === "block" ? "list" : "none") })
-          ]),
-          el("span", { class: "num tiny", text: String(row.total) })
-        ])
-      );
-    }
-    card.append(list_);
-  }
+  const rows = el("div", { class: "list" });
+  rows.append(el("div", { class: "empty", text: t("statusLoading") }));
+  card.append(rows);
   container.append(card);
-  void clear;
+
+  loadTop()
+    .then(({ top }) => {
+      clear(rows);
+      if (top.length === 0) {
+        rows.append(el("div", { class: "empty", text: t("noActivity") }));
+        return;
+      }
+      for (const row of top.slice(0, 12)) {
+        rows.append(
+          el("div", { class: "list-item" }, [
+            el("span", { class: "grow" }, [
+              el("div", { style: row.action === "block" ? "color:var(--danger)" : "", text: row.name }),
+              el("div", { class: "tiny", text: sourceLabel(row.action === "block" ? "list" : "none") })
+            ]),
+            el("span", { class: "num tiny", text: String(row.total) })
+          ])
+        );
+      }
+    })
+    .catch(() => {
+      clear(rows);
+      rows.append(el("div", { class: "empty", text: t("requestFailed") }));
+    });
 }

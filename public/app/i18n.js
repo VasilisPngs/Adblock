@@ -56,8 +56,8 @@ const STRINGS = {
   blockingOn: ["Everything on the lists is blocked.", "Μπλοκάρεται ό,τι υπάρχει στις λίστες."],
   blockingOff: ["Every request passes through untouched.", "Κάθε αίτημα περνά ανέπαφο."],
 
-  blockedToday: ["Blocked today", "Μπλοκαρίστηκαν σήμερα"],
-  allowedToday: ["Allowed today", "Πέρασαν σήμερα"],
+  blockedToday: ["Blocked, 24 h", "Μπλοκαρίστηκαν, 24 ώρες"],
+  allowedToday: ["Allowed, 24 h", "Πέρασαν, 24 ώρες"],
   blockRate: ["Blocked share", "Ποσοστό μπλοκαρίσματος"],
   errorsToday: ["Failures", "Αποτυχίες"],
 
@@ -65,7 +65,7 @@ const STRINGS = {
   listBuilt: ["Built {when}", "Χτίστηκε {when}"],
   customRules: ["{count} of your own rules", "{count} δικοί σου κανόνες"],
 
-  topDomains: ["Most asked today", "Τα πιο ζητημένα σήμερα"],
+  topDomains: ["Most asked, 24 hours", "Τα πιο ζητημένα, 24 ώρες"],
   noActivity: ["No queries yet.", "Κανένα ερώτημα ακόμα."],
 
   logTitle: ["Activity", "Κινήσεις"],

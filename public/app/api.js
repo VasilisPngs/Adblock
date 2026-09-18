@@ -75,6 +75,10 @@ export async function removeSource(url) {
   await refresh();
 }
 
+export function loadTop() {
+  return call("/api/top");
+}
+
 export function loadRules() {
   return call("/api/rules");
 }
