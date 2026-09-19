@@ -150,6 +150,20 @@ export function cnameTargets(message) {
   return targets;
 }
 
+export function decrementTtl(message, seconds) {
+  if (seconds <= 0) return message;
+  walkAnswers(message, (type, offset, view) => {
+    const ttl = view.getUint32(offset + 4);
+    view.setUint32(offset + 4, ttl > seconds ? ttl - seconds : 1);
+  });
+  return message;
+}
+
+export function setTtl(message, ttl) {
+  walkAnswers(message, (type, offset, view) => view.setUint32(offset + 4, ttl));
+  return message;
+}
+
 export function boostTtl(message, floor) {
   walkAnswers(message, (type, offset, view) => {
     if (view.getUint32(offset + 4) < floor) view.setUint32(offset + 4, floor);

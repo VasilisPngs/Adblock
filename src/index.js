@@ -6,6 +6,8 @@ import {
   minimumTtl,
   cnameTargets,
   boostTtl,
+  decrementTtl,
+  setTtl,
   QUERY_TYPES
 } from "./dns.js";
 import { decide } from "./blocklist.js";
@@ -21,7 +23,7 @@ import {
 } from "./auth.js";
 import meta from "./blocklist-meta.json";
 
-const CACHE_TTL_MS = 20000;
+const CACHE_TTL_MS = 60000;
 const BLOCK_TTL = 300;
 const TTL_FLOOR = 300;
 const TTL_CEILING = 3600;
@@ -33,6 +35,51 @@ const HOUR_MS = 3600000;
 const SEEN_INTERVAL_MS = 300000;
 const TOP_TTL_MS = 300000;
 const PRUNE_LIMIT = 5000;
+
+const ANSWER_CACHE_MAX = 4000;
+const STALE_GRACE_MS = 60000;
+const STALE_TTL = 30;
+
+const answers = new Map();
+const inflight = new Map();
+
+const ttlOf = (body) => Math.min(Math.max(minimumTtl(body) || 0, TTL_FLOOR), TTL_CEILING);
+
+function cacheKey(question) {
+  return `${question.name}|${question.type}|${question.class}`;
+}
+
+function remember(key, body, ttl) {
+  if (answers.size >= ANSWER_CACHE_MAX) answers.delete(answers.keys().next().value);
+  answers.delete(key);
+  answers.set(key, { body, storedAt: Date.now(), expires: Date.now() + ttl * 1000 });
+}
+
+function replay(entry, message, question, age) {
+  const body = new Uint8Array(entry.body);
+  body[0] = message[0];
+  body[1] = message[1];
+  body.set(message.subarray(12, question.end), 12);
+  return age === null ? setTtl(body, STALE_TTL) : decrementTtl(body, age);
+}
+
+function fetchUpstream(key, resolvers, message) {
+  const pending = inflight.get(key);
+  if (pending) return pending;
+  const attempt = (async () => {
+    let failure = "no_resolver";
+    for (const resolver of resolvers) {
+      try {
+        return { body: await resolve(resolver, message), failure: null };
+      } catch (error) {
+        failure = String(error && error.message).slice(0, 60);
+      }
+    }
+    return { body: null, failure };
+  })().finally(() => inflight.delete(key));
+  inflight.set(key, attempt);
+  return attempt;
+}
 
 const COUNTER_FLUSH_MS = 60000;
 const LOG_MEMORY = 20000;
@@ -125,6 +172,7 @@ async function loadState(env) {
 
 function invalidate() {
   cache = { at: 0, settings: null, rules: null, tokens: null, auth: null };
+  answers.clear();
 }
 
 async function readMessage(request, url) {
@@ -172,20 +220,30 @@ async function handleDns(request, env, ctx, url, token) {
     body = blockedResponse(message, question, settings.blockMode, BLOCK_TTL);
   } else {
     const resolvers = settings.resolvers.map(parseResolver).filter(Boolean);
+    const key = cacheKey(question);
+    const entry = answers.get(key);
+
     if (resolvers.length === 0) {
       failure = "no_resolver";
       body = servfail(message);
       ttl = 0;
+    } else if (entry && entry.body.length >= question.end && started < entry.expires) {
+      body = replay(entry, message, question, Math.floor((started - entry.storedAt) / 1000));
+      ttl = Math.max(1, Math.ceil((entry.expires - started) / 1000));
+      verdict.source = "cache";
+    } else if (entry && entry.body.length >= question.end && started < entry.expires + STALE_GRACE_MS) {
+      body = replay(entry, message, question, null);
+      ttl = STALE_TTL;
+      verdict.source = "stale";
+      ctx.waitUntil(
+        fetchUpstream(key, resolvers, message).then((fresh) => {
+          if (fresh.body) remember(key, boostTtl(fresh.body, TTL_FLOOR), ttlOf(fresh.body));
+        })
+      );
     } else {
-      for (const resolver of resolvers) {
-        try {
-          body = await resolve(resolver, message);
-          failure = null;
-          break;
-        } catch (error) {
-          failure = String(error && error.message).slice(0, 60);
-        }
-      }
+      const fresh = await fetchUpstream(key, resolvers, message);
+      failure = fresh.failure;
+      body = fresh.body;
       if (!body) {
         body = servfail(message);
         ttl = 0;
@@ -201,7 +259,8 @@ async function handleDns(request, env, ctx, url, token) {
           ttl = BLOCK_TTL;
         } else {
           boostTtl(body, TTL_FLOOR);
-          ttl = Math.min(Math.max(minimumTtl(body) || 0, TTL_FLOOR), TTL_CEILING);
+          ttl = ttlOf(body);
+          remember(key, new Uint8Array(body), ttl);
         }
       }
     }

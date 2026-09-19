@@ -79,6 +79,8 @@ const STRINGS = {
   ruleRemoved: ["Rule removed", "Ο κανόνας αφαιρέθηκε"],
   viaList: ["List", "Λίστα"],
   viaCname: ["Hidden behind a CNAME", "Κρυμμένο πίσω από CNAME"],
+  viaCache: ["From cache", "Από τη μνήμη"],
+  viaStale: ["From cache, refreshing", "Από τη μνήμη, ανανεώνεται"],
   viaCustom: ["Your rule", "Δικός σου κανόνας"],
   viaAllow: ["Your rule", "Δικός σου κανόνας"],
   viaNone: ["Passed", "Πέρασε"],
@@ -223,6 +225,6 @@ export function relativeTime(value) {
 }
 
 export function sourceLabel(source) {
-  const map = { list: "viaList", custom: "viaCustom", allow: "viaAllow", none: "viaNone", off: "viaOff", cname: "viaCname" };
+  const map = { list: "viaList", custom: "viaCustom", allow: "viaAllow", none: "viaNone", off: "viaOff", cname: "viaCname", cache: "viaCache", stale: "viaStale" };
   return map[source] ? t(map[source]) : source;
 }
