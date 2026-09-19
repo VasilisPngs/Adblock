@@ -24,8 +24,39 @@ const TOP_TTL_MS = 300000;
 const COUNTER_DAYS = 30;
 const PRUNE_LIMIT = 5000;
 
+const COUNTER_FLUSH_MS = 60000;
+const LOG_MEMORY = 20000;
+
 const seen = new Map();
+const logged = new Map();
+const pendingCounters = new Map();
+let countersFlushedAt = 0;
 let topCache = { at: 0, rows: null };
+
+function countQuery(hour, action) {
+  const key = `${hour}:${action}`;
+  pendingCounters.set(key, (pendingCounters.get(key) || 0) + 1);
+}
+
+function flushCounters(env) {
+  if (pendingCounters.size === 0) return null;
+  const statements = [...pendingCounters].map(([key, total]) => {
+    const split = key.indexOf(":");
+    return env.DB.prepare(
+      "INSERT INTO counters (hour, action, total) VALUES (?1, ?2, ?3) ON CONFLICT(hour, action) DO UPDATE SET total = total + ?3"
+    ).bind(Number(key.slice(0, split)), key.slice(split + 1), total);
+  });
+  pendingCounters.clear();
+  countersFlushedAt = Date.now();
+  return env.DB.batch(statements).catch(() => {});
+}
+
+function firstThisHour(key, hour) {
+  if (logged.get(key) === hour) return false;
+  if (logged.size >= LOG_MEMORY) logged.clear();
+  logged.set(key, hour);
+  return true;
+}
 
 let cache = { at: 0, settings: null, rules: null, tokens: null, auth: null };
 
@@ -147,22 +178,22 @@ async function handleDns(request, env, ctx, url, token) {
   }
 
   const action = failure ? "error" : verdict.action;
-  ctx.waitUntil(
-    env.DB.prepare(
-      "INSERT INTO counters (hour, action, total) VALUES (?1, ?2, 1) ON CONFLICT(hour, action) DO UPDATE SET total = total + 1"
-    )
-      .bind(Math.floor(started / HOUR_MS), action)
-      .run()
-      .catch(() => {})
-  );
+  const hour = Math.floor(started / HOUR_MS);
+  const type = QUERY_TYPES[question.type] || String(question.type);
 
-  if (settings.logEnabled) {
+  countQuery(hour, action);
+  if (started - countersFlushedAt >= COUNTER_FLUSH_MS) {
+    const flush = flushCounters(env);
+    if (flush) ctx.waitUntil(flush);
+  }
+
+  if (settings.logEnabled && firstThisHour(`${token}|${question.name}|${type}|${action}`, hour)) {
     ctx.waitUntil(
       logQuery(env, {
         at: started,
         token,
         name: question.name,
-        type: QUERY_TYPES[question.type] || String(question.type),
+        type,
         action,
         source: failure || verdict.source,
         rule: verdict.rule,
@@ -206,10 +237,10 @@ async function attemptsLeft(env, ip) {
 }
 
 const recordFailure = (env, ip) =>
-  env.DB.prepare("INSERT INTO login_attempts (at, ip) VALUES (?1, ?2)").bind(Date.now(), ip).run();
+  env.DB.prepare("INSERT INTO login_attempts (at, ip) VALUES (?1, ?2)").bind(Date.now(), ip).run().catch(() => {});
 
 const clearFailures = (env, ip) =>
-  env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?1").bind(ip).run();
+  env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?1").bind(ip).run().catch(() => {});
 
 async function handleLogin(request, env) {
   const secret = await sessionSecret(env);
@@ -603,6 +634,8 @@ export default {
   async scheduled(controller, env, ctx) {
     const { settings } = await loadState(env);
     await rebuild(env, ctx);
+    const flush = flushCounters(env);
+    if (flush) ctx.waitUntil(flush);
     ctx.waitUntil(
       env.DB.batch([
         env.DB.prepare(
