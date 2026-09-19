@@ -132,7 +132,6 @@ const DEGRADED = {
   settings: {
     enabled: false,
     resolvers: ["https://cloudflare-dns.com/dns-query"],
-    blockMode: "zero",
     logEnabled: false,
     logDays: 7,
     deployHookSet: false
@@ -162,7 +161,7 @@ async function loadState(env) {
   if (cache.settings && Date.now() - cache.at < CACHE_TTL_MS) return cache;
   const [settings, rules, devices] = await Promise.all([
     env.DB.prepare(
-      "SELECT enabled, resolvers, block_mode, log_enabled, log_days, password_hash, setup_code, deploy_hook FROM settings WHERE id = 1"
+      "SELECT enabled, resolvers, log_enabled, log_days, password_hash, setup_code, deploy_hook FROM settings WHERE id = 1"
     ).first(),
     env.DB.prepare("SELECT host, action FROM rules").all(),
     env.DB.prepare("SELECT token FROM devices").all()
@@ -175,7 +174,6 @@ async function loadState(env) {
     settings: {
       enabled: Boolean(settings?.enabled),
       resolvers: JSON.parse(settings?.resolvers || "[]"),
-      blockMode: settings?.block_mode || "zero",
       logEnabled: Boolean(settings?.log_enabled),
       logDays: settings?.log_days ?? 7,
       deployHookSet: Boolean(settings?.deploy_hook)
@@ -245,7 +243,7 @@ async function handleDns(request, env, ctx, url, token) {
   let failure = null;
 
   if (verdict.action === "block") {
-    body = blockedResponse(message, question, settings.blockMode, BLOCK_TTL);
+    body = blockedResponse(message, question, BLOCK_TTL);
   } else {
     const resolvers = settings.resolvers.map(parseResolver).filter(Boolean);
     const key = cacheKey(question);
@@ -283,7 +281,7 @@ async function handleDns(request, env, ctx, url, token) {
           verdict.action = "block";
           verdict.rule = cloaked.rule;
           verdict.source = "cname";
-          body = blockedResponse(message, question, settings.blockMode, BLOCK_TTL);
+          body = blockedResponse(message, question, BLOCK_TTL);
           ttl = BLOCK_TTL;
         } else {
           boostTtl(body, TTL_FLOOR);
@@ -460,7 +458,6 @@ async function handleSettings(request, env) {
   if (cloudflareTcp.length > 0) return json({ error: "cloudflare_ip_needs_doh", detail: cloudflareTcp }, 400);
 
   const enabled = payload.enabled === undefined ? current.enabled : Boolean(payload.enabled);
-  const blockMode = payload.blockMode === "nxdomain" || payload.blockMode === "zero" ? payload.blockMode : current.blockMode;
   const logEnabled = payload.logEnabled === undefined ? current.logEnabled : Boolean(payload.logEnabled);
   const logDays = Number.isInteger(payload.logDays) ? Math.max(1, Math.min(90, payload.logDays)) : current.logDays;
 
@@ -471,9 +468,9 @@ async function handleSettings(request, env) {
   }
 
   await env.DB.prepare(
-    "UPDATE settings SET enabled = ?1, resolvers = ?2, block_mode = ?3, log_enabled = ?4, log_days = ?5, updated_at = ?6 WHERE id = 1"
+    "UPDATE settings SET enabled = ?1, resolvers = ?2, log_enabled = ?3, log_days = ?4, updated_at = ?5 WHERE id = 1"
   )
-    .bind(enabled ? 1 : 0, JSON.stringify(resolvers), blockMode, logEnabled ? 1 : 0, logDays, Date.now())
+    .bind(enabled ? 1 : 0, JSON.stringify(resolvers), logEnabled ? 1 : 0, logDays, Date.now())
     .run();
   invalidate();
   return json({ ok: true, settings: (await loadState(env)).settings });

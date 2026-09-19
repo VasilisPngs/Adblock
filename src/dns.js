@@ -1,7 +1,8 @@
 const TYPE_A = 1;
 const TYPE_AAAA = 28;
 const TYPE_CNAME = 5;
-const RCODE_NXDOMAIN = 3;
+const TYPE_SOA = 6;
+const SOA_RDLENGTH = 24;
 
 export const QUERY_TYPES = {
   1: "A",
@@ -46,34 +47,45 @@ export function readQuestion(message) {
   };
 }
 
-export function blockedResponse(message, question, mode, ttl) {
+export function blockedResponse(message, question, ttl) {
   const questionBytes = message.subarray(12, question.end);
-  const answerable = mode === "zero" && (question.type === TYPE_A || question.type === TYPE_AAAA);
-  const address = question.type === TYPE_A ? 4 : 16;
-  const answerLength = answerable ? questionBytes.length - 4 + 10 + address : 0;
-  const response = new Uint8Array(12 + questionBytes.length + answerLength);
+  const nameLength = questionBytes.length - 4;
+  const address = question.type === TYPE_A ? 4 : question.type === TYPE_AAAA ? 16 : 0;
+  const extra = address > 0 ? nameLength + 10 + address : 12 + SOA_RDLENGTH;
+  const response = new Uint8Array(12 + questionBytes.length + extra);
   const view = new DataView(response.buffer);
 
   response.set(message.subarray(0, 2), 0);
-  const recursionDesired = message[2] & 0x01;
-  response[2] = 0x80 | recursionDesired;
-  response[3] = answerable ? 0x80 : 0x80 | RCODE_NXDOMAIN;
+  response[2] = 0x80 | (message[2] & 0x01);
+  response[3] = 0x80;
   view.setUint16(4, 1);
-  view.setUint16(6, answerable ? 1 : 0);
-  view.setUint16(8, 0);
+  view.setUint16(6, address > 0 ? 1 : 0);
+  view.setUint16(8, address > 0 ? 0 : 1);
   view.setUint16(10, 0);
   response.set(questionBytes, 12);
 
-  if (answerable) {
-    let offset = 12 + questionBytes.length;
-    response.set(questionBytes.subarray(0, questionBytes.length - 4), offset);
-    offset += questionBytes.length - 4;
-    view.setUint16(offset, question.type);
-    view.setUint16(offset + 2, question.class);
-    view.setUint32(offset + 4, ttl);
-    view.setUint16(offset + 8, address);
+  const offset = 12 + questionBytes.length;
+  if (address > 0) {
+    response.set(questionBytes.subarray(0, nameLength), offset);
+    view.setUint16(offset + nameLength, question.type);
+    view.setUint16(offset + nameLength + 2, question.class);
+    view.setUint32(offset + nameLength + 4, ttl);
+    view.setUint16(offset + nameLength + 8, address);
+    return response;
   }
 
+  view.setUint16(offset, 0xc00c);
+  view.setUint16(offset + 2, TYPE_SOA);
+  view.setUint16(offset + 4, question.class);
+  view.setUint32(offset + 6, ttl);
+  view.setUint16(offset + 10, SOA_RDLENGTH);
+  view.setUint16(offset + 12, 0xc00c);
+  view.setUint16(offset + 14, 0xc00c);
+  view.setUint32(offset + 16, 1);
+  view.setUint32(offset + 20, 3600);
+  view.setUint32(offset + 24, 600);
+  view.setUint32(offset + 28, 86400);
+  view.setUint32(offset + 32, ttl);
   return response;
 }
 

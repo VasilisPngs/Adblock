@@ -146,26 +146,6 @@ export function renderSettings(container) {
 
   container.append(
     el("div", { class: "card" }, [
-      field(
-        t("blockAnswer"),
-        el(
-          "select",
-          {
-            onchange: async (event) => {
-              try {
-                await saveSettings({ blockMode: event.target.value });
-                toast(t("saved"));
-              } catch {
-                toast(t("requestFailed"));
-              }
-            }
-          },
-          [
-            el("option", { value: "zero", text: t("answerZero"), selected: settings.blockMode === "zero" }),
-            el("option", { value: "nxdomain", text: t("answerNxdomain"), selected: settings.blockMode === "nxdomain" })
-          ]
-        )
-      ),
       el("div", { class: "switch boxed" }, [
         el("span", { class: "grow", text: t("logging") }),
         el(
