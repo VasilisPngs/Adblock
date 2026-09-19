@@ -68,7 +68,7 @@ on a DNS query.
 
 | Device | How |
 | --- | --- |
-| iPhone / iPad / Mac | Install the generated `.mobileconfig`. System-wide, works on mobile data. |
+| iPhone / iPad / Mac | Install the generated `.mobileconfig`. System-wide, works on mobile data. It excludes `captive.apple.com` and `3gppnetwork.org` from encrypted DNS so hotel and airport sign-in pages still appear and Wi-Fi calling keeps working, and its identifiers are derived from the device token, so downloading it again replaces the profile instead of adding a second one. |
 | Windows 11 | `netsh dns add encryption server=<ip> dohtemplate=<url> autoupgrade=yes udpfallback=no`, then set the adapter's DNS to that IP. |
 | Android | Private DNS only speaks DoT for custom hostnames, so it cannot use this endpoint. Use any DoH client app and paste the URL. |
 | Android TV, consoles, routers | Not supported: they need plain DNS on port 53, which Workers cannot serve. |

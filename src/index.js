@@ -594,6 +594,17 @@ async function handleDevices(request, env) {
 function mobileconfig(host, token, name) {
   const endpoint = `https://${host}/dns-query/${token}`;
   const identifier = `gr.adblock.${token.slice(0, 12)}`;
+  const uuid = [
+    token.slice(0, 8),
+    token.slice(8, 12),
+    token.slice(12, 16),
+    token.slice(16, 20),
+    token.slice(20, 32)
+  ]
+    .join("-")
+    .toUpperCase();
+  const escape = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const label = escape(name);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -608,30 +619,61 @@ function mobileconfig(host, token, name) {
         <key>ServerURL</key>
         <string>${endpoint}</string>
       </dict>
+      <key>OnDemandRules</key>
+      <array>
+        <dict>
+          <key>Action</key>
+          <string>EvaluateConnection</string>
+          <key>ActionParameters</key>
+          <array>
+            <dict>
+              <key>DomainAction</key>
+              <string>NeverConnect</string>
+              <key>Domains</key>
+              <array>
+                <string>captive.apple.com</string>
+                <string>3gppnetwork.org</string>
+              </array>
+            </dict>
+          </array>
+        </dict>
+        <dict>
+          <key>Action</key>
+          <string>Connect</string>
+        </dict>
+      </array>
       <key>PayloadDescription</key>
-      <string>Encrypted DNS for ${name}</string>
+      <string>Encrypted DNS for ${label}</string>
       <key>PayloadDisplayName</key>
-      <string>${name}</string>
+      <string>${label}</string>
       <key>PayloadIdentifier</key>
-      <string>${identifier}.dns</string>
+      <string>${identifier}.dnsSettings.managed</string>
+      <key>PayloadOrganization</key>
+      <string>Adblock</string>
       <key>PayloadType</key>
       <string>com.apple.dnsSettings.managed</string>
       <key>PayloadUUID</key>
-      <string>${crypto.randomUUID().toUpperCase()}</string>
+      <string>${uuid}.dnsSettings.managed</string>
       <key>PayloadVersion</key>
       <integer>1</integer>
     </dict>
   </array>
+  <key>PayloadDescription</key>
+  <string>Sends every DNS query from this device to ${host}, encrypted, on Wi-Fi and on mobile data.</string>
   <key>PayloadDisplayName</key>
-  <string>${host} · ${name}</string>
+  <string>Adblock (${label})</string>
   <key>PayloadIdentifier</key>
   <string>${identifier}</string>
+  <key>PayloadOrganization</key>
+  <string>Adblock</string>
   <key>PayloadRemovalDisallowed</key>
   <false/>
+  <key>PayloadScope</key>
+  <string>System</string>
   <key>PayloadType</key>
   <string>Configuration</string>
   <key>PayloadUUID</key>
-  <string>${crypto.randomUUID().toUpperCase()}</string>
+  <string>${uuid}</string>
   <key>PayloadVersion</key>
   <integer>1</integer>
 </dict>
