@@ -2,8 +2,8 @@
   "endpoint": "https://adblock.vasilispngs.workers.dev/api/sources",
   "sources": [
     {
-      "url": "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt",
-      "name": "AdGuard DNS filter"
+      "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.mini.txt",
+      "name": "HaGeZi's Multi PRO mini (best for browser/mobile ad blockers)"
     }
   ]
 }

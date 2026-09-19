@@ -1,14 +1,14 @@
 {
-  "builtAt": "2026-09-18T08:29:11.120Z",
-  "domains": 179648,
-  "bytes": 3761330,
+  "builtAt": "2026-09-19T08:16:49.329Z",
+  "domains": 53522,
+  "bytes": 1029030,
   "sources": [
     {
-      "name": "AdGuard DNS filter",
-      "url": "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt",
-      "domains": 179653,
-      "exceptions": 11,
-      "skipped": 753
+      "name": "HaGeZi's Multi PRO mini (best for browser/mobile ad blockers)",
+      "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.mini.txt",
+      "domains": 53522,
+      "exceptions": 0,
+      "skipped": 1
     }
   ]
 }
