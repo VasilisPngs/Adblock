@@ -1,5 +1,5 @@
 import { el, clear, formatNumber, toast } from "../dom.js";
-import { t, sourceLabel } from "../i18n.js";
+import { t } from "../i18n.js";
 import { currentState, saveSettings, loadTop } from "../api.js";
 import { navigate } from "../router.js";
 
@@ -89,11 +89,8 @@ export function renderHome(container) {
       for (const row of top.slice(0, 12)) {
         rows.append(
           el("div", { class: "list-item" }, [
-            el("span", { class: "grow" }, [
-              el("div", { style: row.action === "block" ? "color:var(--danger)" : "", text: row.name }),
-              el("div", { class: "tiny", text: sourceLabel(row.action === "block" ? "list" : "none") })
-            ]),
-            el("span", { class: "num tiny", text: String(row.total) })
+            el("span", { class: "grow", style: "color:var(--danger);overflow-wrap:anywhere", text: row.name }),
+            el("span", { class: "num tiny", text: row.total.toLocaleString() })
           ])
         );
       }

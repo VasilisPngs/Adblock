@@ -21,7 +21,6 @@ const LOGIN_ATTEMPTS = 10;
 const HOUR_MS = 3600000;
 const SEEN_INTERVAL_MS = 300000;
 const TOP_TTL_MS = 300000;
-const COUNTER_DAYS = 30;
 const PRUNE_LIMIT = 5000;
 
 const COUNTER_FLUSH_MS = 60000;
@@ -30,23 +29,31 @@ const LOG_MEMORY = 20000;
 const seen = new Map();
 const logged = new Map();
 const pendingCounters = new Map();
+const pendingBlocked = new Map();
 let countersFlushedAt = 0;
 let topCache = { at: 0, rows: null };
 
-function countQuery(hour, action) {
-  const key = `${hour}:${action}`;
-  pendingCounters.set(key, (pendingCounters.get(key) || 0) + 1);
+function countQuery(action, name) {
+  pendingCounters.set(action, (pendingCounters.get(action) || 0) + 1);
+  if (action === "block") pendingBlocked.set(name, (pendingBlocked.get(name) || 0) + 1);
 }
 
 function flushCounters(env) {
-  if (pendingCounters.size === 0) return null;
-  const statements = [...pendingCounters].map(([key, total]) => {
-    const split = key.indexOf(":");
-    return env.DB.prepare(
-      "INSERT INTO counters (hour, action, total) VALUES (?1, ?2, ?3) ON CONFLICT(hour, action) DO UPDATE SET total = total + ?3"
-    ).bind(Number(key.slice(0, split)), key.slice(split + 1), total);
-  });
+  if (pendingCounters.size === 0 && pendingBlocked.size === 0) return null;
+  const statements = [
+    ...[...pendingCounters].map(([action, total]) =>
+      env.DB.prepare(
+        "INSERT INTO totals (action, total) VALUES (?1, ?2) ON CONFLICT(action) DO UPDATE SET total = total + ?2"
+      ).bind(action, total)
+    ),
+    ...[...pendingBlocked].map(([name, total]) =>
+      env.DB.prepare(
+        "INSERT INTO blocked_totals (name, total) VALUES (?1, ?2) ON CONFLICT(name) DO UPDATE SET total = total + ?2"
+      ).bind(name, total)
+    )
+  ];
   pendingCounters.clear();
+  pendingBlocked.clear();
   countersFlushedAt = Date.now();
   return env.DB.batch(statements).catch(() => {});
 }
@@ -181,7 +188,7 @@ async function handleDns(request, env, ctx, url, token) {
   const hour = Math.floor(started / HOUR_MS);
   const type = QUERY_TYPES[question.type] || String(question.type);
 
-  countQuery(hour, action);
+  countQuery(action, question.name);
   if (started - countersFlushedAt >= COUNTER_FLUSH_MS) {
     const flush = flushCounters(env);
     if (flush) ctx.waitUntil(flush);
@@ -311,12 +318,8 @@ function handleLogout() {
 
 async function handleState(request, env) {
   const { settings } = await loadState(env);
-  const now = Date.now();
-  const since = now - 86400000;
   const [counts, devices, sources] = await Promise.all([
-    env.DB.prepare("SELECT action, SUM(total) AS total FROM counters WHERE hour >= ?1 GROUP BY action")
-      .bind(Math.floor(since / HOUR_MS))
-      .all(),
+    env.DB.prepare("SELECT action, total FROM totals").all(),
     env.DB.prepare("SELECT token, name, created_at, last_seen_at FROM devices ORDER BY created_at").all(),
     listSources(env)
   ]);
@@ -397,10 +400,8 @@ async function handleRules(request, env) {
 async function handleTop(request, env) {
   if (topCache.rows && Date.now() - topCache.at < TOP_TTL_MS) return json({ top: topCache.rows });
   const rows = await env.DB.prepare(
-    "SELECT name, action, COUNT(*) AS total FROM queries WHERE at >= ?1 GROUP BY name, action ORDER BY total DESC LIMIT 20"
-  )
-    .bind(Date.now() - 86400000)
-    .all();
+    "SELECT name, total FROM blocked_totals ORDER BY total DESC LIMIT 20"
+  ).all();
   topCache = { at: Date.now(), rows: rows.results || [] };
   return json({ top: topCache.rows });
 }
@@ -641,10 +642,7 @@ export default {
         env.DB.prepare(
           `DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY at LIMIT ${PRUNE_LIMIT})`
         ).bind(controller.scheduledTime - settings.logDays * 86400000),
-        env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS),
-        env.DB.prepare("DELETE FROM counters WHERE hour < ?1").bind(
-          Math.floor((controller.scheduledTime - COUNTER_DAYS * 86400000) / HOUR_MS)
-        )
+        env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS)
       ]).catch(() => {})
     );
   }
