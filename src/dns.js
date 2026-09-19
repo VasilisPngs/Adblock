@@ -1,5 +1,6 @@
 const TYPE_A = 1;
 const TYPE_AAAA = 28;
+const TYPE_CNAME = 5;
 const RCODE_NXDOMAIN = 3;
 
 export const QUERY_TYPES = {
@@ -90,6 +91,70 @@ export function base64UrlDecode(value) {
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
   return bytes;
+}
+
+function readName(message, start) {
+  const labels = [];
+  let offset = start;
+  let jumps = 0;
+  while (offset < message.length) {
+    const length = message[offset];
+    if (length === 0) return labels.join(".").toLowerCase();
+    if ((length & 0xc0) === 0xc0) {
+      if (offset + 1 >= message.length || jumps > 8) return "";
+      offset = ((length & 0x3f) << 8) | message[offset + 1];
+      jumps += 1;
+      continue;
+    }
+    if (length > 63 || offset + length + 1 > message.length) return "";
+    labels.push(String.fromCharCode(...message.subarray(offset + 1, offset + 1 + length)));
+    offset += length + 1;
+  }
+  return "";
+}
+
+function walkAnswers(message, visit) {
+  const question = readQuestion(message);
+  if (!question) return;
+  const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
+  const answers = view.getUint16(6);
+  let offset = question.end;
+  for (let index = 0; index < answers && offset + 12 <= message.length; index += 1) {
+    while (offset < message.length) {
+      const length = message[offset];
+      if (length === 0) {
+        offset += 1;
+        break;
+      }
+      if ((length & 0xc0) === 0xc0) {
+        offset += 2;
+        break;
+      }
+      offset += length + 1;
+    }
+    if (offset + 10 > message.length) return;
+    const type = view.getUint16(offset);
+    const length = view.getUint16(offset + 8);
+    visit(type, offset, view);
+    offset += 10 + length;
+  }
+}
+
+export function cnameTargets(message) {
+  const targets = [];
+  walkAnswers(message, (type, offset) => {
+    if (type !== TYPE_CNAME) return;
+    const target = readName(message, offset + 10);
+    if (target) targets.push(target);
+  });
+  return targets;
+}
+
+export function boostTtl(message, floor) {
+  walkAnswers(message, (type, offset, view) => {
+    if (view.getUint32(offset + 4) < floor) view.setUint32(offset + 4, floor);
+  });
+  return message;
 }
 
 export function minimumTtl(message) {

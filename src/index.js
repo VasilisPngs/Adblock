@@ -1,4 +1,13 @@
-import { readQuestion, blockedResponse, servfail, base64UrlDecode, minimumTtl, QUERY_TYPES } from "./dns.js";
+import {
+  readQuestion,
+  blockedResponse,
+  servfail,
+  base64UrlDecode,
+  minimumTtl,
+  cnameTargets,
+  boostTtl,
+  QUERY_TYPES
+} from "./dns.js";
 import { decide } from "./blocklist.js";
 import { parseResolver, resolve, isCloudflareAddress } from "./upstream.js";
 import {
@@ -13,7 +22,9 @@ import {
 import meta from "./blocklist-meta.json";
 
 const CACHE_TTL_MS = 20000;
-const BLOCK_TTL = 60;
+const BLOCK_TTL = 300;
+const TTL_FLOOR = 300;
+const TTL_CEILING = 3600;
 const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
 const LOGIN_WINDOW_MS = 600000;
@@ -179,7 +190,19 @@ async function handleDns(request, env, ctx, url, token) {
         body = servfail(message);
         ttl = 0;
       } else {
-        ttl = Math.min(minimumTtl(body) || 0, 3600);
+        const cloaked = settings.enabled
+          ? cnameTargets(body).map((target) => decide(target, rules)).find((result) => result.action === "block")
+          : null;
+        if (cloaked) {
+          verdict.action = "block";
+          verdict.rule = cloaked.rule;
+          verdict.source = "cname";
+          body = blockedResponse(message, question, settings.blockMode, BLOCK_TTL);
+          ttl = BLOCK_TTL;
+        } else {
+          boostTtl(body, TTL_FLOOR);
+          ttl = Math.min(Math.max(minimumTtl(body) || 0, TTL_FLOOR), TTL_CEILING);
+        }
       }
     }
   }
