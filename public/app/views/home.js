@@ -1,4 +1,4 @@
-import { el, clear, formatNumber, toast } from "../dom.js";
+import { el, clear, toast } from "../dom.js";
 import { t } from "../i18n.js";
 import { currentState, saveSettings, loadTop } from "../api.js";
 import { navigate } from "../router.js";
@@ -38,8 +38,7 @@ export function renderHome(container) {
   const state = currentState();
   if (!state) return;
   const { today, settings } = state;
-  const total = today.allow + today.block;
-  const share = total > 0 ? (today.block / total) * 100 : 0;
+  const total = today.allow + today.block + today.error;
 
   container.append(masterSwitch(settings.enabled));
 
@@ -55,20 +54,12 @@ export function renderHome(container) {
   container.append(
     el("div", { class: "stat-grid" }, [
       el("div", { class: "stat" }, [
+        el("b", { class: "num", text: total.toLocaleString() }),
+        el("span", { class: "tiny", text: t("queriesTotal") })
+      ]),
+      el("div", { class: "stat" }, [
         el("b", { class: "num", text: today.block.toLocaleString() }),
-        el("span", { class: "tiny", text: t("blockedToday") })
-      ]),
-      el("div", { class: "stat" }, [
-        el("b", { class: "num", text: today.allow.toLocaleString() }),
-        el("span", { class: "tiny", text: t("allowedToday") })
-      ]),
-      el("div", { class: "stat" }, [
-        el("b", { class: "num", text: `${formatNumber(share, 1)}%` }),
-        el("span", { class: "tiny", text: t("blockRate") })
-      ]),
-      el("div", { class: "stat" }, [
-        el("b", { class: "num", text: today.error.toLocaleString() }),
-        el("span", { class: "tiny", text: t("errorsToday") })
+        el("span", { class: "tiny", text: t("blockedTotal") })
       ])
     ])
   );

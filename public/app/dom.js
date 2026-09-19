@@ -28,12 +28,6 @@ export function clear(node) {
   return node;
 }
 
-export function formatNumber(value, digits = 1) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "-";
-  const rounded = Math.round(value * 10 ** digits) / 10 ** digits;
-  return String(rounded);
-}
-
 export function toast(message) {
   const host = document.getElementById("toast-host");
   const node = el("div", { class: "toast", text: message });

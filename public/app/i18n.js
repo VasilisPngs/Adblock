@@ -55,10 +55,8 @@ const STRINGS = {
   blockingOn: ["Everything on the lists is blocked.", "Μπλοκάρεται ό,τι υπάρχει στις λίστες."],
   blockingOff: ["Every request passes through untouched.", "Κάθε αίτημα περνά ανέπαφο."],
 
-  blockedToday: ["Blocked", "Μπλοκαρίστηκαν"],
-  allowedToday: ["Allowed", "Πέρασαν"],
-  blockRate: ["Blocked share", "Ποσοστό μπλοκαρίσματος"],
-  errorsToday: ["Failures", "Αποτυχίες"],
+  queriesTotal: ["Queries", "Ερωτήματα"],
+  blockedTotal: ["Blocked queries", "Μπλοκαρισμένα ερωτήματα"],
 
   listBuilt: ["Built {when}", "Χτίστηκε {when}"],
 

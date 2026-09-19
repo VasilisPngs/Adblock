@@ -24,6 +24,7 @@ import {
 import meta from "./blocklist-meta.json";
 
 const CACHE_TTL_MS = 60000;
+const D1_RETRY_MS = 5000;
 const BLOCK_TTL = 300;
 const TTL_FLOOR = 300;
 const TTL_CEILING = 3600;
@@ -124,6 +125,23 @@ function firstThisHour(key, hour) {
 }
 
 let cache = { at: 0, settings: null, rules: null, tokens: null, auth: null };
+let d1DownUntil = 0;
+
+const DEGRADED = {
+  at: 0,
+  settings: {
+    enabled: true,
+    resolvers: ["https://cloudflare-dns.com/dns-query"],
+    blockMode: "zero",
+    logEnabled: false,
+    logDays: 7,
+    deployHookSet: false
+  },
+  deployHook: null,
+  rules: { allow: new Set(), block: new Set() },
+  tokens: null,
+  auth: { hash: null, setupCode: null }
+};
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -170,6 +188,16 @@ async function loadState(env) {
   return cache;
 }
 
+async function dnsState(env) {
+  if (Date.now() < d1DownUntil) return cache.settings ? cache : DEGRADED;
+  try {
+    return await loadState(env);
+  } catch {
+    d1DownUntil = Date.now() + D1_RETRY_MS;
+    return cache.settings ? cache : DEGRADED;
+  }
+}
+
 function invalidate() {
   cache = { at: 0, settings: null, rules: null, tokens: null, auth: null };
   answers.clear();
@@ -202,8 +230,8 @@ function logQuery(env, entry) {
 
 async function handleDns(request, env, ctx, url, token) {
   const started = Date.now();
-  const { settings, rules, tokens } = await loadState(env);
-  if (!tokens.has(token)) return json({ error: "unknown_device" }, 403);
+  const { settings, rules, tokens } = await dnsState(env);
+  if (tokens && !tokens.has(token)) return json({ error: "unknown_device" }, 403);
 
   const message = await readMessage(request, url);
   if (!message) return json({ error: "bad_request" }, 400);
