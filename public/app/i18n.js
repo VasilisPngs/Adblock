@@ -10,13 +10,13 @@ const STRINGS = {
   statusOn: ["Active", "Ενεργό"],
   statusOff: ["Paused", "Σε παύση"],
   statusLoading: ["Loading", "Φόρτωση"],
-  statusFailed: ["Not reachable", "Χωρίς σύνδεση"],
+  statusFailed: ["Offline", "Χωρίς σύνδεση"],
   statusSignIn: ["Sign in", "Σύνδεση"],
 
   signInTitle: ["Sign in", "Σύνδεση"],
   signInNote: [
-    "The dashboard is private. Your devices keep resolving either way.",
-    "Ο πίνακας είναι ιδιωτικός. Οι συσκευές σου συνεχίζουν να λύνουν DNS κανονικά."
+    "The dashboard is private. Your devices keep resolving DNS either way.",
+    "Ο πίνακας είναι ιδιωτικός. Οι συσκευές σου συνεχίζουν κανονικά."
   ],
   passwordLabel: ["Password", "Κωδικός"],
   wrongPassword: ["Wrong password.", "Λάθος κωδικός."],
@@ -38,8 +38,8 @@ const STRINGS = {
   setupSubmit: ["Set the password", "Όρισε τον κωδικό"],
   wrongCode: ["Wrong setup code.", "Λάθος κωδικός εγκατάστασης."],
   weakPassword: [
-    "At least {count} characters, and nothing anyone could guess about you.",
-    "Τουλάχιστον {count} χαρακτήρες, και τίποτα που να μαντεύεται για σένα."
+    "At least {count} characters, and nothing easy to guess.",
+    "Τουλάχιστον {count} χαρακτήρες, και τίποτα που μαντεύεται εύκολα."
   ],
   passwordTitle: ["Dashboard password", "Κωδικός πίνακα"],
   currentPassword: ["Current password", "Τρέχων κωδικός"],
@@ -53,7 +53,7 @@ const STRINGS = {
 
   blockingTitle: ["Blocking", "Μπλοκάρισμα"],
   blockingOn: ["Everything on the lists is blocked.", "Μπλοκάρεται ό,τι υπάρχει στις λίστες."],
-  blockingOff: ["Every request passes through untouched.", "Κάθε αίτημα περνά ανέπαφο."],
+  blockingOff: ["Every request passes through unfiltered.", "Όλα τα αιτήματα περνούν χωρίς φίλτρο."],
 
   queriesTotal: ["Queries", "Ερωτήματα"],
   blockedTotal: ["Blocked queries", "Μπλοκαρισμένα ερωτήματα"],
@@ -86,17 +86,17 @@ const STRINGS = {
   viaNoResolver: ["No resolver set", "Δεν έχει οριστεί resolver"],
 
   protectionTitle: ["Protection", "Προστασία"],
-  noSources: ["No list is set, so only your own rules apply.", "Καμία λίστα, άρα ισχύουν μόνο οι δικοί σου κανόνες."],
+  noSources: ["No list is set, so only your own rules apply.", "Δεν έχει οριστεί λίστα, οπότε ισχύουν μόνο οι δικοί σου κανόνες."],
   sourceUrl: ["https://… list URL", "https://… URL λίστας"],
-  sourceName: ["Name, or leave it to the list", "Όνομα, ή άσ'το στη λίστα"],
+  sourceName: ["Name, or leave it blank", "Όνομα, ή άφησέ το κενό"],
   addSource: ["Add list", "Πρόσθεσε λίστα"],
-  sourcePending: ["Applies on the next nightly build", "Ισχύει στο επόμενο νυχτερινό build"],
+  sourcePending: ["Applies on the next build", "Θα ισχύσει στο επόμενο build"],
   sourceBuilding: ["Building now", "Χτίζεται τώρα"],
   rebuildTitle: ["Rebuild", "Ξαναχτίσιμο"],
   deployHook: ["Deploy hook URL", "Deploy hook URL"],
   deployHookNote: [
-    "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Once it is saved, changing a list starts a build at once instead of waiting for the nightly one. A build takes two to four minutes, and the list already compiled keeps blocking until it lands.",
-    "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Μόλις αποθηκευτεί, κάθε αλλαγή λίστας ξεκινά build αμέσως αντί να περιμένει το νυχτερινό. Το build θέλει δύο με τέσσερα λεπτά, και μέχρι να βγει συνεχίζει να μπλοκάρει η ήδη χτισμένη λίστα."
+    "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Once it is saved, changing a list starts a build at once instead of waiting for the next scheduled one. A build takes two to four minutes, and the list already compiled keeps blocking until it lands.",
+    "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Μόλις αποθηκευτεί, κάθε αλλαγή λίστας ξεκινά build αμέσως, χωρίς να περιμένει το επόμενο προγραμματισμένο. Το build θέλει δύο με τέσσερα λεπτά, και μέχρι να βγει συνεχίζει να μπλοκάρει η ήδη χτισμένη λίστα."
   ],
   deployHookSaved: ["Deploy hook saved", "Το deploy hook αποθηκεύτηκε"],
   deployHookReady: [
@@ -111,7 +111,7 @@ const STRINGS = {
   sourcesTitle: ["Sources", "Πηγές"],
   sourceDomains: ["{count} domains", "{count} domains"],
   myRules: ["Your rules", "Οι κανόνες σου"],
-  noRules: ["Nothing of your own yet.", "Τίποτα δικό σου ακόμα."],
+  noRules: ["No rules of your own yet.", "Δεν έχεις δικούς σου κανόνες ακόμα."],
   hostPlaceholder: ["domain.com", "domain.com"],
 
   settingsTitle: ["Settings", "Ρυθμίσεις"],
@@ -122,7 +122,7 @@ const STRINGS = {
   ],
   resolverPlaceholder: ["https://… or 1.2.3.4", "https://… ή 1.2.3.4"],
   addResolver: ["Add resolver", "Πρόσθεσε resolver"],
-  logging: ["Keep an activity log", "Κρατά ιστορικό κινήσεων"],
+  logging: ["Keep an activity log", "Καταγραφή κινήσεων"],
   logDays: ["Days kept", "Μέρες διατήρησης"],
   devicesTitle: ["Devices", "Συσκευές"],
   devicesNote: [
@@ -136,10 +136,10 @@ const STRINGS = {
   copied: ["Copied", "Αντιγράφηκε"],
   removeDevice: ["Remove device", "Αφαίρεση συσκευής"],
   removeDeviceBody: [
-    "«{name}» stops resolving through this app.",
+    "\"{name}\" stops resolving through this app.",
     "Το «{name}» σταματά να περνά από αυτή την εφαρμογή."
   ],
-  neverSeen: ["Never used", "Δεν χρησιμοποιήθηκε"],
+  neverSeen: ["Never used", "Δεν χρησιμοποιήθηκε ποτέ"],
   lastSeen: ["Last query {when}", "Τελευταίο ερώτημα {when}"],
   theme: ["Theme", "Θέμα"],
   themeSystem: ["System", "Σύστημα"],
@@ -151,7 +151,7 @@ const STRINGS = {
   saved: ["Saved", "Αποθηκεύτηκε"],
   remove: ["Remove", "Αφαίρεση"],
   cancel: ["Cancel", "Άκυρο"],
-  requestFailed: ["That did not go through.", "Δεν πέρασε."],
+  requestFailed: ["Something went wrong.", "Κάτι πήγε στραβά."],
   invalidResolver: ["Not a DoH URL or an IP address: {detail}", "Δεν είναι DoH URL ούτε IP: {detail}"],
   cloudflareNeedsDoh: [
     "{detail} belongs to Cloudflare. Workers cannot open TCP to their own network, so give the DoH URL instead.",
@@ -161,9 +161,9 @@ const STRINGS = {
     "No resolver is set, so nothing can be answered.",
     "Δεν έχει οριστεί resolver, άρα τίποτα δεν μπορεί να απαντηθεί."
   ],
-  justNow: ["just now", "τώρα"],
-  minutesAgo: ["{count} min ago", "πριν {count} λεπτά"],
-  hoursAgo: ["{count} h ago", "πριν {count} ώρες"],
+  justNow: ["just now", "μόλις τώρα"],
+  minutesAgo: ["{count} minutes ago", "πριν {count} λεπτά"],
+  hoursAgo: ["{count} hours ago", "πριν {count} ώρες"],
   daysAgo: ["{count} days ago", "πριν {count} μέρες"]
 };
 
