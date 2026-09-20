@@ -58,7 +58,7 @@ export function renderHome(container) {
         el("span", { class: "tiny", text: t("queriesTotal") })
       ]),
       el("div", { class: "stat" }, [
-        el("b", { class: "num", text: today.block.toLocaleString() }),
+        el("b", { class: "num", style: "color:var(--danger)", text: today.block.toLocaleString() }),
         el("span", { class: "tiny", text: t("blockedTotal") })
       ])
     ])
