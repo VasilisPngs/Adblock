@@ -613,13 +613,6 @@ async function handleDevices(request, env) {
     invalidate();
     return json({ ok: true });
   }
-  if (payload.action === "platform") {
-    await env.DB.prepare("UPDATE devices SET platform = ?2 WHERE token = ?1")
-      .bind(String(payload.token || ""), payload.platform === "other" ? "other" : "apple")
-      .run();
-    invalidate();
-    return json({ ok: true });
-  }
   const name = String(payload.name || "").trim();
   if (!name) return json({ error: "invalid_name" }, 400);
   const platform = payload.platform === "other" ? "other" : "apple";

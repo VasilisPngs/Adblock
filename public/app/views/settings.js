@@ -1,7 +1,7 @@
 import { el, toast, confirmSheet } from "../dom.js";
 import { t, relativeTime, languages, language, setLanguage } from "../i18n.js";
 import { themeMode, themeModes, setTheme } from "../theme.js";
-import { currentState, saveSettings, addDevice, setDevicePlatform, removeDevice, signOut, changePassword } from "../api.js";
+import { currentState, saveSettings, addDevice, removeDevice, signOut, changePassword } from "../api.js";
 
 function field(label, control) {
   return el("label", { class: "field" }, [el("span", { class: "tiny", text: label }), control]);
@@ -68,24 +68,7 @@ function deviceCard(state) {
             class: "tiny",
             text: device.last_seen_at ? t("lastSeen", { when: relativeTime(device.last_seen_at) }) : t("neverSeen")
           }),
-          el("div", { class: "tiny", style: "overflow-wrap:anywhere;color:var(--accent-text)", text: url }),
-          el(
-            "select",
-            {
-              style: "width:auto;margin-top:8px",
-              onchange: async (event) => {
-                try {
-                  await setDevicePlatform(device.token, event.target.value);
-                } catch {
-                  toast(t("requestFailed"));
-                }
-              }
-            },
-            [
-              el("option", { value: "apple", text: t("platformApple"), selected: device.platform !== "other" }),
-              el("option", { value: "other", text: t("platformOther"), selected: device.platform === "other" })
-            ]
-          )
+          el("div", { class: "tiny", style: "overflow-wrap:anywhere;color:var(--accent-text)", text: url })
         ]),
         el("span", { class: "row wrap", style: "gap:6px;justify-content:flex-end" }, [
           el("button", {

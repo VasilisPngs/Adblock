@@ -98,10 +98,6 @@ export async function addDevice(name, platform) {
   return result.token;
 }
 
-export async function setDevicePlatform(token, platform) {
-  await call("/api/devices", { method: "POST", body: JSON.stringify({ action: "platform", token, platform }) });
-  await refresh();
-}
 
 export async function removeDevice(token) {
   await call("/api/devices", { method: "POST", body: JSON.stringify({ action: "remove", token }) });
