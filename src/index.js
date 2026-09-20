@@ -37,6 +37,7 @@ const SEEN_INTERVAL_MS = 300000;
 const TOP_TTL_MS = 300000;
 const TOP_LIMIT = 10;
 const PRUNE_LIMIT = 5000;
+const ERROR_RETENTION_MS = 30 * 86400000;
 
 const ANSWER_CACHE_MAX = 4000;
 const STALE_GRACE_MS = 60000;
@@ -419,6 +420,36 @@ async function handlePassword(request, env) {
   return signedIn(await issueSession(hash));
 }
 
+const REPORT_WINDOW_MS = 60000;
+const REPORT_LIMIT = 20;
+let reportWindow = 0;
+let reportCount = 0;
+
+async function handleReport(request, env) {
+  const now = Date.now();
+  if (now - reportWindow > REPORT_WINDOW_MS) {
+    reportWindow = now;
+    reportCount = 0;
+  }
+  if (reportCount >= REPORT_LIMIT) return json({ ok: true });
+  reportCount += 1;
+  const payload = await request.json().catch(() => null);
+  const message = payload && typeof payload.message === "string" ? payload.message.trim() : "";
+  if (!message) return json({ ok: true });
+  await env.DB.prepare("INSERT INTO errors (at, kind, message, stack, route, agent) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+    .bind(
+      now,
+      String(payload.kind || "error").slice(0, 20),
+      message.slice(0, 300),
+      String(payload.stack || "").slice(0, 1000) || null,
+      String(payload.route || "").slice(0, 120) || null,
+      (request.headers.get("user-agent") || "").slice(0, 200) || null
+    )
+    .run()
+    .catch(() => {});
+  return json({ ok: true });
+}
+
 function handleLogout() {
   return new Response(JSON.stringify({ ok: true }), {
     headers: {
@@ -739,7 +770,12 @@ const API = {
   "/api/rebuild": { method: "POST", handler: handleRebuild }
 };
 
-const OPEN = { "/api/login": handleLogin, "/api/setup": handleSetup, "/api/logout": () => handleLogout() };
+const OPEN = {
+  "/api/login": handleLogin,
+  "/api/setup": handleSetup,
+  "/api/logout": () => handleLogout(),
+  "/api/report": handleReport
+};
 
 export default {
   async fetch(request, env, ctx) {
@@ -799,7 +835,8 @@ export default {
         env.DB.prepare(
           `DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY at LIMIT ${PRUNE_LIMIT})`
         ).bind(controller.scheduledTime - settings.logDays * 86400000),
-        env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS)
+        env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS),
+        env.DB.prepare("DELETE FROM errors WHERE at < ?1").bind(controller.scheduledTime - ERROR_RETENTION_MS)
       ]).catch(() => {})
     );
   }
