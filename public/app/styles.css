@@ -22,6 +22,7 @@
   --speed: 0.24s;
   --tabbar: 62px;
   --topbar: calc(env(safe-area-inset-top) + 5.25rem);
+  --view-pad-top: 16px;
   --rail: clamp(12rem, 15vw, 20rem);
   --column: clamp(46rem, 44vw, 68rem);
 }
@@ -208,10 +209,34 @@ svg {
   overflow-y: auto;
   overscroll-behavior: contain;
   width: 100%;
-  padding: 16px max(16px, calc((100% - var(--column)) / 2)) 28px;
+  padding: 0 max(16px, calc((100% - var(--column)) / 2)) 28px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.view > * {
+  flex: none;
+}
+
+.view > :first-child {
+  margin-top: var(--view-pad-top);
+}
+
+.list-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: saturate(180%) blur(18px);
+  padding: var(--view-pad-top) 0 12px;
+}
+
+.view > .list-bar:first-child {
+  margin-top: 0;
 }
 
 .view.enter {
@@ -536,6 +561,10 @@ textarea {
   animation: slide-up 0.3s var(--ease);
 }
 
+.sheet > * {
+  flex: none;
+}
+
 @keyframes slide-up {
   from { transform: translateY(14%); opacity: 0.6; }
   to { transform: none; opacity: 1; }
@@ -617,7 +646,8 @@ textarea {
 
   .view {
     margin: 0;
-    padding-block: 20px 60px;
+    --view-pad-top: 20px;
+    padding-block: 0 60px;
     padding-inline: max(calc(var(--rail) + 24px), calc((100% - var(--column)) / 2));
   }
 

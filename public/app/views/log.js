@@ -108,8 +108,10 @@ export function renderLog(container) {
     );
   }
 
-  container.append(el("h1", { text: t("logTitle") }));
-  container.append(chips);
+  const bar = el("div", { class: "list-bar" });
+  container.append(bar);
+  bar.append(el("h1", { text: t("logTitle") }));
+  bar.append(chips);
 
   const controls = el("div", { class: "card tight" }, [
     el("input", {
@@ -140,7 +142,7 @@ export function renderLog(container) {
       )
     );
   }
-  container.append(controls);
+  bar.append(controls);
   container.append(listNode);
   paint();
 }
