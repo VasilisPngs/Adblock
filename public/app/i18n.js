@@ -51,9 +51,9 @@ const STRINGS = {
   ],
   signOut: ["Sign out", "Αποσύνδεση"],
 
-  blockingTitle: ["Blocking", "Μπλοκάρισμα"],
-  blockingOn: ["Everything on the lists is blocked.", "Μπλοκάρεται ό,τι υπάρχει στις λίστες."],
-  blockingOff: ["Every request passes through unfiltered.", "Όλα τα αιτήματα περνούν χωρίς φίλτρο."],
+  protection: ["Protection", "Προστασία"],
+  protectionOn: ["Protection is enabled", "Προστασία ενεργή"],
+  protectionOff: ["Protection is disabled", "Προστασία ανενεργή"],
 
   queriesTotal: ["Queries", "Ερωτήματα"],
   blockedTotal: ["Blocked queries", "Μπλοκαρισμένα ερωτήματα"],
@@ -82,7 +82,7 @@ const STRINGS = {
   viaCustom: ["Blocked by your rule", "Μπλοκαρίστηκε από δικό σου κανόνα"],
   viaAllow: ["Allowed by your rule", "Πέρασε από δικό σου κανόνα"],
   viaNone: ["Allowed", "Πέρασε"],
-  viaOff: ["Blocking paused", "Μπλοκάρισμα σε παύση"],
+  viaOff: ["Protection off", "Προστασία ανενεργή"],
   viaNoResolver: ["No resolver set", "Δεν έχει οριστεί resolver"],
 
   protectionTitle: ["Protection", "Προστασία"],
@@ -122,7 +122,7 @@ const STRINGS = {
   ],
   resolverPlaceholder: ["https://… or 1.2.3.4", "https://… ή 1.2.3.4"],
   addResolver: ["Add resolver", "Προσθήκη resolver"],
-  logging: ["Keep an activity log", "Καταγραφή κινήσεων"],
+  logging: ["Log DNS queries", "Καταγραφή ερωτημάτων DNS"],
   logDays: ["Days kept", "Μέρες διατήρησης"],
   devicesTitle: ["Devices", "Συσκευές"],
   devicesNote: [

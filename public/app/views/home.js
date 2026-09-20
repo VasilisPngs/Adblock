@@ -6,17 +6,14 @@ import { navigate } from "../router.js";
 function masterSwitch(enabled) {
   return el("div", { class: "card tight" }, [
     el("div", { class: "switch" }, [
-      el("div", { class: "grow" }, [
-        el("div", { class: "switch-label", text: t("blockingTitle") }),
-        el("div", { class: "tiny", text: enabled ? t("blockingOn") : t("blockingOff") })
-      ]),
+      el("div", { class: "switch-label grow", text: enabled ? t("protectionOn") : t("protectionOff") }),
       el(
         "button",
         {
           class: "switch-track",
           type: "button",
           "aria-pressed": enabled ? "true" : "false",
-          "aria-label": t("blockingTitle"),
+          "aria-label": t("protection"),
           onclick: async (event) => {
             const track = event.currentTarget;
             track.setAttribute("aria-pressed", enabled ? "false" : "true");
