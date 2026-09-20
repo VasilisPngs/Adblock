@@ -30,8 +30,8 @@ const STRINGS = {
   ],
   setupTitle: ["First run", "Πρώτη εκκίνηση"],
   setupNote: [
-    "Read the setup code from the D1 console with: SELECT setup_code FROM settings;",
-    "Διάβασε τον κωδικό εγκατάστασης από την κονσόλα D1 με: SELECT setup_code FROM settings;"
+    "Cloudflare → Storage & Databases → D1 → adblock → Console, and run: SELECT setup_code FROM settings;",
+    "Cloudflare → Storage & Databases → D1 → adblock → Console, και τρέξε: SELECT setup_code FROM settings;"
   ],
   setupCode: ["Setup code", "Κωδικός εγκατάστασης"],
   newPassword: ["New password", "Νέος κωδικός"],
@@ -95,8 +95,8 @@ const STRINGS = {
   rebuildTitle: ["Rebuild", "Ανανέωση λιστών"],
   deployHook: ["Deploy hook URL", "Deploy hook URL"],
   deployHookNote: [
-    "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Once it is saved, changing a list starts a build at once instead of waiting for the next scheduled one. A build takes two to four minutes, and the list already compiled keeps blocking until it lands.",
-    "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Μόλις αποθηκευτεί, κάθε αλλαγή λίστας ξεκινά build αμέσως, χωρίς να περιμένει το επόμενο προγραμματισμένο. Το build θέλει δύο με τέσσερα λεπτά, και μέχρι να βγει συνεχίζει να μπλοκάρει η ήδη χτισμένη λίστα."
+    "Cloudflare → Worker → Settings → Builds → Deploy Hooks. Once it is saved, changing a list starts a build at once instead of waiting for the next scheduled one, which takes two to four minutes.",
+    "Cloudflare → Worker → Settings → Builds → Deploy Hooks. Μόλις αποθηκευτεί, κάθε αλλαγή λίστας ξεκινά build αμέσως, χωρίς να περιμένει το επόμενο προγραμματισμένο. Το build θέλει δύο με τέσσερα λεπτά."
   ],
   deployHookSaved: ["Deploy hook saved", "Το deploy hook αποθηκεύτηκε"],
   deployHookReady: [
