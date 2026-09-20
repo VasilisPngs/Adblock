@@ -75,14 +75,15 @@ const STRINGS = {
   actionClear: ["Remove rule", "Αφαίρεση κανόνα"],
   ruleAdded: ["Rule saved", "Ο κανόνας αποθηκεύτηκε"],
   ruleRemoved: ["Rule removed", "Ο κανόνας αφαιρέθηκε"],
-  viaList: ["List", "Λίστα"],
-  viaCname: ["Hidden behind a CNAME", "Κρυμμένο πίσω από CNAME"],
-  viaCache: ["From cache", "Από τη μνήμη"],
-  viaStale: ["From cache, refreshing", "Από τη μνήμη, ανανεώνεται"],
-  viaCustom: ["Your rule", "Δικός σου κανόνας"],
-  viaAllow: ["Your rule", "Δικός σου κανόνας"],
-  viaNone: ["Passed", "Πέρασε"],
+  viaList: ["Blocked by the list", "Μπλοκαρίστηκε από τη λίστα"],
+  viaCname: ["Blocked behind a CNAME", "Μπλοκαρίστηκε πίσω από CNAME"],
+  viaCache: ["Allowed, from memory", "Πέρασε από τη μνήμη"],
+  viaStale: ["Allowed, from memory, refreshing", "Πέρασε από τη μνήμη, ανανεώνεται"],
+  viaCustom: ["Blocked by your rule", "Μπλοκαρίστηκε από δικό σου κανόνα"],
+  viaAllow: ["Allowed by your rule", "Πέρασε από δικό σου κανόνα"],
+  viaNone: ["Allowed", "Πέρασε"],
   viaOff: ["Blocking paused", "Μπλοκάρισμα σε παύση"],
+  viaNoResolver: ["No resolver set", "Δεν έχει οριστεί resolver"],
 
   protectionTitle: ["Protection", "Προστασία"],
   noSources: ["No list is set, so only your own rules apply.", "Καμία λίστα, άρα ισχύουν μόνο οι δικοί σου κανόνες."],
@@ -220,6 +221,6 @@ export function relativeTime(value) {
 }
 
 export function sourceLabel(source) {
-  const map = { list: "viaList", custom: "viaCustom", allow: "viaAllow", none: "viaNone", off: "viaOff", cname: "viaCname", cache: "viaCache", stale: "viaStale" };
+  const map = { list: "viaList", custom: "viaCustom", allow: "viaAllow", none: "viaNone", off: "viaOff", cname: "viaCname", cache: "viaCache", stale: "viaStale", no_resolver: "viaNoResolver" };
   return map[source] ? t(map[source]) : source;
 }
