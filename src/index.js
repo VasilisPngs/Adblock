@@ -26,7 +26,7 @@ import meta from "./blocklist-meta.json";
 const CACHE_TTL_MS = 60000;
 const D1_RETRY_MS = 5000;
 const BLOCK_TTL = 300;
-const TTL_FLOOR = 600;
+const TTL_FLOOR = 300;
 const TTL_CEILING = 3600;
 const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
@@ -629,7 +629,7 @@ async function handleLog(request, env) {
     binds.push(token);
   }
   const rows = await env.DB.prepare(
-    `SELECT at, token, name, type, action, source, rule, ms FROM queries WHERE ${clauses.join(" AND ")} ORDER BY at DESC LIMIT ${LOG_LIMIT}`
+    `SELECT at, token, name, type, action, source, rule, ms FROM queries WHERE ${clauses.join(" AND ")} ORDER BY id DESC LIMIT ${LOG_LIMIT}`
   )
     .bind(...binds)
     .all();
@@ -833,7 +833,7 @@ export default {
     ctx.waitUntil(
       env.DB.batch([
         env.DB.prepare(
-          `DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY at LIMIT ${PRUNE_LIMIT})`
+          `DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY id LIMIT ${PRUNE_LIMIT})`
         ).bind(controller.scheduledTime - settings.logDays * 86400000),
         env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS),
         env.DB.prepare("DELETE FROM errors WHERE at < ?1").bind(controller.scheduledTime - ERROR_RETENTION_MS)
