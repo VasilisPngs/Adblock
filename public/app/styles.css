@@ -129,9 +129,11 @@ svg {
 }
 
 .topbar {
-  position: relative;
-  z-index: 20;
-  flex: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -209,7 +211,7 @@ svg {
   overflow-y: auto;
   overscroll-behavior: contain;
   width: 100%;
-  padding: 0 max(16px, calc((100% - var(--column)) / 2)) 28px;
+  padding: var(--topbar) max(16px, calc((100% - var(--column)) / 2)) 28px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -237,6 +239,13 @@ svg {
 
 .view > .list-bar:first-child {
   margin-top: 0;
+}
+
+.list-bar > .card,
+.list-bar .chip:not([aria-pressed="true"]),
+.list-bar input,
+.list-bar select {
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
 }
 
 .view.enter {
@@ -647,7 +656,7 @@ textarea {
   .view {
     margin: 0;
     --view-pad-top: 20px;
-    padding-block: 0 60px;
+    padding-block: var(--topbar) 60px;
     padding-inline: max(calc(var(--rail) + 24px), calc((100% - var(--column)) / 2));
   }
 
