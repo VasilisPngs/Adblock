@@ -1,4 +1,5 @@
 import { el, clear, toast } from "./dom.js";
+import { startShell } from "./shell.js";
 import { t, applyLanguage, i18nEvents } from "./i18n.js";
 import { applyTheme, themeEvents } from "./theme.js";
 import { currentRoute, startRouter } from "./router.js";
@@ -156,6 +157,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 async function boot() {
+  startShell();
   applyLanguage();
   applyTheme();
   apiEvents.addEventListener("changed", () => render());

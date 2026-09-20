@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Adblock",
   "short_name": "Adblock",
   "description": "DNS-level ad and tracker blocking with your own resolver.",
