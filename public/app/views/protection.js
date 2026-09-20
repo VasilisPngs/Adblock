@@ -24,7 +24,7 @@ function sourceCard(state) {
           el("div", { class: "tiny", style: "overflow-wrap:anywhere", text: source.url }),
           el("div", {
             class: "tiny",
-            style: built ? "" : "color:var(--accent)",
+            style: built ? "" : "color:var(--accent-text)",
             text: built
               ? t("sourceDomains", { count: built.domains.toLocaleString() })
               : t(state.settings.deployHookSet ? "sourceBuilding" : "sourcePending")

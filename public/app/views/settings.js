@@ -68,7 +68,7 @@ function deviceCard(state) {
             class: "tiny",
             text: device.last_seen_at ? t("lastSeen", { when: relativeTime(device.last_seen_at) }) : t("neverSeen")
           }),
-          el("div", { class: "tiny", style: "overflow-wrap:anywhere;color:var(--accent)", text: url })
+          el("div", { class: "tiny", style: "overflow-wrap:anywhere;color:var(--accent-text)", text: url })
         ]),
         el("span", { class: "row wrap", style: "gap:6px;justify-content:flex-end" }, [
           el("button", {
