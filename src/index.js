@@ -35,7 +35,7 @@ const LOGIN_ATTEMPTS = 10;
 const HOUR_MS = 3600000;
 const SEEN_INTERVAL_MS = 300000;
 const TOP_TTL_MS = 300000;
-const TOP_LIMIT = 12;
+const TOP_LIMIT = 10;
 const PRUNE_LIMIT = 5000;
 
 const ANSWER_CACHE_MAX = 4000;
@@ -84,6 +84,7 @@ function fetchUpstream(key, resolvers, message) {
 }
 
 const COUNTER_FLUSH_MS = 60000;
+const COUNTER_FLUSH_QUERIES = 25;
 const LOG_MEMORY = 20000;
 
 const seen = new Map();
@@ -91,11 +92,13 @@ const logged = new Map();
 const pendingCounters = new Map();
 const pendingBlocked = new Map();
 let countersFlushedAt = 0;
-let topCache = { at: 0, rows: null, rest: null };
+let pendingQueries = 0;
+let topCache = { at: 0, rows: null };
 
 function countQuery(action, name) {
   pendingCounters.set(action, (pendingCounters.get(action) || 0) + 1);
   if (action === "block") pendingBlocked.set(name, (pendingBlocked.get(name) || 0) + 1);
+  pendingQueries += 1;
 }
 
 function flushCounters(env) {
@@ -114,6 +117,7 @@ function flushCounters(env) {
   ];
   pendingCounters.clear();
   pendingBlocked.clear();
+  pendingQueries = 0;
   countersFlushedAt = Date.now();
   return env.DB.batch(statements).catch(() => {});
 }
@@ -298,7 +302,7 @@ async function handleDns(request, env, ctx, url, token) {
   const type = QUERY_TYPES[question.type] || String(question.type);
 
   countQuery(action, question.name);
-  if (started - countersFlushedAt >= COUNTER_FLUSH_MS) {
+  if (pendingQueries >= COUNTER_FLUSH_QUERIES || started - countersFlushedAt >= COUNTER_FLUSH_MS) {
     const flush = flushCounters(env);
     if (flush) ctx.waitUntil(flush);
   }
@@ -506,17 +510,12 @@ async function handleRules(request, env) {
 }
 
 async function handleTop(request, env) {
-  if (topCache.rows && Date.now() - topCache.at < TOP_TTL_MS) return json({ top: topCache.rows, rest: topCache.rest });
-  const [rows, counted] = await env.DB.batch([
-    env.DB.prepare(`SELECT name, total FROM blocked_totals ORDER BY total DESC LIMIT ${TOP_LIMIT}`),
-    env.DB.prepare("SELECT total FROM totals WHERE action = 'block'")
-  ]);
-  const top = rows.results || [];
-  const shown = top.reduce((sum, row) => sum + row.total, 0);
-  const blocked = ((counted.results || [])[0] || {}).total || 0;
-  const rest = Math.max(0, blocked - shown);
-  topCache = { at: Date.now(), rows: top, rest };
-  return json({ top, rest });
+  if (topCache.rows && Date.now() - topCache.at < TOP_TTL_MS) return json({ top: topCache.rows });
+  const rows = await env.DB.prepare(
+    `SELECT name, total FROM blocked_totals ORDER BY total DESC LIMIT ${TOP_LIMIT}`
+  ).all();
+  topCache = { at: Date.now(), rows: rows.results || [] };
+  return json({ top: topCache.rows });
 }
 
 const listSources = (env) =>
