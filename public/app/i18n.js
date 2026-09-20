@@ -35,7 +35,7 @@ const STRINGS = {
   ],
   setupCode: ["Setup code", "Κωδικός εγκατάστασης"],
   newPassword: ["New password", "Νέος κωδικός"],
-  setupSubmit: ["Set the password", "Όρισε τον κωδικό"],
+  setupSubmit: ["Set the password", "Ορισμός κωδικού"],
   wrongCode: ["Wrong setup code.", "Λάθος κωδικός εγκατάστασης."],
   weakPassword: [
     "At least {count} characters, and nothing easy to guess.",
@@ -43,7 +43,7 @@ const STRINGS = {
   ],
   passwordTitle: ["Dashboard password", "Κωδικός πίνακα"],
   currentPassword: ["Current password", "Τρέχων κωδικός"],
-  changePassword: ["Change password", "Άλλαξε κωδικό"],
+  changePassword: ["Change password", "Αλλαγή κωδικού"],
   passwordChanged: ["Password changed. Other devices are signed out.", "Ο κωδικός άλλαξε. Οι άλλες συσκευές αποσυνδέθηκαν."],
   managedBySecret: [
     "The password comes from the DASHBOARD_PASSWORD secret, so change it there.",
@@ -70,8 +70,8 @@ const STRINGS = {
   filterErrors: ["Failures", "Αποτυχίες"],
   searchDomains: ["Search domains", "Αναζήτηση domain"],
   allDevices: ["All devices", "Όλες οι συσκευές"],
-  actionAllow: ["Allow", "Επιτρέπω"],
-  actionBlock: ["Block", "Μπλοκάρω"],
+  actionAllow: ["Allow", "Εξαίρεση"],
+  actionBlock: ["Block", "Μπλοκάρισμα"],
   actionClear: ["Remove rule", "Αφαίρεση κανόνα"],
   ruleAdded: ["Rule saved", "Ο κανόνας αποθηκεύτηκε"],
   ruleRemoved: ["Rule removed", "Ο κανόνας αφαιρέθηκε"],
@@ -89,10 +89,10 @@ const STRINGS = {
   noSources: ["No list is set, so only your own rules apply.", "Δεν έχει οριστεί λίστα, οπότε ισχύουν μόνο οι δικοί σου κανόνες."],
   sourceUrl: ["https://… list URL", "https://… URL λίστας"],
   sourceName: ["Name, or leave it blank", "Όνομα, ή άφησέ το κενό"],
-  addSource: ["Add list", "Πρόσθεσε λίστα"],
+  addSource: ["Add list", "Προσθήκη λίστας"],
   sourcePending: ["Applies on the next build", "Θα ισχύσει στο επόμενο build"],
   sourceBuilding: ["Building now", "Χτίζεται τώρα"],
-  rebuildTitle: ["Rebuild", "Ξαναχτίσιμο"],
+  rebuildTitle: ["Rebuild", "Ανανέωση λιστών"],
   deployHook: ["Deploy hook URL", "Deploy hook URL"],
   deployHookNote: [
     "Cloudflare, Worker, Settings, Builds, Deploy Hooks. Once it is saved, changing a list starts a build at once instead of waiting for the next scheduled one. A build takes two to four minutes, and the list already compiled keeps blocking until it lands.",
@@ -104,7 +104,7 @@ const STRINGS = {
     "Οι λίστες ξαναχτίζονται μόνες τους κάθε τρεις ώρες, και ξανά όποτε αλλάξεις κάποια. Αυτό το κουμπί είναι μόνο για όταν δεν θες να περιμένεις."
   ],
   changeHook: ["Change hook", "Αλλαγή hook"],
-  rebuildNow: ["Rebuild now", "Ξαναχτίσε τώρα"],
+  rebuildNow: ["Rebuild now", "Ανανέωση τώρα"],
   rebuildStarted: ["Build started", "Το build ξεκίνησε"],
   rebuildNoHook: ["Save a deploy hook first.", "Αποθήκευσε πρώτα ένα deploy hook."],
   invalidUrl: ["That is not an https URL.", "Δεν είναι https URL."],
@@ -121,7 +121,7 @@ const STRINGS = {
     "DoH URL ή σκέτη IP. Δοκιμάζονται με σειρά, κερδίζει ο πρώτος που απαντά."
   ],
   resolverPlaceholder: ["https://… or 1.2.3.4", "https://… ή 1.2.3.4"],
-  addResolver: ["Add resolver", "Πρόσθεσε resolver"],
+  addResolver: ["Add resolver", "Προσθήκη resolver"],
   logging: ["Keep an activity log", "Καταγραφή κινήσεων"],
   logDays: ["Days kept", "Μέρες διατήρησης"],
   devicesTitle: ["Devices", "Συσκευές"],
@@ -130,7 +130,7 @@ const STRINGS = {
     "Κάθε συσκευή παίρνει δική της διεύθυνση, ώστε το ιστορικό να τις ξεχωρίζει."
   ],
   deviceName: ["Device name", "Όνομα συσκευής"],
-  addDevice: ["Add device", "Πρόσθεσε συσκευή"],
+  addDevice: ["Add device", "Προσθήκη συσκευής"],
   copyUrl: ["Copy address", "Αντιγραφή διεύθυνσης"],
   appleProfile: ["Apple profile", "Προφίλ Apple"],
   copied: ["Copied", "Αντιγράφηκε"],
@@ -162,9 +162,9 @@ const STRINGS = {
     "Δεν έχει οριστεί resolver, άρα τίποτα δεν μπορεί να απαντηθεί."
   ],
   justNow: ["just now", "μόλις τώρα"],
-  minutesAgo: ["{count} minutes ago", "πριν {count} λεπτά"],
-  hoursAgo: ["{count} hours ago", "πριν {count} ώρες"],
-  daysAgo: ["{count} days ago", "πριν {count} μέρες"]
+  minutesAgo: ["{count} minutes ago", "πριν από {count} λεπτά"],
+  hoursAgo: ["{count} hours ago", "πριν από {count} ώρες"],
+  daysAgo: ["{count} days ago", "πριν από {count} μέρες"]
 };
 
 export const i18nEvents = new EventTarget();
