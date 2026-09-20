@@ -120,7 +120,7 @@ svg {
 }
 
 #app {
-  min-height: calc(100% + 1px);
+  min-height: var(--shell-min, calc(100% + 1px));
   display: flex;
   flex-direction: column;
 }

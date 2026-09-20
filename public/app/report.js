@@ -69,3 +69,41 @@ globalThis.fetch = async (input, init) => {
     throw error;
   }
 };
+
+function insets() {
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;" +
+    "padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)";
+  document.documentElement.append(probe);
+  const style = getComputedStyle(probe);
+  const value = [parseFloat(style.paddingTop) || 0, parseFloat(style.paddingBottom) || 0];
+  probe.remove();
+  return value;
+}
+
+function reportViewport() {
+  const [top, bottom] = insets();
+  const root = document.documentElement;
+  const bar = document.querySelector(".tabbar");
+  post(
+    "viewport",
+    [
+      `iw=${innerWidth}`,
+      `ih=${innerHeight}`,
+      `cw=${root.clientWidth}`,
+      `ch=${root.clientHeight}`,
+      `sw=${screen.width}`,
+      `sh=${screen.height}`,
+      `sat=${top}`,
+      `sab=${bottom}`,
+      `scroll=${root.scrollHeight - root.clientHeight}`,
+      `barBottom=${bar ? Math.round(bar.getBoundingClientRect().bottom) : -1}`,
+      `standalone=${matchMedia("(display-mode: standalone)").matches || navigator.standalone === true}`,
+      `dpr=${devicePixelRatio}`
+    ].join(" "),
+    ""
+  );
+}
+
+addEventListener("load", () => setTimeout(reportViewport, 1200));
