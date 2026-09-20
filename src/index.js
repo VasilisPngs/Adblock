@@ -433,7 +433,7 @@ async function handleState(request, env) {
   const { settings } = await loadState(env);
   const [counts, devices, sources] = await Promise.all([
     env.DB.prepare("SELECT action, total FROM totals").all(),
-    env.DB.prepare("SELECT token, name, created_at, last_seen_at FROM devices ORDER BY created_at").all(),
+    env.DB.prepare("SELECT token, name, platform, created_at, last_seen_at FROM devices ORDER BY created_at").all(),
     listSources(env)
   ]);
   const totals = { allow: 0, block: 0, error: 0 };
@@ -613,10 +613,20 @@ async function handleDevices(request, env) {
     invalidate();
     return json({ ok: true });
   }
+  if (payload.action === "platform") {
+    await env.DB.prepare("UPDATE devices SET platform = ?2 WHERE token = ?1")
+      .bind(String(payload.token || ""), payload.platform === "other" ? "other" : "apple")
+      .run();
+    invalidate();
+    return json({ ok: true });
+  }
   const name = String(payload.name || "").trim();
   if (!name) return json({ error: "invalid_name" }, 400);
+  const platform = payload.platform === "other" ? "other" : "apple";
   const token = crypto.randomUUID().replace(/-/g, "");
-  await env.DB.prepare("INSERT INTO devices (token, name, created_at) VALUES (?1, ?2, ?3)").bind(token, name, Date.now()).run();
+  await env.DB.prepare("INSERT INTO devices (token, name, platform, created_at) VALUES (?1, ?2, ?3, ?4)")
+    .bind(token, name, platform, Date.now())
+    .run();
   invalidate();
   return json({ ok: true, token });
 }

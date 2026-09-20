@@ -130,6 +130,8 @@ const STRINGS = {
     "Κάθε συσκευή παίρνει δική της διεύθυνση, ώστε το ιστορικό να τις ξεχωρίζει."
   ],
   deviceName: ["Device name", "Όνομα συσκευής"],
+  platformApple: ["Apple", "Apple"],
+  platformOther: ["Other", "Άλλη"],
   addDevice: ["Add device", "Προσθήκη συσκευής"],
   copyUrl: ["Copy address", "Αντιγραφή διεύθυνσης"],
   appleProfile: ["Apple profile", "Προφίλ Apple"],
