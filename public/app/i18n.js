@@ -61,6 +61,7 @@ const STRINGS = {
   listBuilt: ["Built {when}", "Χτίστηκε {when}"],
 
   topDomains: ["Most blocked", "Τα πιο μπλοκαρισμένα"],
+  restDomains: ["{count} more domains", "{count} ακόμα domains"],
   noActivity: ["No queries yet.", "Κανένα ερώτημα ακόμα."],
 
   logTitle: ["Activity", "Κινήσεις"],

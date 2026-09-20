@@ -71,17 +71,25 @@ export function renderHome(container) {
   container.append(card);
 
   loadTop()
-    .then(({ top }) => {
+    .then(({ top, rest }) => {
       clear(rows);
       if (top.length === 0) {
         rows.append(el("div", { class: "empty", text: t("noActivity") }));
         return;
       }
-      for (const row of top.slice(0, 12)) {
+      for (const row of top) {
         rows.append(
           el("div", { class: "list-item" }, [
             el("span", { class: "grow", style: "color:var(--danger);overflow-wrap:anywhere", text: row.name }),
             el("span", { class: "num tiny", text: row.total.toLocaleString() })
+          ])
+        );
+      }
+      if (rest && rest.names > 0) {
+        rows.append(
+          el("div", { class: "list-item" }, [
+            el("span", { class: "grow tiny", text: t("restDomains", { count: rest.names.toLocaleString() }) }),
+            el("span", { class: "num tiny", text: rest.total.toLocaleString() })
           ])
         );
       }
