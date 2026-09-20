@@ -21,7 +21,7 @@
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --speed: 0.24s;
   --tabbar: 62px;
-  --topbar: calc(env(safe-area-inset-top) + 5.25rem);
+  --topbar: calc(env(safe-area-inset-top) + 3.5rem);
   --view-pad-top: 16px;
   --rail: clamp(12rem, 15vw, 20rem);
   --column: clamp(46rem, 44vw, 68rem);
@@ -97,7 +97,6 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 15px;
   line-height: 1.45;
-  overflow: hidden;
   overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -121,15 +120,13 @@ svg {
 }
 
 #app {
-  position: fixed;
-  inset: 0;
+  min-height: calc(100% + 1px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .topbar {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -207,11 +204,8 @@ svg {
 
 .view {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
   width: 100%;
-  padding: var(--topbar) max(16px, calc((100% - var(--column)) / 2)) 28px;
+  padding: var(--topbar) max(16px, calc((100% - var(--column)) / 2)) calc(var(--tabbar) + 28px);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -227,7 +221,7 @@ svg {
 
 .list-bar {
   position: sticky;
-  top: 0;
+  top: var(--topbar);
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -260,7 +254,10 @@ svg {
 
 .tabbar {
   --bottom-bar: 1;
-  flex: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -616,6 +613,10 @@ textarea {
 }
 
 @media (min-width: 56.25rem) {
+  #app {
+    min-height: 100%;
+  }
+
   :root {
     --tabbar: 0px;
   }

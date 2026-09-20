@@ -13,8 +13,7 @@ function syncBars() {
 }
 
 export function scrollViewTop() {
-  const view = document.querySelector(".view");
-  if (view) view.scrollTo({ top: 0, behavior: "instant" });
+  scrollTo({ top: 0, behavior: "instant" });
 }
 
 export function startShell() {
