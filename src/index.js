@@ -26,7 +26,7 @@ import meta from "./blocklist-meta.json";
 const CACHE_TTL_MS = 60000;
 const D1_RETRY_MS = 5000;
 const BLOCK_TTL = 300;
-const TTL_FLOOR = 300;
+const TTL_FLOOR = 600;
 const TTL_CEILING = 3600;
 const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
