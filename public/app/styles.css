@@ -581,23 +581,22 @@ textarea {
   }
 
   #app {
-    display: grid;
-    grid-template-columns: var(--rail) 1fr;
-    grid-template-rows: auto 1fr;
-    gap: 0 24px;
+    display: flex;
+    flex-direction: column;
   }
 
   .topbar {
-    grid-column: 1 / -1;
+    flex: none;
   }
 
   .tabbar {
     --bottom-bar: 0;
-    position: sticky;
+    position: fixed;
     top: var(--topbar);
-    align-self: start;
-    grid-column: 1;
-    grid-row: 2;
+    left: 0;
+    bottom: 0;
+    width: var(--rail);
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -616,10 +615,9 @@ textarea {
   }
 
   .view {
-    grid-column: 2;
-    grid-row: 2;
     margin: 0;
-    padding: 20px max(16px, calc((100% - var(--column)) / 2)) 60px;
+    padding-block: 20px 60px;
+    padding-inline: max(calc(var(--rail) + 24px), calc((100% - var(--column)) / 2));
   }
 
   .toast-host {
