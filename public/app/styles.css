@@ -242,6 +242,7 @@ svg {
 }
 
 .list-bar > .card,
+.list-bar .stat,
 .list-bar .chip:not([aria-pressed="true"]),
 .list-bar input,
 .list-bar select {

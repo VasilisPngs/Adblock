@@ -113,9 +113,10 @@ export function renderLog(container) {
   bar.append(el("h1", { text: t("logTitle") }));
   bar.append(chips);
 
-  const controls = el("div", { class: "card tight" }, [
+  const fields = el("div", { class: "row" }, [
     el("input", {
       type: "search",
+      class: "grow",
       placeholder: t("searchDomains"),
       value: search,
       oninput: (event) => {
@@ -125,11 +126,13 @@ export function renderLog(container) {
       }
     })
   ]);
+  const controls = el("div", { class: "card tight" }, [fields]);
   if ((state.devices || []).length > 0) {
-    controls.append(
+    fields.append(
       el(
         "select",
         {
+          class: "grow",
           onchange: (event) => {
             device = event.target.value;
             paint();

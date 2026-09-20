@@ -37,10 +37,13 @@ export function renderHome(container) {
   const { today, settings } = state;
   const total = today.allow + today.block + today.error;
 
-  container.append(masterSwitch(settings.enabled));
+  const bar = el("div", { class: "list-bar" });
+  container.append(bar);
+
+  bar.append(masterSwitch(settings.enabled));
 
   if (settings.resolvers.length === 0) {
-    container.append(
+    bar.append(
       el("div", { class: "banner" }, [
         el("span", { text: t("noResolver") }),
         el("button", { class: "btn small", type: "button", text: t("settingsTitle"), onclick: () => navigate("/settings") })
@@ -48,7 +51,7 @@ export function renderHome(container) {
     );
   }
 
-  container.append(
+  bar.append(
     el("div", { class: "stat-grid" }, [
       el("div", { class: "stat" }, [
         el("b", { class: "num", text: total.toLocaleString() }),
