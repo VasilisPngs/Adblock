@@ -128,9 +128,9 @@ svg {
 }
 
 .topbar {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 20;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
