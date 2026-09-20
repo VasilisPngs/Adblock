@@ -115,6 +115,7 @@ const STRINGS = {
   hostPlaceholder: ["domain.com", "domain.com"],
 
   settingsTitle: ["Settings", "Ρυθμίσεις"],
+  appearance: ["Appearance", "Εμφάνιση"],
   resolversTitle: ["Upstream resolvers", "Resolvers"],
   resolversNote: [
     "A DoH URL or a plain IP. Tried in order, the first that answers wins.",

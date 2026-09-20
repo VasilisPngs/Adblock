@@ -163,6 +163,36 @@ export function renderSettings(container) {
 
   container.append(
     el("div", { class: "card" }, [
+      el("h2", { text: t("appearance") }),
+      field(
+        t("theme"),
+        el(
+          "select",
+          { onchange: (event) => setTheme(event.target.value) },
+          themeModes().map((mode) =>
+            el("option", {
+              value: mode,
+              text: t(`theme${mode[0].toUpperCase()}${mode.slice(1)}`),
+              selected: mode === themeMode()
+            })
+          )
+        )
+      ),
+      field(
+        t("languageLabel"),
+        el(
+          "select",
+          { onchange: (event) => setLanguage(event.target.value) },
+          languages().map((code) =>
+            el("option", { value: code, text: code === "el" ? "Ελληνικά" : "English", selected: code === language() })
+          )
+        )
+      )
+    ])
+  );
+
+  container.append(
+    el("div", { class: "card" }, [
       el("div", { class: "switch boxed" }, [
         el("span", { class: "grow", text: t("logging") }),
         el(
@@ -206,35 +236,6 @@ export function renderSettings(container) {
   );
 
   container.append(deviceCard(state));
-
-  container.append(
-    el("div", { class: "card" }, [
-      field(
-        t("theme"),
-        el(
-          "select",
-          { onchange: (event) => setTheme(event.target.value) },
-          themeModes().map((mode) =>
-            el("option", {
-              value: mode,
-              text: t(`theme${mode[0].toUpperCase()}${mode.slice(1)}`),
-              selected: mode === themeMode()
-            })
-          )
-        )
-      ),
-      field(
-        t("languageLabel"),
-        el(
-          "select",
-          { onchange: (event) => setLanguage(event.target.value) },
-          languages().map((code) =>
-            el("option", { value: code, text: code === "el" ? "Ελληνικά" : "English", selected: code === language() })
-          )
-        )
-      )
-    ])
-  );
 
   container.append(passwordCard());
 
