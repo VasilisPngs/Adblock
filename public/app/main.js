@@ -1,5 +1,5 @@
 import { el, clear, toast } from "./dom.js";
-import { startShell } from "./shell.js";
+import { startShell, scrollViewTop } from "./shell.js";
 import { t, applyLanguage, i18nEvents } from "./i18n.js";
 import { applyTheme, themeEvents } from "./theme.js";
 import { currentRoute, startRouter } from "./router.js";
@@ -144,7 +144,7 @@ function render(force = false) {
     view.classList.remove("enter");
     void view.offsetWidth;
     view.classList.add("enter");
-    scrollTo({ top: 0, behavior: "instant" });
+    scrollViewTop();
   }
 }
 

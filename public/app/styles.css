@@ -97,6 +97,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 15px;
   line-height: 1.45;
+  overflow: hidden;
   overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -120,9 +121,11 @@ svg {
 }
 
 #app {
-  min-height: 100%;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .topbar {
@@ -202,9 +205,12 @@ svg {
 
 .view {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   width: var(--column);
   margin: 0 auto;
-  padding: 16px 16px calc(var(--tabbar) + 16px);
+  padding: 16px 16px 28px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -220,10 +226,8 @@ svg {
 }
 
 .tabbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  --bottom-bar: 1;
+  flex: none;
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -592,6 +596,7 @@ textarea {
   }
 
   .tabbar {
+    --bottom-bar: 0;
     position: sticky;
     top: var(--topbar);
     align-self: start;

@@ -4,11 +4,14 @@ function syncTabbar() {
   const bar = document.querySelector(TAB_SELECTOR);
   const root = document.documentElement;
   if (!bar) return;
-  if (getComputedStyle(bar).position === "fixed") {
-    root.style.setProperty("--tabbar", `${Math.round(bar.getBoundingClientRect().height)}px`);
-  } else {
-    root.style.removeProperty("--tabbar");
-  }
+  const bottom = getComputedStyle(bar).getPropertyValue("--bottom-bar").trim() === "1";
+  if (bottom) root.style.setProperty("--tabbar", `${Math.round(bar.getBoundingClientRect().height)}px`);
+  else root.style.removeProperty("--tabbar");
+}
+
+export function scrollViewTop() {
+  const view = document.querySelector(".view");
+  if (view) view.scrollTo({ top: 0, behavior: "instant" });
 }
 
 export function startShell() {
