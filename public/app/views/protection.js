@@ -91,7 +91,6 @@ function sourceCard(state) {
       el("button", { class: "btn small primary", type: "button", text: t("addSource"), onclick: submit })
     ])
   );
-  card.append(el("div", { class: "tiny", text: t("sourcesNote") }));
   return card;
 }
 

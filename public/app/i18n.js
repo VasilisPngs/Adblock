@@ -110,10 +110,6 @@ const STRINGS = {
   invalidUrl: ["That is not an https URL.", "Δεν είναι https URL."],
   sourcesTitle: ["Sources", "Πηγές"],
   sourceDomains: ["{count} domains", "{count} domains"],
-  sourcesNote: [
-    "Lists are compiled into the Worker, not read at run time: the free plan allows 10 ms of CPU per request and parsing 180 000 rules needs far more. Until a build lands the list already compiled keeps blocking, so a change here never leaves you unprotected.",
-    "Οι λίστες χτίζονται μέσα στον Worker, δεν διαβάζονται σε πραγματικό χρόνο: το δωρεάν πλάνο δίνει 10 ms CPU ανά αίτημα και το parsing 180.000 κανόνων θέλει πολύ περισσότερο. Μέχρι να βγει το build συνεχίζει να μπλοκάρει η ήδη χτισμένη λίστα, οπότε καμία αλλαγή εδώ δεν σε αφήνει απροστάτευτο."
-  ],
   myRules: ["Your rules", "Οι κανόνες σου"],
   noRules: ["Nothing of your own yet.", "Τίποτα δικό σου ακόμα."],
   hostPlaceholder: ["domain.com", "domain.com"],
