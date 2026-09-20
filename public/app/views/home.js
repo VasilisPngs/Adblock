@@ -85,11 +85,11 @@ export function renderHome(container) {
           ])
         );
       }
-      if (rest && rest.names > 0) {
+      if (rest > 0) {
         rows.append(
           el("div", { class: "list-item" }, [
-            el("span", { class: "grow tiny", text: t("restDomains", { count: rest.names.toLocaleString() }) }),
-            el("span", { class: "num tiny", text: rest.total.toLocaleString() })
+            el("span", { class: "grow tiny", text: t("restDomains") }),
+            el("span", { class: "num tiny", text: rest.toLocaleString() })
           ])
         );
       }

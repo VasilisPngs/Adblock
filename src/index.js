@@ -507,16 +507,14 @@ async function handleRules(request, env) {
 
 async function handleTop(request, env) {
   if (topCache.rows && Date.now() - topCache.at < TOP_TTL_MS) return json({ top: topCache.rows, rest: topCache.rest });
-  const [rows, all] = await env.DB.batch([
+  const [rows, counted] = await env.DB.batch([
     env.DB.prepare(`SELECT name, total FROM blocked_totals ORDER BY total DESC LIMIT ${TOP_LIMIT}`),
-    env.DB.prepare("SELECT COUNT(*) AS names, SUM(total) AS total FROM blocked_totals")
+    env.DB.prepare("SELECT total FROM totals WHERE action = 'block'")
   ]);
   const top = rows.results || [];
-  const summary = (all.results || [])[0] || { names: 0, total: 0 };
-  const rest = {
-    names: Math.max(0, (summary.names || 0) - top.length),
-    total: Math.max(0, (summary.total || 0) - top.reduce((sum, row) => sum + row.total, 0))
-  };
+  const shown = top.reduce((sum, row) => sum + row.total, 0);
+  const blocked = ((counted.results || [])[0] || {}).total || 0;
+  const rest = Math.max(0, blocked - shown);
   topCache = { at: Date.now(), rows: top, rest };
   return json({ top, rest });
 }
