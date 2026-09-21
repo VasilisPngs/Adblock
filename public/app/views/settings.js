@@ -159,7 +159,7 @@ export function renderSettings(container) {
   if (!state) return;
   const { settings } = state;
 
-  container.append(el("h1", { text: t("settingsTitle") }));
+  container.append(el("div", { class: "list-bar" }, [el("h1", { text: t("settingsTitle") })]));
 
   container.append(
     el("div", { class: "card" }, [

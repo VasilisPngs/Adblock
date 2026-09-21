@@ -325,7 +325,7 @@ export function renderProtection(container) {
   const state = currentState();
   if (!state) return;
 
-  container.append(el("h1", { text: t("protectionTitle") }));
+  container.append(el("div", { class: "list-bar" }, [el("h1", { text: t("protectionTitle") })]));
   container.append(sourceCard(state));
   container.append(ruleCard());
   container.append(resolverCard(state.settings));
