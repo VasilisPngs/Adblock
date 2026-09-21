@@ -11,10 +11,12 @@ import {
   QUERY_TYPES
 } from "./dns.js";
 import { decide } from "./blocklist.js";
-import { parseResolver, resolve, isCloudflareAddress } from "./upstream.js";
+import { parseResolver, resolve } from "./upstream.js";
 import {
   checkPassword,
   hashPassword,
+  hashText,
+  outdatedHash,
   equalText,
   issueSession,
   validSession,
@@ -30,13 +32,14 @@ const TTL_FLOOR = 300;
 const TTL_CEILING = 3600;
 const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
+const SEARCH_WINDOW_DAYS = 7;
 const LOGIN_WINDOW_MS = 600000;
 const LOGIN_ATTEMPTS = 10;
 const HOUR_MS = 3600000;
 const SEEN_INTERVAL_MS = 300000;
 const TOP_TTL_MS = 300000;
 const TOP_LIMIT = 10;
-const PRUNE_LIMIT = 5000;
+const PRUNE_LIMIT = 20000;
 const ERROR_RETENTION_MS = 30 * 86400000;
 
 const ANSWER_CACHE_MAX = 4000;
@@ -58,11 +61,16 @@ function remember(key, body, ttl) {
   answers.set(key, { body, storedAt: Date.now(), expires: Date.now() + ttl * 1000 });
 }
 
-function replay(entry, message, question, age) {
-  const body = new Uint8Array(entry.body);
+function adopt(source, message, question) {
+  const body = new Uint8Array(source);
   body[0] = message[0];
   body[1] = message[1];
   body.set(message.subarray(12, question.end), 12);
+  return body;
+}
+
+function replay(entry, message, question, age) {
+  const body = adopt(entry.body, message, question);
   return age === null ? setTtl(body, STALE_TTL) : decrementTtl(body, age);
 }
 
@@ -275,13 +283,12 @@ async function handleDns(request, env, ctx, url, token) {
     } else {
       const fresh = await fetchUpstream(key, resolvers, message);
       failure = fresh.failure;
-      body = fresh.body;
-      if (!body) {
+      if (!fresh.body) {
         body = servfail(message);
         ttl = 0;
       } else {
         const cloaked = settings.enabled
-          ? cnameTargets(body).map((target) => decide(target, rules)).find((result) => result.action === "block")
+          ? cnameTargets(fresh.body).map((target) => decide(target, rules)).find((result) => result.action === "block")
           : null;
         if (cloaked) {
           verdict.action = "block";
@@ -290,9 +297,10 @@ async function handleDns(request, env, ctx, url, token) {
           body = blockedResponse(message, question, BLOCK_TTL);
           ttl = BLOCK_TTL;
         } else {
-          boostTtl(body, TTL_FLOOR);
-          ttl = ttlOf(body);
-          remember(key, new Uint8Array(body), ttl);
+          const answer = boostTtl(new Uint8Array(fresh.body), TTL_FLOOR);
+          ttl = ttlOf(answer);
+          remember(key, answer, ttl);
+          body = answer.length >= question.end ? adopt(answer, message, question) : answer;
         }
       }
     }
@@ -333,7 +341,7 @@ async function handleDns(request, env, ctx, url, token) {
 }
 
 async function sessionSecret(env) {
-  if (env.DASHBOARD_PASSWORD) return hashPassword(env.DASHBOARD_PASSWORD);
+  if (env.DASHBOARD_PASSWORD) return hashText(env.DASHBOARD_PASSWORD);
   return (await loadState(env)).auth.hash;
 }
 
@@ -378,7 +386,11 @@ async function handleLogin(request, env) {
     return json({ error: "wrong_password", remaining: remaining - 1 }, 401);
   }
   await clearFailures(env, ip);
-  return signedIn(await issueSession(secret));
+  if (env.DASHBOARD_PASSWORD || !outdatedHash(secret)) return signedIn(await issueSession(secret));
+  const upgraded = await hashPassword(password);
+  await env.DB.prepare("UPDATE settings SET password_hash = ?1 WHERE id = 1").bind(upgraded).run();
+  invalidate();
+  return signedIn(await issueSession(upgraded));
 }
 
 async function handleSetup(request, env) {
@@ -486,12 +498,7 @@ async function handleSettings(request, env) {
     ? payload.resolvers.map((value) => String(value).trim()).filter(Boolean).slice(0, 8)
     : current.resolvers;
   const invalid = resolvers.filter((value) => !parseResolver(value));
-  const cloudflareTcp = resolvers.filter((value) => {
-    const parsed = parseResolver(value);
-    return parsed && parsed.kind === "tcp" && parsed.family === 4 && isCloudflareAddress(parsed.target);
-  });
   if (invalid.length > 0) return json({ error: "invalid_resolver", detail: invalid }, 400);
-  if (cloudflareTcp.length > 0) return json({ error: "cloudflare_ip_needs_doh", detail: cloudflareTcp }, 400);
 
   const enabled = payload.enabled === undefined ? current.enabled : Boolean(payload.enabled);
   const logEnabled = payload.logEnabled === undefined ? current.logEnabled : Boolean(payload.logEnabled);
@@ -513,7 +520,6 @@ async function handleSettings(request, env) {
 }
 
 async function handleRules(request, env) {
-  const url = new URL(request.url);
   if (request.method === "GET") {
     const rows = await env.DB.prepare("SELECT host, action, created_at FROM rules ORDER BY created_at DESC").all();
     return json({ rules: rows.results || [] });
@@ -536,7 +542,6 @@ async function handleRules(request, env) {
     return json({ error: "invalid_action" }, 400);
   }
   invalidate();
-  void url;
   return json({ ok: true });
 }
 
@@ -623,6 +628,7 @@ async function handleLog(request, env) {
   if (query) {
     clauses.push(`name LIKE ?${binds.length + 1}`);
     binds.push(`%${query}%`);
+    binds[0] = Math.max(binds[0], Date.now() - 86400000 * SEARCH_WINDOW_DAYS);
   }
   if (token) {
     clauses.push(`token = ?${binds.length + 1}`);
@@ -745,7 +751,7 @@ function mobileconfig(host, token, name) {
 `;
 }
 
-async function handleProfile(request, env, url) {
+async function handleProfile(env, url) {
   const token = url.searchParams.get("token") || "";
   const device = await env.DB.prepare("SELECT name FROM devices WHERE token = ?1").bind(token).first();
   if (!device) return json({ error: "unknown_device" }, 404);
@@ -809,7 +815,7 @@ export default {
     const route = API[url.pathname];
     if (route || url.pathname === "/profile.mobileconfig") {
       if (!(await validSession(request, await sessionSecret(env)))) return json({ error: "unauthorized" }, 401);
-      if (url.pathname === "/profile.mobileconfig") return handleProfile(request, env, url);
+      if (url.pathname === "/profile.mobileconfig") return handleProfile(env, url);
       if (route.method !== "ANY" && request.method !== route.method && !(route.method === "POST" && request.method === "DELETE")) {
         return json({ error: "method_not_allowed" }, 405);
       }
@@ -828,8 +834,6 @@ export default {
   async scheduled(controller, env, ctx) {
     const { settings } = await loadState(env);
     await rebuild(env, ctx);
-    const flush = flushCounters(env);
-    if (flush) ctx.waitUntil(flush);
     ctx.waitUntil(
       env.DB.batch([
         env.DB.prepare(

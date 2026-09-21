@@ -60,6 +60,23 @@ function deviceCard(state) {
   const list = el("div", { class: "list" });
   for (const device of state.devices) {
     const url = `https://${state.host}/dns-query/${device.token}`;
+    const masked = `https://${state.host}/dns-query/${"\u2022".repeat(8)}${device.token.slice(-5)}`;
+    const address = el("div", {
+      class: "tiny",
+      style: "overflow-wrap:anywhere;color:var(--accent-text)",
+      text: masked
+    });
+    let shown = false;
+    const reveal = el("button", {
+      class: "btn small ghost",
+      type: "button",
+      text: t("revealAddress"),
+      onclick: () => {
+        shown = !shown;
+        address.textContent = shown ? url : masked;
+        reveal.textContent = shown ? t("hideAddress") : t("revealAddress");
+      }
+    });
     list.append(
       el("div", { class: "list-item" }, [
         el("span", { class: "grow" }, [
@@ -68,9 +85,10 @@ function deviceCard(state) {
             class: "tiny",
             text: device.last_seen_at ? t("lastSeen", { when: relativeTime(device.last_seen_at) }) : t("neverSeen")
           }),
-          el("div", { class: "tiny", style: "overflow-wrap:anywhere;color:var(--accent-text)", text: url })
+          address
         ]),
         el("span", { class: "row wrap", style: "gap:6px;justify-content:flex-end" }, [
+          reveal,
           el("button", {
             class: "btn small ghost",
             type: "button",

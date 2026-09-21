@@ -3,7 +3,6 @@
   "name": "adblock",
   "main": "src/index.js",
   "compatibility_date": "2026-09-01",
-  "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   "assets": {
     "directory": "public",
@@ -21,6 +20,6 @@
     }
   ],
   "triggers": {
-    "crons": ["17 */3 * * *"]
+    "crons": ["17 9,21 * * *"]
   }
 }

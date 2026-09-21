@@ -181,8 +181,7 @@ function resolverCard(settings) {
       toast(t("saved"));
     } catch (error) {
       const detail = Array.isArray(error.detail) ? error.detail.join(", ") : error.detail || "";
-      if (error.code === "cloudflare_ip_needs_doh") toast(t("cloudflareNeedsDoh", { detail }));
-      else if (error.code === "invalid_resolver") toast(t("invalidResolver", { detail }));
+      if (error.code === "invalid_resolver") toast(t("invalidResolver", { detail }));
       else toast(t("requestFailed"));
     }
   };

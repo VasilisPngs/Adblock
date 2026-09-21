@@ -68,7 +68,7 @@ const STRINGS = {
   filterBlocked: ["Blocked", "Μπλοκαρισμένα"],
   filterAllowed: ["Allowed", "Πέρασαν"],
   filterErrors: ["Failures", "Αποτυχίες"],
-  searchDomains: ["Search domains", "Αναζήτηση domain"],
+  searchDomains: ["Search last 7 days", "Αναζήτηση 7 ημερών"],
   allDevices: ["All devices", "Όλες οι συσκευές"],
   actionAllow: ["Allow", "Εξαίρεση"],
   actionBlock: ["Block", "Μπλοκάρισμα"],
@@ -118,10 +118,10 @@ const STRINGS = {
   appearance: ["Appearance", "Εμφάνιση"],
   resolversTitle: ["Upstream resolvers", "Resolvers"],
   resolversNote: [
-    "A DoH URL or a plain IP. Tried in order, the first that answers wins.",
-    "DoH URL ή σκέτη IP. Δοκιμάζονται με σειρά, κερδίζει ο πρώτος που απαντά."
+    "An encrypted DoH URL. Tried in order, the first that answers wins.",
+    "Κρυπτογραφημένο DoH URL. Δοκιμάζονται με σειρά, κερδίζει ο πρώτος που απαντά."
   ],
-  resolverPlaceholder: ["https://… or 1.2.3.4", "https://… ή 1.2.3.4"],
+  resolverPlaceholder: ["https://…/dns-query", "https://…/dns-query"],
   addResolver: ["Add resolver", "Προσθήκη resolver"],
   logging: ["Log DNS queries", "Καταγραφή ερωτημάτων DNS"],
   logDays: ["Days kept", "Μέρες διατήρησης"],
@@ -134,6 +134,8 @@ const STRINGS = {
   platformApple: ["Apple", "Apple"],
   platformOther: ["Other", "Άλλη"],
   addDevice: ["Add device", "Προσθήκη συσκευής"],
+  revealAddress: ["Show address", "Εμφάνιση διεύθυνσης"],
+  hideAddress: ["Hide address", "Απόκρυψη διεύθυνσης"],
   copyUrl: ["Copy address", "Αντιγραφή διεύθυνσης"],
   appleProfile: ["Apple profile", "Προφίλ Apple"],
   copied: ["Copied", "Αντιγράφηκε"],
@@ -155,11 +157,7 @@ const STRINGS = {
   remove: ["Remove", "Αφαίρεση"],
   cancel: ["Cancel", "Άκυρο"],
   requestFailed: ["Something went wrong.", "Κάτι πήγε στραβά."],
-  invalidResolver: ["Not a DoH URL or an IP address: {detail}", "Δεν είναι DoH URL ούτε IP: {detail}"],
-  cloudflareNeedsDoh: [
-    "{detail} belongs to Cloudflare. Workers cannot open TCP to their own network, so give the DoH URL instead.",
-    "Το {detail} ανήκει στην Cloudflare. Οι Workers δεν ανοίγουν TCP προς το δικό τους δίκτυο, βάλε το DoH URL αντ' αυτού."
-  ],
+  invalidResolver: ["Not a DoH URL: {detail}", "Δεν είναι DoH URL: {detail}"],
   noResolver: [
     "No resolver is set, so nothing can be answered.",
     "Δεν έχει οριστεί resolver, άρα τίποτα δεν μπορεί να απαντηθεί."

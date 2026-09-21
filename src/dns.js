@@ -49,10 +49,9 @@ export function readQuestion(message) {
 
 export function blockedResponse(message, question, ttl) {
   const questionBytes = message.subarray(12, question.end);
-  const nameLength = questionBytes.length - 4;
   const address = question.type === TYPE_A ? 4 : question.type === TYPE_AAAA ? 16 : 0;
-  const extra = address > 0 ? nameLength + 10 + address : 12 + SOA_RDLENGTH;
-  const response = new Uint8Array(12 + questionBytes.length + extra);
+  const rdlength = address > 0 ? address : SOA_RDLENGTH;
+  const response = new Uint8Array(12 + questionBytes.length + 12 + rdlength);
   const view = new DataView(response.buffer);
 
   response.set(message.subarray(0, 2), 0);
@@ -65,20 +64,13 @@ export function blockedResponse(message, question, ttl) {
   response.set(questionBytes, 12);
 
   const offset = 12 + questionBytes.length;
-  if (address > 0) {
-    response.set(questionBytes.subarray(0, nameLength), offset);
-    view.setUint16(offset + nameLength, question.type);
-    view.setUint16(offset + nameLength + 2, question.class);
-    view.setUint32(offset + nameLength + 4, ttl);
-    view.setUint16(offset + nameLength + 8, address);
-    return response;
-  }
-
   view.setUint16(offset, 0xc00c);
-  view.setUint16(offset + 2, TYPE_SOA);
+  view.setUint16(offset + 2, address > 0 ? question.type : TYPE_SOA);
   view.setUint16(offset + 4, question.class);
   view.setUint32(offset + 6, ttl);
-  view.setUint16(offset + 10, SOA_RDLENGTH);
+  view.setUint16(offset + 10, rdlength);
+  if (address > 0) return response;
+
   view.setUint16(offset + 12, 0xc00c);
   view.setUint16(offset + 14, 0xc00c);
   view.setUint32(offset + 16, 1);
@@ -184,29 +176,9 @@ export function boostTtl(message, floor) {
 }
 
 export function minimumTtl(message) {
-  const question = readQuestion(message);
-  if (!question) return 0;
-  const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
-  const answers = view.getUint16(6);
-  if (answers === 0) return 0;
-  let offset = question.end;
   let ttl = Infinity;
-  for (let index = 0; index < answers && offset + 12 <= message.length; index += 1) {
-    while (offset < message.length) {
-      const length = message[offset];
-      if (length === 0) {
-        offset += 1;
-        break;
-      }
-      if ((length & 0xc0) === 0xc0) {
-        offset += 2;
-        break;
-      }
-      offset += length + 1;
-    }
-    if (offset + 10 > message.length) break;
+  walkAnswers(message, (type, offset, view) => {
     ttl = Math.min(ttl, view.getUint32(offset + 4));
-    offset += 10 + view.getUint16(offset + 8);
-  }
+  });
   return Number.isFinite(ttl) ? ttl : 0;
 }

@@ -175,7 +175,7 @@ async function boot() {
   await refresh().catch(() => {});
   setInterval(() => {
     if (document.visibilityState === "visible" && currentRoute().name === "home") refresh().catch(() => {});
-  }, 30000);
+  }, 60000);
 }
 
 boot();

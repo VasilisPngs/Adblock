@@ -2,6 +2,10 @@ const encoder = new TextEncoder();
 
 const SESSION_COOKIE = "adblock_session";
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+const KDF_PREFIX = "pbkdf2";
+const KDF_ITERATIONS = 10000;
+const KDF_SALT_BYTES = 16;
+const KDF_BITS = 256;
 export const MIN_PASSWORD_LENGTH = 12;
 
 async function digest(value) {
@@ -27,6 +31,14 @@ function base64Url(bytes) {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+function fromBase64Url(value) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
 function readCookie(header, name) {
   if (!header) return null;
   for (const part of header.split(";")) {
@@ -48,18 +60,37 @@ async function sign(secret, payload) {
   return base64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(payload))));
 }
 
-export async function hashPassword(password) {
-  return hex(await digest(password));
+async function deriveBits(password, salt, iterations) {
+  const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
+  return new Uint8Array(
+    await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, KDF_BITS)
+  );
 }
+
+export async function hashText(value) {
+  return hex(await digest(value));
+}
+
+export async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(KDF_SALT_BYTES));
+  const bits = await deriveBits(password, salt, KDF_ITERATIONS);
+  return `${KDF_PREFIX}$${KDF_ITERATIONS}$${base64Url(salt)}$${base64Url(bits)}`;
+}
+
+export const outdatedHash = (stored) => Boolean(stored) && !stored.startsWith(`${KDF_PREFIX}$`);
 
 export function equalText(given, expected) {
   if (!given || !expected) return false;
   return equalBytes(encoder.encode(given), encoder.encode(expected));
 }
 
-export async function checkPassword(password, hash) {
-  if (!hash || !password) return false;
-  return equalText(await hashPassword(password), hash);
+export async function checkPassword(password, stored) {
+  if (!stored || !password) return false;
+  if (outdatedHash(stored)) return equalText(await hashText(password), stored);
+  const [, iterations, salt, expected] = stored.split("$");
+  const count = Number(iterations);
+  if (!Number.isInteger(count) || count < 1 || !salt || !expected) return false;
+  return equalBytes(await deriveBits(password, fromBase64Url(salt), count), fromBase64Url(expected));
 }
 
 export async function issueSession(secret) {
