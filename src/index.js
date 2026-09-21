@@ -184,7 +184,7 @@ const DEGRADED = {
   at: 0,
   settings: {
     enabled: false,
-    resolvers: ["https://cloudflare-dns.com/dns-query", "https://dns.google/dns-query"],
+    resolvers: ["https://cloudflare-dns.com/dns-query"],
     logEnabled: false,
     logDays: 7,
     deployHookSet: false
