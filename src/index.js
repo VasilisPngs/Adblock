@@ -33,7 +33,7 @@ const TTL_FLOOR = 300;
 const TTL_CEILING = 3600;
 const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
-const SEARCH_WINDOW_DAYS = 7;
+const LOG_DAYS = 3;
 const LOGIN_WINDOW_MS = 600000;
 const LOGIN_ATTEMPTS = 10;
 const HOUR_MS = 3600000;
@@ -147,7 +147,6 @@ const DEGRADED = {
     enabled: false,
     resolvers: ["https://cloudflare-dns.com/dns-query"],
     logEnabled: false,
-    logDays: 7,
     deployHookSet: false
   },
   deployHook: null,
@@ -176,7 +175,7 @@ let stateRefresh = null;
 async function readState(env) {
   const [settings, rules, devices] = await Promise.all([
     env.DB.prepare(
-      "SELECT enabled, resolvers, log_enabled, log_days, password_hash, setup_code, deploy_hook FROM settings WHERE id = 1"
+      "SELECT enabled, resolvers, log_enabled, password_hash, setup_code, deploy_hook FROM settings WHERE id = 1"
     ).first(),
     env.DB.prepare("SELECT host, action FROM rules").all(),
     env.DB.prepare("SELECT token FROM devices").all()
@@ -190,7 +189,6 @@ async function readState(env) {
       enabled: Boolean(settings?.enabled),
       resolvers: JSON.parse(settings?.resolvers || "[]"),
       logEnabled: Boolean(settings?.log_enabled),
-      logDays: settings?.log_days ?? 7,
       deployHookSet: Boolean(settings?.deploy_hook)
     },
     deployHook: settings?.deploy_hook || null,
@@ -529,7 +527,6 @@ async function handleSettings(request, env) {
 
   const enabled = payload.enabled === undefined ? current.enabled : Boolean(payload.enabled);
   const logEnabled = payload.logEnabled === undefined ? current.logEnabled : Boolean(payload.logEnabled);
-  const logDays = Number.isInteger(payload.logDays) ? Math.max(1, Math.min(90, payload.logDays)) : current.logDays;
 
   if (typeof payload.deployHook === "string") {
     const hook = payload.deployHook.trim();
@@ -538,9 +535,9 @@ async function handleSettings(request, env) {
   }
 
   await env.DB.prepare(
-    "UPDATE settings SET enabled = ?1, resolvers = ?2, log_enabled = ?3, log_days = ?4, updated_at = ?5 WHERE id = 1"
+    "UPDATE settings SET enabled = ?1, resolvers = ?2, log_enabled = ?3, updated_at = ?4 WHERE id = 1"
   )
-    .bind(enabled ? 1 : 0, JSON.stringify(resolvers), logEnabled ? 1 : 0, logDays, Date.now())
+    .bind(enabled ? 1 : 0, JSON.stringify(resolvers), logEnabled ? 1 : 0, Date.now())
     .run();
   invalidate();
   return json({ ok: true, settings: (await loadState(env)).settings });
@@ -647,7 +644,7 @@ async function handleLog(request, env) {
   const token = url.searchParams.get("token");
   const { settings } = await loadState(env);
   const clauses = ["at >= ?1"];
-  const binds = [Date.now() - 86400000 * settings.logDays];
+  const binds = [Date.now() - 86400000 * LOG_DAYS];
   if (action === "block" || action === "allow" || action === "error") {
     clauses.push(`action = ?${binds.length + 1}`);
     binds.push(action);
@@ -655,7 +652,6 @@ async function handleLog(request, env) {
   if (query) {
     clauses.push(`name LIKE ?${binds.length + 1}`);
     binds.push(`%${query}%`);
-    binds[0] = Math.max(binds[0], Date.now() - 86400000 * SEARCH_WINDOW_DAYS);
   }
   if (token) {
     clauses.push(`token = ?${binds.length + 1}`);
@@ -859,13 +855,12 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
-    const { settings } = await loadState(env);
     await rebuild(env, ctx);
     ctx.waitUntil(
       env.DB.batch([
         env.DB.prepare(
           `DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY id LIMIT ${PRUNE_LIMIT})`
-        ).bind(controller.scheduledTime - settings.logDays * 86400000),
+        ).bind(controller.scheduledTime - LOG_DAYS * 86400000),
         env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS),
         env.DB.prepare("DELETE FROM errors WHERE at < ?1").bind(controller.scheduledTime - ERROR_RETENTION_MS)
       ]).catch(() => {})

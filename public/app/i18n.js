@@ -68,7 +68,7 @@ const STRINGS = {
   filterBlocked: ["Blocked", "Μπλοκαρισμένα"],
   filterAllowed: ["Allowed", "Πέρασαν"],
   filterErrors: ["Failures", "Αποτυχίες"],
-  searchDomains: ["Search last 7 days", "Αναζήτηση 7 ημερών"],
+  searchDomains: ["Search last 3 days", "Αναζήτηση 3 ημερών"],
   allDevices: ["All devices", "Όλες οι συσκευές"],
   actionAllow: ["Allow", "Εξαίρεση"],
   actionBlock: ["Block", "Μπλοκάρισμα"],
@@ -124,7 +124,6 @@ const STRINGS = {
   resolverPlaceholder: ["https://…/dns-query", "https://…/dns-query"],
   addResolver: ["Add resolver", "Προσθήκη resolver"],
   logging: ["Log DNS queries", "Καταγραφή ερωτημάτων DNS"],
-  logDays: ["Days kept", "Μέρες διατήρησης"],
   devicesTitle: ["Devices", "Συσκευές"],
   devicesNote: [
     "Each device gets its own address, so the log can tell them apart.",

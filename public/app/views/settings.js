@@ -230,26 +230,7 @@ export function renderSettings(container) {
           },
           [el("span", { class: "switch-knob" })]
         )
-      ]),
-      field(
-        t("logDays"),
-        el(
-          "select",
-          {
-            onchange: async (event) => {
-              try {
-                await saveSettings({ logDays: Number(event.target.value) });
-                toast(t("saved"));
-              } catch {
-                toast(t("requestFailed"));
-              }
-            }
-          },
-          [1, 3, 7, 14, 30].map((days) =>
-            el("option", { value: String(days), text: String(days), selected: settings.logDays === days })
-          )
-        )
-      )
+      ])
     ])
   );
 
