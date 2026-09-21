@@ -1,12 +1,12 @@
 {
-  "builtAt": "2026-09-20T08:48:42.690Z",
-  "domains": 53356,
-  "bytes": 1024329,
+  "builtAt": "2026-09-21T09:17:35.757Z",
+  "domains": 44690,
+  "bytes": 854964,
   "sources": [
     {
       "name": "HaGeZi's Multi PRO mini (best for browser/mobile ad blockers)",
       "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.mini.txt",
-      "domains": 53356,
+      "domains": 44690,
       "exceptions": 0,
       "skipped": 1
     }
