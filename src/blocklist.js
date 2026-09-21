@@ -38,9 +38,18 @@ export function* ancestors(name) {
   }
 }
 
+const DENIED_NAMES = new Set([
+  "use-application-dns.net",
+  "mask.icloud.com",
+  "mask-h2.icloud.com",
+  "mask-api.icloud.com",
+  "resolver.arpa"
+]);
+
 export function decide(name, rules) {
   for (const host of ancestors(name)) {
     if (rules.allow.has(host)) return { action: "allow", rule: host, source: "allow" };
+    if (DENIED_NAMES.has(host)) return { action: "block", rule: host, source: "bypass", rcode: 3 };
     if (rules.block.has(host)) return { action: "block", rule: host, source: "custom" };
   }
   for (const host of ancestors(name)) {

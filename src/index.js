@@ -5,6 +5,7 @@ import {
   base64UrlDecode,
   minimumTtl,
   cnameTargets,
+  stripClientSubnet,
   boostTtl,
   decrementTtl,
   setTtl,
@@ -61,6 +62,15 @@ function remember(key, body, ttl) {
   answers.set(key, { body, storedAt: Date.now(), expires: Date.now() + ttl * 1000 });
 }
 
+function cloakedBy(body, settings, rules) {
+  if (!settings.enabled) return null;
+  for (const target of cnameTargets(body)) {
+    const result = decide(target, rules);
+    if (result.action === "block") return result;
+  }
+  return null;
+}
+
 function adopt(source, message, question) {
   const body = new Uint8Array(source);
   body[0] = message[0];
@@ -77,19 +87,48 @@ function replay(entry, message, question, age) {
 function fetchUpstream(key, resolvers, message) {
   const pending = inflight.get(key);
   if (pending) return pending;
-  const attempt = (async () => {
-    let failure = "no_resolver";
-    for (const resolver of resolvers) {
-      try {
-        return { body: await resolve(resolver, message), failure: null };
-      } catch (error) {
-        failure = String(error && error.message).slice(0, 60);
-      }
-    }
-    return { body: null, failure };
-  })().finally(() => inflight.delete(key));
+  const attempt = resolve(resolvers, message).finally(() => inflight.delete(key));
   inflight.set(key, attempt);
   return attempt;
+}
+
+const STORED_AT = "x-stored-at";
+const STORED_TTL = "x-stored-ttl";
+const colo = caches.default;
+
+const coloKey = (question) => `https://dns.cache/${question.class}/${question.type}/${encodeURIComponent(question.name)}`;
+
+async function coloRead(question) {
+  try {
+    const hit = await colo.match(coloKey(question));
+    if (!hit) return null;
+    const storedAt = Number(hit.headers.get(STORED_AT));
+    const ttl = Number(hit.headers.get(STORED_TTL));
+    if (!storedAt || !ttl) return null;
+    const age = Math.floor((Date.now() - storedAt) / 1000);
+    if (age < 0 || age >= ttl) return null;
+    return { body: new Uint8Array(await hit.arrayBuffer()), age, ttl: ttl - age };
+  } catch {
+    return null;
+  }
+}
+
+function coloWrite(ctx, question, body, ttl) {
+  try {
+    ctx.waitUntil(
+      colo.put(
+        coloKey(question),
+        new Response(body, {
+          headers: {
+            "content-type": "application/dns-message",
+            "cache-control": `max-age=${ttl}`,
+            [STORED_AT]: String(Date.now()),
+            [STORED_TTL]: String(ttl)
+          }
+        })
+      )
+    );
+  } catch {}
 }
 
 const COUNTER_FLUSH_MS = 60000;
@@ -145,7 +184,7 @@ const DEGRADED = {
   at: 0,
   settings: {
     enabled: false,
-    resolvers: ["https://cloudflare-dns.com/dns-query"],
+    resolvers: ["https://cloudflare-dns.com/dns-query", "https://dns.google/dns-query"],
     logEnabled: false,
     logDays: 7,
     deployHookSet: false
@@ -171,8 +210,9 @@ const dnsResponse = (body, ttl) =>
     }
   });
 
-async function loadState(env) {
-  if (cache.settings && Date.now() - cache.at < CACHE_TTL_MS) return cache;
+let stateRefresh = null;
+
+async function readState(env) {
   const [settings, rules, devices] = await Promise.all([
     env.DB.prepare(
       "SELECT enabled, resolvers, log_enabled, log_days, password_hash, setup_code, deploy_hook FROM settings WHERE id = 1"
@@ -200,13 +240,31 @@ async function loadState(env) {
   return cache;
 }
 
+function loadState(env) {
+  if (cache.settings && Date.now() - cache.at < CACHE_TTL_MS) return Promise.resolve(cache);
+  return readState(env);
+}
+
 async function dnsState(env) {
   if (Date.now() < d1DownUntil) return cache.settings ? cache : DEGRADED;
+  if (cache.settings && Date.now() - cache.at < CACHE_TTL_MS) return cache;
+  if (cache.settings) {
+    if (!stateRefresh) {
+      stateRefresh = readState(env)
+        .catch(() => {
+          d1DownUntil = Date.now() + D1_RETRY_MS;
+        })
+        .finally(() => {
+          stateRefresh = null;
+        });
+    }
+    return cache;
+  }
   try {
-    return await loadState(env);
+    return await readState(env);
   } catch {
     d1DownUntil = Date.now() + D1_RETRY_MS;
-    return cache.settings ? cache : DEGRADED;
+    return DEGRADED;
   }
 }
 
@@ -251,56 +309,73 @@ async function handleDns(request, env, ctx, url, token) {
   if (!question) return json({ error: "bad_query" }, 400);
 
   const verdict = settings.enabled ? decide(question.name, rules) : { action: "allow", rule: null, source: "off" };
+  const forward = stripClientSubnet(message, question);
 
   let body;
   let ttl = BLOCK_TTL;
   let failure = null;
 
   if (verdict.action === "block") {
-    body = blockedResponse(message, question, BLOCK_TTL);
+    body = blockedResponse(message, question, BLOCK_TTL, verdict.rcode);
   } else {
     const resolvers = settings.resolvers.map(parseResolver).filter(Boolean);
     const key = cacheKey(question);
     const entry = answers.get(key);
+    const usable = entry && entry.body.length >= question.end;
+
+    const accept = (fresh) => {
+      const cloaked = cloakedBy(fresh, settings, rules);
+      if (cloaked) return cloaked;
+      const answer = boostTtl(new Uint8Array(fresh), TTL_FLOOR);
+      const life = ttlOf(answer);
+      remember(key, answer, life);
+      coloWrite(ctx, question, answer, life);
+      return { answer, life };
+    };
 
     if (resolvers.length === 0) {
       failure = "no_resolver";
       body = servfail(message);
       ttl = 0;
-    } else if (entry && entry.body.length >= question.end && started < entry.expires) {
+    } else if (usable && started < entry.expires) {
       body = replay(entry, message, question, Math.floor((started - entry.storedAt) / 1000));
       ttl = Math.max(1, Math.ceil((entry.expires - started) / 1000));
       verdict.source = "cache";
-    } else if (entry && entry.body.length >= question.end && started < entry.expires + STALE_GRACE_MS) {
+    } else if (usable && started < entry.expires + STALE_GRACE_MS) {
       body = replay(entry, message, question, null);
       ttl = STALE_TTL;
       verdict.source = "stale";
       ctx.waitUntil(
-        fetchUpstream(key, resolvers, message).then((fresh) => {
-          if (fresh.body) remember(key, boostTtl(fresh.body, TTL_FLOOR), ttlOf(fresh.body));
+        fetchUpstream(key, resolvers, forward).then((fresh) => {
+          if (!fresh.body) return;
+          if (accept(fresh.body).rule) answers.delete(key);
         })
       );
     } else {
-      const fresh = await fetchUpstream(key, resolvers, message);
-      failure = fresh.failure;
-      if (!fresh.body) {
-        body = servfail(message);
-        ttl = 0;
+      const near = await coloRead(question);
+      if (near && near.body.length >= question.end) {
+        remember(key, near.body, near.ttl);
+        body = decrementTtl(adopt(near.body, message, question), near.age);
+        ttl = near.ttl;
+        verdict.source = "colo";
       } else {
-        const cloaked = settings.enabled
-          ? cnameTargets(fresh.body).map((target) => decide(target, rules)).find((result) => result.action === "block")
-          : null;
-        if (cloaked) {
-          verdict.action = "block";
-          verdict.rule = cloaked.rule;
-          verdict.source = "cname";
-          body = blockedResponse(message, question, BLOCK_TTL);
-          ttl = BLOCK_TTL;
+        const fresh = await fetchUpstream(key, resolvers, forward);
+        failure = fresh.failure;
+        if (!fresh.body) {
+          body = servfail(message);
+          ttl = 0;
         } else {
-          const answer = boostTtl(new Uint8Array(fresh.body), TTL_FLOOR);
-          ttl = ttlOf(answer);
-          remember(key, answer, ttl);
-          body = answer.length >= question.end ? adopt(answer, message, question) : answer;
+          const outcome = accept(fresh.body);
+          if (outcome.rule) {
+            verdict.action = "block";
+            verdict.rule = outcome.rule;
+            verdict.source = "cname";
+            body = blockedResponse(message, question, BLOCK_TTL, outcome.rcode);
+            ttl = BLOCK_TTL;
+          } else {
+            ttl = outcome.life;
+            body = outcome.answer.length >= question.end ? adopt(outcome.answer, message, question) : outcome.answer;
+          }
         }
       }
     }

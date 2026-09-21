@@ -25,7 +25,7 @@ export const QUERY_TYPES = {
 export function readQuestion(message) {
   if (message.length < 13) return null;
   const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
-  if (view.getUint16(4) === 0) return null;
+  if (view.getUint16(4) !== 1) return null;
   const labels = [];
   let offset = 12;
   while (offset < message.length) {
@@ -47,20 +47,34 @@ export function readQuestion(message) {
   };
 }
 
-export function blockedResponse(message, question, ttl) {
+const TYPE_OPT = 41;
+const OPT_LENGTH = 11;
+const MIN_PAYLOAD = 512;
+const MAX_PAYLOAD = 4096;
+
+export function ednsPayload(message, question) {
+  const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
+  if (view.getUint16(10) === 0) return 0;
+  const at = question.end;
+  if (at + OPT_LENGTH > message.length || message[at] !== 0 || view.getUint16(at + 1) !== TYPE_OPT) return 0;
+  return Math.min(MAX_PAYLOAD, Math.max(MIN_PAYLOAD, view.getUint16(at + 3)));
+}
+
+export function blockedResponse(message, question, ttl, rcode = 0) {
   const questionBytes = message.subarray(12, question.end);
-  const address = question.type === TYPE_A ? 4 : question.type === TYPE_AAAA ? 16 : 0;
+  const address = rcode === 0 && (question.type === TYPE_A ? 4 : question.type === TYPE_AAAA ? 16 : 0);
   const rdlength = address > 0 ? address : SOA_RDLENGTH;
-  const response = new Uint8Array(12 + questionBytes.length + 12 + rdlength);
+  const payload = ednsPayload(message, question);
+  const response = new Uint8Array(12 + questionBytes.length + 12 + rdlength + (payload > 0 ? OPT_LENGTH : 0));
   const view = new DataView(response.buffer);
 
   response.set(message.subarray(0, 2), 0);
   response[2] = 0x80 | (message[2] & 0x01);
-  response[3] = 0x80;
+  response[3] = 0x80 | rcode;
   view.setUint16(4, 1);
   view.setUint16(6, address > 0 ? 1 : 0);
   view.setUint16(8, address > 0 ? 0 : 1);
-  view.setUint16(10, 0);
+  view.setUint16(10, payload > 0 ? 1 : 0);
   response.set(questionBytes, 12);
 
   const offset = 12 + questionBytes.length;
@@ -69,7 +83,11 @@ export function blockedResponse(message, question, ttl) {
   view.setUint16(offset + 4, question.class);
   view.setUint32(offset + 6, ttl);
   view.setUint16(offset + 10, rdlength);
-  if (address > 0) return response;
+  const optAt = offset + 12 + rdlength;
+  if (address > 0) {
+    writeOpt(view, optAt, payload);
+    return response;
+  }
 
   view.setUint16(offset + 12, 0xc00c);
   view.setUint16(offset + 14, 0xc00c);
@@ -78,7 +96,55 @@ export function blockedResponse(message, question, ttl) {
   view.setUint32(offset + 24, 600);
   view.setUint32(offset + 28, 86400);
   view.setUint32(offset + 32, ttl);
+  writeOpt(view, optAt, payload);
   return response;
+}
+
+function writeOpt(view, offset, payload) {
+  if (payload === 0) return;
+  view.setUint8(offset, 0);
+  view.setUint16(offset + 1, TYPE_OPT);
+  view.setUint16(offset + 3, payload);
+  view.setUint32(offset + 5, 0);
+  view.setUint16(offset + 9, 0);
+}
+
+const OPTION_ECS = 8;
+
+export function stripClientSubnet(message, question) {
+  const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
+  if (view.getUint16(6) !== 0 || view.getUint16(8) !== 0 || view.getUint16(10) === 0) return message;
+  const at = question.end;
+  if (at + OPT_LENGTH > message.length || message[at] !== 0 || view.getUint16(at + 1) !== TYPE_OPT) return message;
+
+  const rdlength = view.getUint16(at + 9);
+  const rdata = at + OPT_LENGTH;
+  const rdataEnd = rdata + rdlength;
+  if (rdataEnd > message.length) return message;
+
+  const keep = [];
+  let cursor = rdata;
+  let found = false;
+  while (cursor + 4 <= rdataEnd) {
+    const length = view.getUint16(cursor + 2);
+    if (cursor + 4 + length > rdataEnd) return message;
+    if (view.getUint16(cursor) === OPTION_ECS) found = true;
+    else keep.push([cursor, 4 + length]);
+    cursor += 4 + length;
+  }
+  if (!found) return message;
+
+  const kept = keep.reduce((total, [, length]) => total + length, 0);
+  const out = new Uint8Array(message.length - (rdlength - kept));
+  out.set(message.subarray(0, rdata), 0);
+  let write = rdata;
+  for (const [from, length] of keep) {
+    out.set(message.subarray(from, from + length), write);
+    write += length;
+  }
+  out.set(message.subarray(rdataEnd), write);
+  new DataView(out.buffer).setUint16(at + 9, kept);
+  return out;
 }
 
 export function servfail(message) {
