@@ -92,45 +92,6 @@ function fetchUpstream(key, resolvers, message) {
   return attempt;
 }
 
-const STORED_AT = "x-stored-at";
-const STORED_TTL = "x-stored-ttl";
-const colo = caches.default;
-
-const coloKey = (question) => `https://dns.cache/${question.class}/${question.type}/${encodeURIComponent(question.name)}`;
-
-async function coloRead(question) {
-  try {
-    const hit = await colo.match(coloKey(question));
-    if (!hit) return null;
-    const storedAt = Number(hit.headers.get(STORED_AT));
-    const ttl = Number(hit.headers.get(STORED_TTL));
-    if (!storedAt || !ttl) return null;
-    const age = Math.floor((Date.now() - storedAt) / 1000);
-    if (age < 0 || age >= ttl) return null;
-    return { body: new Uint8Array(await hit.arrayBuffer()), age, ttl: ttl - age };
-  } catch {
-    return null;
-  }
-}
-
-function coloWrite(ctx, question, body, ttl) {
-  try {
-    ctx.waitUntil(
-      colo.put(
-        coloKey(question),
-        new Response(body, {
-          headers: {
-            "content-type": "application/dns-message",
-            "cache-control": `max-age=${ttl}`,
-            [STORED_AT]: String(Date.now()),
-            [STORED_TTL]: String(ttl)
-          }
-        })
-      )
-    );
-  } catch {}
-}
-
 const COUNTER_FLUSH_MS = 60000;
 const COUNTER_FLUSH_QUERIES = 25;
 const LOG_MEMORY = 20000;
@@ -329,7 +290,6 @@ async function handleDns(request, env, ctx, url, token) {
       const answer = boostTtl(new Uint8Array(fresh), TTL_FLOOR);
       const life = ttlOf(answer);
       remember(key, answer, life);
-      coloWrite(ctx, question, answer, life);
       return { answer, life };
     };
 
@@ -352,30 +312,22 @@ async function handleDns(request, env, ctx, url, token) {
         })
       );
     } else {
-      const near = await coloRead(question);
-      if (near && near.body.length >= question.end) {
-        remember(key, near.body, near.ttl);
-        body = decrementTtl(adopt(near.body, message, question), near.age);
-        ttl = near.ttl;
-        verdict.source = "colo";
+      const fresh = await fetchUpstream(key, resolvers, forward);
+      failure = fresh.failure;
+      if (!fresh.body) {
+        body = servfail(message);
+        ttl = 0;
       } else {
-        const fresh = await fetchUpstream(key, resolvers, forward);
-        failure = fresh.failure;
-        if (!fresh.body) {
-          body = servfail(message);
-          ttl = 0;
+        const outcome = accept(fresh.body);
+        if (outcome.rule) {
+          verdict.action = "block";
+          verdict.rule = outcome.rule;
+          verdict.source = "cname";
+          body = blockedResponse(message, question, BLOCK_TTL, outcome.rcode);
+          ttl = BLOCK_TTL;
         } else {
-          const outcome = accept(fresh.body);
-          if (outcome.rule) {
-            verdict.action = "block";
-            verdict.rule = outcome.rule;
-            verdict.source = "cname";
-            body = blockedResponse(message, question, BLOCK_TTL, outcome.rcode);
-            ttl = BLOCK_TTL;
-          } else {
-            ttl = outcome.life;
-            body = outcome.answer.length >= question.end ? adopt(outcome.answer, message, question) : outcome.answer;
-          }
+          ttl = outcome.life;
+          body = outcome.answer.length >= question.end ? adopt(outcome.answer, message, question) : outcome.answer;
         }
       }
     }
