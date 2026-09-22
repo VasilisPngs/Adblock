@@ -80,7 +80,6 @@ const STRINGS = {
   viaAllow: ["Allowed by your rule", "Πέρασε από δικό σου κανόνα"],
   viaNone: ["Allowed", "Πέρασε"],
   viaOff: ["Protection off", "Προστασία ανενεργή"],
-  viaNoResolver: ["No resolver set", "Δεν έχει οριστεί resolver"],
 
   protectionTitle: ["Protection", "Προστασία"],
   noSources: ["No list is set, so only your own rules apply.", "Δεν έχει οριστεί λίστα, οπότε ισχύουν μόνο οι δικοί σου κανόνες."],
@@ -113,13 +112,6 @@ const STRINGS = {
 
   settingsTitle: ["Settings", "Ρυθμίσεις"],
   appearance: ["Appearance", "Εμφάνιση"],
-  resolversTitle: ["Upstream resolvers", "Resolvers"],
-  resolversNote: [
-    "An encrypted DoH URL. Tried in order, the first that answers wins.",
-    "Κρυπτογραφημένο DoH URL. Δοκιμάζονται με σειρά, κερδίζει ο πρώτος που απαντά."
-  ],
-  resolverPlaceholder: ["https://…/dns-query", "https://…/dns-query"],
-  addResolver: ["Add resolver", "Προσθήκη resolver"],
   logging: ["Log DNS queries", "Καταγραφή ερωτημάτων DNS"],
   loggingNote: ["Kept for 24 hours, then deleted automatically.", "Κρατιούνται για 24 ώρες και μετά σβήνονται αυτόματα."],
   devicesTitle: ["Devices", "Συσκευές"],
@@ -154,11 +146,6 @@ const STRINGS = {
   remove: ["Remove", "Αφαίρεση"],
   cancel: ["Cancel", "Άκυρο"],
   requestFailed: ["Something went wrong.", "Κάτι πήγε στραβά."],
-  invalidResolver: ["Not a DoH URL: {detail}", "Δεν είναι DoH URL: {detail}"],
-  noResolver: [
-    "No resolver is set, so nothing can be answered.",
-    "Δεν έχει οριστεί resolver, άρα τίποτα δεν μπορεί να απαντηθεί."
-  ],
   justNow: ["just now", "μόλις τώρα"],
   minutesAgo: ["{count} minutes ago", "πριν από {count} λεπτά"],
   hoursAgo: ["{count} hours ago", "πριν από {count} ώρες"],
@@ -215,6 +202,6 @@ export function relativeTime(value) {
 }
 
 export function sourceLabel(source) {
-  const map = { list: "viaList", custom: "viaCustom", allow: "viaAllow", none: "viaNone", off: "viaOff", cname: "viaCname", cache: "viaCache", stale: "viaStale", no_resolver: "viaNoResolver" };
+  const map = { list: "viaList", custom: "viaCustom", allow: "viaAllow", none: "viaNone", off: "viaOff", cname: "viaCname", cache: "viaCache", stale: "viaStale" };
   return map[source] ? t(map[source]) : source;
 }

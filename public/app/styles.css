@@ -585,18 +585,6 @@ textarea {
   animation: rise var(--speed) var(--ease);
 }
 
-.banner {
-  border-radius: var(--radius-m);
-  padding: 11px 13px;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: color-mix(in srgb, var(--danger) 14%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
-}
-
 @media (min-width: 56.25rem) {
   #app {
     min-height: 100%;

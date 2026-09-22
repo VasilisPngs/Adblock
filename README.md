@@ -2,15 +2,15 @@
 
 DNS-level ad and tracker blocking on Cloudflare Workers. The Worker is the resolver:
 it answers DNS-over-HTTPS, blocks what is on the lists, and forwards everything else
-to whichever upstream resolvers you type in yourself.
+to Cloudflare's DoH resolver.
 
 ## How it works
 
 ```
 device ──DoH──▶ Worker ──▶ blocklist lookup (in memory, bundled)
                   │
-                  ├─ blocked → 0.0.0.0 / :: / NXDOMAIN, never leaves Cloudflare
-                  └─ allowed → your upstream resolver (DoH, encrypted)
+                  ├─ blocked → 0.0.0.0 / :: / NODATA, never leaves Cloudflare
+                  └─ allowed → Cloudflare DoH (encrypted)
 ```
 
 Blocklists are compiled at build time, not at runtime: the Workers free plan allows
@@ -46,9 +46,7 @@ pretending the change is live.
    who finds the URL first can claim it.
    A `DASHBOARD_PASSWORD` secret on the Worker still wins if one is set, which is the
    better place for it when the dashboard lets you save it.
-5. Open the app, sign in, and add a device to get its DoH URL and profile. It already
-   resolves through `https://cloudflare-dns.com/dns-query`; change or extend that list in
-   Settings whenever you want.
+5. Open the app, sign in, and add a device to get its DoH URL and profile.
 
 A GitHub Action rebuilds the lists every night and commits them when they changed,
 which makes Workers Builds deploy the fresh list. `npm run lists` does the same by hand.
@@ -77,15 +75,10 @@ on a DNS query.
 The device address is the credential, so the app shows it masked and reveals it on
 request. Copy puts the full address on the clipboard without ever putting it on screen.
 
-## Upstream resolvers
+## Upstream resolver
 
-`https://cloudflare-dns.com/dns-query` ships as the default so the resolver works the
-moment it is deployed. Replace it with any DoH URL you type, in order, first one that answers wins, for example
-`https://dns.example.net/dns-query`.
-
-Plain DNS on port 53 is not offered. It is unencrypted, which is the one thing this
-resolver exists to avoid, and it costs a fresh TCP handshake on every query that cannot
-be reused between requests. A resolver that is not an `https://` URL is refused.
+Everything that is not blocked is forwarded to `https://cloudflare-dns.com/dns-query`.
+It is fixed in `src/upstream.js` and cannot be changed from the app or the API.
 
 ## Toolchain
 

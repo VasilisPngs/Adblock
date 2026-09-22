@@ -164,79 +164,6 @@ function rebuildCard(settings) {
   return card;
 }
 
-function resolverCard(settings) {
-  const card = el("div", { class: "card" }, [
-    el("h2", { text: t("resolversTitle") }),
-    el("div", { class: "tiny", text: t("resolversNote") })
-  ]);
-  let values = settings.resolvers.length > 0 ? [...settings.resolvers] : [""];
-  const rows = el("div", { class: "list" });
-
-  const commit = async () => {
-    const resolvers = values.map((value) => value.trim()).filter(Boolean);
-    try {
-      const saved = await saveSettings({ resolvers });
-      values = saved.resolvers.length > 0 ? [...saved.resolvers] : [""];
-      paint();
-      toast(t("saved"));
-    } catch (error) {
-      const detail = Array.isArray(error.detail) ? error.detail.join(", ") : error.detail || "";
-      if (error.code === "invalid_resolver") toast(t("invalidResolver", { detail }));
-      else toast(t("requestFailed"));
-    }
-  };
-
-  const paint = () => {
-    clear(rows);
-    values.forEach((value, index) => {
-      rows.append(
-        el("div", { class: "resolver-row" }, [
-          el("input", {
-            type: "text",
-            inputMode: "url",
-            autocapitalize: "none",
-            autocomplete: "off",
-            spellcheck: "false",
-            placeholder: t("resolverPlaceholder"),
-            value,
-            oninput: (event) => {
-              values[index] = event.target.value;
-            }
-          }),
-          el("button", {
-            class: "btn small ghost",
-            type: "button",
-            text: t("remove"),
-            onclick: () => {
-              values.splice(index, 1);
-              if (values.length === 0) values.push("");
-              paint();
-            }
-          })
-        ])
-      );
-    });
-  };
-
-  paint();
-  card.append(rows);
-  card.append(
-    el("div", { class: "row", style: "gap:8px" }, [
-      el("button", {
-        class: "btn small grow",
-        type: "button",
-        text: t("addResolver"),
-        onclick: () => {
-          values.push("");
-          paint();
-        }
-      }),
-      el("button", { class: "btn small primary grow", type: "button", text: t("save"), onclick: commit })
-    ])
-  );
-  return card;
-}
-
 function ruleCard() {
   const card = el("div", { class: "card" }, [el("h2", { text: t("myRules") })]);
   const list = el("div", { class: "list" });
@@ -327,6 +254,5 @@ export function renderProtection(container) {
   container.append(el("div", { class: "list-bar" }, [el("h1", { text: t("protectionTitle") })]));
   container.append(sourceCard(state));
   container.append(ruleCard());
-  container.append(resolverCard(state.settings));
   container.append(rebuildCard(state.settings));
 }

@@ -12,7 +12,7 @@ import {
   QUERY_TYPES
 } from "./dns.js";
 import { decide } from "./blocklist.js";
-import { parseResolver, resolve } from "./upstream.js";
+import { resolve } from "./upstream.js";
 import {
   checkPassword,
   hashPassword,
@@ -82,10 +82,10 @@ function replay(entry, message, question, age) {
   return age === null ? setTtl(body, STALE_TTL) : decrementTtl(body, age);
 }
 
-function fetchUpstream(key, resolvers, message) {
+function fetchUpstream(key, message) {
   const pending = inflight.get(key);
   if (pending) return pending;
-  const attempt = resolve(resolvers, message).finally(() => inflight.delete(key));
+  const attempt = resolve(message).finally(() => inflight.delete(key));
   inflight.set(key, attempt);
   return attempt;
 }
@@ -109,7 +109,6 @@ const DEGRADED = {
   at: 0,
   settings: {
     enabled: false,
-    resolvers: ["https://cloudflare-dns.com/dns-query"],
     logEnabled: false,
     deployHookSet: false
   },
@@ -139,7 +138,7 @@ let stateRefresh = null;
 async function readState(env) {
   const [settings, rules, devices] = await Promise.all([
     env.DB.prepare(
-      "SELECT enabled, resolvers, log_enabled, password_hash, setup_code, deploy_hook FROM settings WHERE id = 1"
+      "SELECT enabled, log_enabled, password_hash, setup_code, deploy_hook FROM settings WHERE id = 1"
     ).first(),
     env.DB.prepare("SELECT host, action FROM rules").all(),
     env.DB.prepare("SELECT token FROM devices").all()
@@ -151,7 +150,6 @@ async function readState(env) {
     at: Date.now(),
     settings: {
       enabled: Boolean(settings?.enabled),
-      resolvers: JSON.parse(settings?.resolvers || "[]"),
       logEnabled: Boolean(settings?.log_enabled),
       deployHookSet: Boolean(settings?.deploy_hook)
     },
@@ -241,7 +239,6 @@ async function handleDns(request, env, ctx, url, token) {
   if (verdict.action === "block") {
     body = blockedResponse(message, question, BLOCK_TTL);
   } else {
-    const resolvers = settings.resolvers.map(parseResolver).filter(Boolean);
     const key = cacheKey(question);
     const entry = answers.get(key);
     const usable = entry && entry.body.length >= question.end;
@@ -255,11 +252,7 @@ async function handleDns(request, env, ctx, url, token) {
       return { answer, life };
     };
 
-    if (resolvers.length === 0) {
-      failure = "no_resolver";
-      body = servfail(message);
-      ttl = 0;
-    } else if (usable && started < entry.expires) {
+    if (usable && started < entry.expires) {
       body = replay(entry, message, question, Math.floor((started - entry.storedAt) / 1000));
       ttl = Math.max(1, Math.ceil((entry.expires - started) / 1000));
       verdict.source = "cache";
@@ -268,13 +261,13 @@ async function handleDns(request, env, ctx, url, token) {
       ttl = STALE_TTL;
       verdict.source = "stale";
       ctx.waitUntil(
-        fetchUpstream(key, resolvers, forward).then((fresh) => {
+        fetchUpstream(key, forward).then((fresh) => {
           if (!fresh.body) return;
           if (accept(fresh.body).rule) answers.delete(key);
         })
       );
     } else {
-      const fresh = await fetchUpstream(key, resolvers, forward);
+      const fresh = await fetchUpstream(key, forward);
       failure = fresh.failure;
       if (!fresh.body) {
         body = servfail(message);
@@ -473,12 +466,6 @@ async function handleSettings(request, env) {
   const payload = await request.json().catch(() => null);
   if (!payload) return json({ error: "invalid_json" }, 400);
   const current = (await loadState(env)).settings;
-  const resolvers = Array.isArray(payload.resolvers)
-    ? payload.resolvers.map((value) => String(value).trim()).filter(Boolean).slice(0, 8)
-    : current.resolvers;
-  const invalid = resolvers.filter((value) => !parseResolver(value));
-  if (invalid.length > 0) return json({ error: "invalid_resolver", detail: invalid }, 400);
-
   const enabled = payload.enabled === undefined ? current.enabled : Boolean(payload.enabled);
   const logEnabled = payload.logEnabled === undefined ? current.logEnabled : Boolean(payload.logEnabled);
 
@@ -489,9 +476,9 @@ async function handleSettings(request, env) {
   }
 
   await env.DB.prepare(
-    "UPDATE settings SET enabled = ?1, resolvers = ?2, log_enabled = ?3, updated_at = ?4 WHERE id = 1"
+    "UPDATE settings SET enabled = ?1, log_enabled = ?2, updated_at = ?3 WHERE id = 1"
   )
-    .bind(enabled ? 1 : 0, JSON.stringify(resolvers), logEnabled ? 1 : 0, Date.now())
+    .bind(enabled ? 1 : 0, logEnabled ? 1 : 0, Date.now())
     .run();
   invalidate();
   return json({ ok: true, settings: (await loadState(env)).settings });

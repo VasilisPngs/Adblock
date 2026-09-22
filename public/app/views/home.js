@@ -1,7 +1,6 @@
 import { el, toast } from "../dom.js";
 import { t } from "../i18n.js";
 import { currentState, saveSettings } from "../api.js";
-import { navigate } from "../router.js";
 
 const motion = matchMedia("(prefers-reduced-motion: no-preference)");
 
@@ -44,16 +43,7 @@ export function renderHome(container) {
     },
     [el("span", { class: "switch-knob" })]
   );
-  const hero = el("div", { class: "hero" }, [el("div", { class: "card hero-card" }, [label, track])]);
-  if (settings.resolvers.length === 0) {
-    hero.append(
-      el("div", { class: "banner" }, [
-        el("span", { text: t("noResolver") }),
-        el("button", { class: "btn small", type: "button", text: t("settingsTitle"), onclick: () => navigate("/settings") })
-      ])
-    );
-  }
-  container.append(hero);
+  container.append(el("div", { class: "hero" }, [el("div", { class: "card hero-card" }, [label, track])]));
 }
 
 export function updateHome(container) {
@@ -61,7 +51,6 @@ export function updateHome(container) {
   const label = container.querySelector(".hero-label");
   const track = container.querySelector(".hero .switch-track");
   if (!state || !label || !track) return false;
-  if (Boolean(container.querySelector(".hero .banner")) !== (state.settings.resolvers.length === 0)) return false;
   paint(label, track, state.settings.enabled);
   return true;
 }
