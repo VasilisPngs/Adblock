@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "wrangler dev --config wrangler.app.jsonc",
     "dev:dns": "wrangler dev",
-    "deploy": "npm run lists && npx wrangler d1 migrations apply DB --remote && npx wrangler deploy --config wrangler.app.jsonc && npx wrangler deploy",
+    "deploy": "npm run lists && npx wrangler d1 migrations apply DB --remote && npx wrangler deploy",
+    "deploy:app": "npx wrangler deploy --config wrangler.app.jsonc",
     "lists": "node scripts/build-blocklist.mjs",
     "db:migrate": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",

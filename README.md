@@ -37,10 +37,9 @@ pretending the change is live.
 
 1. `npm install`
 2. The database id in `wrangler.jsonc` points at the `adblock` D1 database.
-3. `npm run deploy` — builds the lists, applies migrations, deploys the dashboard Worker
-   (`adblock-app`, `wrangler.app.jsonc`) and then the resolver (`adblock`, `wrangler.jsonc`).
-   The dashboard goes first, so a failed deploy never leaves the resolver redirecting to a
-   dashboard that does not exist.
+3. Two Workers Builds connections on this repository, because a build always deploys to
+   the Worker it is connected to: `adblock` runs `npm run deploy` (lists, migrations,
+   resolver) and `adblock-app` runs `npm run deploy:app` (dashboard).
 4. Protect the dashboard: Workers & Pages → `adblock-app` → Access → Protect this Worker
    behind Access → All traffic → your policy → Apply Access. Until then the dashboard
    refuses every API request, because the Worker only trusts requests Access authenticated.
