@@ -51,11 +51,11 @@ export async function refresh() {
   }
 }
 
-export async function saveSettings(patch) {
+export async function saveSettings(patch, quiet = false) {
   const result = await call("/api/settings", { method: "POST", body: JSON.stringify(patch) });
   if (state) state.settings = result.settings;
   setStatus(result.settings.enabled ? "on" : "off");
-  apiEvents.dispatchEvent(new CustomEvent("changed"));
+  if (!quiet) apiEvents.dispatchEvent(new CustomEvent("changed"));
   return result.settings;
 }
 

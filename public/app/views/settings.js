@@ -209,28 +209,29 @@ export function renderSettings(container) {
     ])
   );
 
+  const loggingTrack = el(
+    "button",
+    {
+      class: "switch-track",
+      type: "button",
+      "aria-pressed": settings.logEnabled ? "true" : "false",
+      "aria-label": t("logging"),
+      onclick: async () => {
+        const next = loggingTrack.getAttribute("aria-pressed") !== "true";
+        loggingTrack.setAttribute("aria-pressed", next ? "true" : "false");
+        try {
+          await saveSettings({ logEnabled: next }, true);
+        } catch {
+          loggingTrack.setAttribute("aria-pressed", currentState().settings.logEnabled ? "true" : "false");
+          toast(t("requestFailed"));
+        }
+      }
+    },
+    [el("span", { class: "switch-knob" })]
+  );
   container.append(
     el("div", { class: "card" }, [
-      el("div", { class: "switch boxed" }, [
-        el("span", { class: "grow", text: t("logging") }),
-        el(
-          "button",
-          {
-            class: "switch-track",
-            type: "button",
-            "aria-pressed": settings.logEnabled ? "true" : "false",
-            "aria-label": t("logging"),
-            onclick: async () => {
-              try {
-                await saveSettings({ logEnabled: !settings.logEnabled });
-              } catch {
-                toast(t("requestFailed"));
-              }
-            }
-          },
-          [el("span", { class: "switch-knob" })]
-        )
-      ]),
+      el("div", { class: "switch boxed" }, [el("span", { class: "grow", text: t("logging") }), loggingTrack]),
       el("div", { class: "tiny", text: t("loggingNote") })
     ])
   );
