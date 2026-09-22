@@ -33,7 +33,7 @@ export function renderHome(container) {
     [el("span", { class: "switch-knob" })]
   );
   paint(label, track, settings.enabled);
-  const hero = el("div", { class: "hero" }, [label, track]);
+  const hero = el("div", { class: "hero" }, [el("div", { class: "card hero-card" }, [label, track])]);
   if (settings.resolvers.length === 0) {
     hero.append(
       el("div", { class: "banner" }, [
