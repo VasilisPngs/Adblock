@@ -243,7 +243,6 @@ svg {
 }
 
 .list-bar > .card,
-.list-bar .stat,
 .list-bar .chip:not([aria-pressed="true"]),
 .list-bar input,
 .list-bar select {
@@ -518,27 +517,6 @@ textarea {
   font-size: 13.5px;
 }
 
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-}
-
-.stat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-m);
-  padding: 12px 13px;
-}
-
-.stat b {
-  display: block;
-  font-size: 20px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
 @keyframes rise {
   from { opacity: 0; transform: translate(-50%, 10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
@@ -800,15 +778,29 @@ textarea {
   margin-top: -4px;
 }
 
-.switch-label {
-  font-size: 17px;
-  font-weight: 640;
+.view > .hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.1rem, 3.2dvh, 1.75rem);
+  text-align: center;
+}
+
+.hero-label {
+  font-size: clamp(1.3rem, 5vw, 1.75rem);
+  font-weight: 660;
+  letter-spacing: -0.015em;
 }
 
 .switch-track {
+  --w: 58px;
+  --h: calc(var(--w) * 34 / 58);
+  --inset: calc(var(--w) * 3 / 58);
   position: relative;
-  width: 58px;
-  height: 34px;
+  width: var(--w);
+  height: var(--h);
   border: 0;
   border-radius: 999px;
   background: var(--surface-3);
@@ -821,12 +813,16 @@ textarea {
   background: var(--accent);
 }
 
+.switch-track.large {
+  --w: clamp(6.5rem, 30vw, 8rem);
+}
+
 .switch-knob {
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 28px;
-  height: 28px;
+  top: var(--inset);
+  left: var(--inset);
+  width: calc(var(--h) - 2 * var(--inset));
+  height: calc(var(--h) - 2 * var(--inset));
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -834,7 +830,7 @@ textarea {
 }
 
 .switch-track[aria-pressed="true"] .switch-knob {
-  transform: translateX(24px);
+  transform: translateX(calc(var(--w) - var(--h)));
 }
 
 .log-row {

@@ -55,14 +55,10 @@ const STRINGS = {
   protectionOn: ["Protection is enabled", "Προστασία ενεργή"],
   protectionOff: ["Protection is disabled", "Προστασία ανενεργή"],
 
-  queriesTotal: ["Queries", "Ερωτήματα"],
-  blockedTotal: ["Blocked queries", "Μπλοκαρισμένα ερωτήματα"],
 
   listBuilt: ["Built {when}", "Χτίστηκε {when}"],
 
-  topDomains: ["Most blocked", "Τα πιο μπλοκαρισμένα"],
   noActivity: ["No queries yet.", "Κανένα ερώτημα ακόμα."],
-  noBlocked: ["Nothing blocked yet.", "Τίποτα μπλοκαρισμένο ακόμα."],
 
   logTitle: ["Activity", "Κινήσεις"],
   filterAll: ["All", "Όλα"],
@@ -126,18 +122,6 @@ const STRINGS = {
   addResolver: ["Add resolver", "Προσθήκη resolver"],
   logging: ["Log DNS queries", "Καταγραφή ερωτημάτων DNS"],
   loggingNote: ["Kept for 24 hours, then deleted automatically.", "Κρατιούνται για 24 ώρες και μετά σβήνονται αυτόματα."],
-  countersTitle: ["Counters", "Μετρητές"],
-  countersNote: [
-    "Queries, blocked queries and most blocked add up from the first day until you reset them.",
-    "Τα ερωτήματα, τα μπλοκαρισμένα και τα πιο μπλοκαρισμένα αθροίζουν από την πρώτη μέρα μέχρι να τα μηδενίσεις."
-  ],
-  resetCounters: ["Reset counters", "Μηδενισμός μετρητών"],
-  resetCountersBody: [
-    "Queries, blocked queries and most blocked start again from zero. The activity log stays.",
-    "Τα ερωτήματα, τα μπλοκαρισμένα και τα πιο μπλοκαρισμένα ξεκινούν ξανά από το μηδέν. Οι κινήσεις μένουν."
-  ],
-  reset: ["Reset", "Μηδενισμός"],
-  countersCleared: ["Counters reset", "Οι μετρητές μηδενίστηκαν"],
   devicesTitle: ["Devices", "Συσκευές"],
   devicesNote: [
     "Each device gets its own address, so the log can tell them apart.",

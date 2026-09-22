@@ -79,15 +79,6 @@ export function rebuildNow() {
   return call("/api/rebuild", { method: "POST", body: "{}" });
 }
 
-export function loadTop() {
-  return call("/api/top");
-}
-
-export async function resetCounters() {
-  await call("/api/reset", { method: "POST", body: "{}" });
-  await refresh();
-}
-
 export function loadRules() {
   return call("/api/rules");
 }

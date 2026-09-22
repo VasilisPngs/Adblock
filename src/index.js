@@ -38,7 +38,6 @@ const LOGIN_WINDOW_MS = 600000;
 const LOGIN_ATTEMPTS = 10;
 const HOUR_MS = 3600000;
 const SEEN_INTERVAL_MS = 300000;
-const TOP_LIMIT = 10;
 const PRUNE_LIMIT = 20000;
 const ERROR_RETENTION_MS = 30 * 86400000;
 
@@ -91,43 +90,10 @@ function fetchUpstream(key, resolvers, message) {
   return attempt;
 }
 
-const COUNTER_FLUSH_MS = 60000;
-const COUNTER_FLUSH_QUERIES = 25;
 const LOG_MEMORY = 20000;
 
 const seen = new Map();
 const logged = new Map();
-const pendingCounters = new Map();
-const pendingBlocked = new Map();
-let countersFlushedAt = 0;
-let pendingQueries = 0;
-
-function countQuery(action, name) {
-  pendingCounters.set(action, (pendingCounters.get(action) || 0) + 1);
-  if (action === "block") pendingBlocked.set(name, (pendingBlocked.get(name) || 0) + 1);
-  pendingQueries += 1;
-}
-
-function flushCounters(env) {
-  if (pendingCounters.size === 0 && pendingBlocked.size === 0) return null;
-  const statements = [
-    ...[...pendingCounters].map(([action, total]) =>
-      env.DB.prepare(
-        "INSERT INTO totals (action, total) VALUES (?1, ?2) ON CONFLICT(action) DO UPDATE SET total = total + ?2"
-      ).bind(action, total)
-    ),
-    ...[...pendingBlocked].map(([name, total]) =>
-      env.DB.prepare(
-        "INSERT INTO blocked_totals (name, total) VALUES (?1, ?2) ON CONFLICT(name) DO UPDATE SET total = total + ?2"
-      ).bind(name, total)
-    )
-  ];
-  pendingCounters.clear();
-  pendingBlocked.clear();
-  pendingQueries = 0;
-  countersFlushedAt = Date.now();
-  return env.DB.batch(statements).catch(() => {});
-}
 
 function firstThisHour(key, hour) {
   if (logged.get(key) === hour) return false;
@@ -333,12 +299,6 @@ async function handleDns(request, env, ctx, url, token) {
   const hour = Math.floor(started / HOUR_MS);
   const type = QUERY_TYPES[question.type] || String(question.type);
 
-  countQuery(action, question.name);
-  if (pendingQueries >= COUNTER_FLUSH_QUERIES || started - countersFlushedAt >= COUNTER_FLUSH_MS) {
-    const flush = flushCounters(env);
-    if (flush) ctx.waitUntil(flush);
-  }
-
   if (settings.logEnabled && firstThisHour(`${token}|${question.name}|${type}|${action}`, hour)) {
     ctx.waitUntil(
       logQuery(env, {
@@ -497,17 +457,13 @@ function handleLogout() {
 
 async function handleState(request, env) {
   const { settings } = await loadState(env);
-  const [counts, devices, sources] = await Promise.all([
-    env.DB.prepare("SELECT action, total FROM totals").all(),
+  const [devices, sources] = await Promise.all([
     env.DB.prepare("SELECT token, name, platform, created_at, last_seen_at FROM devices ORDER BY created_at").all(),
     listSources(env)
   ]);
-  const totals = { allow: 0, block: 0, error: 0 };
-  for (const row of counts.results || []) totals[row.action] = row.total;
   return json({
     settings,
     list: { builtAt: meta.builtAt, compiled: meta.sources, sources: sources.results || [] },
-    today: totals,
     devices: devices.results || [],
     host: new URL(request.url).host
   });
@@ -565,22 +521,6 @@ async function handleRules(request, env) {
   }
   invalidate();
   return json({ ok: true });
-}
-
-async function handleReset(request, env) {
-  pendingCounters.clear();
-  pendingBlocked.clear();
-  pendingQueries = 0;
-  countersFlushedAt = Date.now();
-  await env.DB.batch([env.DB.prepare("DELETE FROM totals"), env.DB.prepare("DELETE FROM blocked_totals")]);
-  return json({ ok: true });
-}
-
-async function handleTop(request, env) {
-  const rows = await env.DB.prepare(
-    `SELECT name, total FROM blocked_totals ORDER BY total DESC LIMIT ${TOP_LIMIT}`
-  ).all();
-  return json({ top: rows.results || [] });
 }
 
 const listSources = (env) =>
@@ -796,8 +736,6 @@ const API = {
   "/api/settings": { method: "POST", handler: handleSettings },
   "/api/rules": { method: "ANY", handler: handleRules },
   "/api/log": { method: "GET", handler: handleLog },
-  "/api/top": { method: "GET", handler: handleTop },
-  "/api/reset": { method: "POST", handler: handleReset },
   "/api/devices": { method: "POST", handler: handleDevices },
   "/api/password": { method: "POST", handler: handlePassword },
   "/api/sources": { method: "POST", handler: handleSources },

@@ -4,7 +4,7 @@ import { t, applyLanguage, i18nEvents } from "./i18n.js";
 import { applyTheme, themeEvents } from "./theme.js";
 import { currentRoute, startRouter } from "./router.js";
 import { apiEvents, currentStatus, refresh, signIn, setUpPassword } from "./api.js";
-import { renderHome } from "./views/home.js";
+import { renderHome, updateHome } from "./views/home.js";
 import { renderLog } from "./views/log.js";
 import { renderProtection } from "./views/protection.js";
 import { renderSettings } from "./views/settings.js";
@@ -133,6 +133,7 @@ function render(force = false) {
     const label = tab.querySelector("span");
     if (label) label.textContent = t(TAB_LABELS[tab.dataset.route]);
   }
+  if (!force && route.name === "home" && lastRoute === "home" && currentStatus() !== "auth" && updateHome(view)) return;
   clear(view);
   if (currentStatus() === "auth") {
     view.append(authMode === "setup" ? setupCard() : loginCard());
