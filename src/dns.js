@@ -60,9 +60,9 @@ export function ednsPayload(message, question) {
   return Math.min(MAX_PAYLOAD, Math.max(MIN_PAYLOAD, view.getUint16(at + 3)));
 }
 
-export function blockedResponse(message, question, ttl, rcode = 0) {
+export function blockedResponse(message, question, ttl) {
   const questionBytes = message.subarray(12, question.end);
-  const address = rcode === 0 && (question.type === TYPE_A ? 4 : question.type === TYPE_AAAA ? 16 : 0);
+  const address = question.type === TYPE_A ? 4 : question.type === TYPE_AAAA ? 16 : 0;
   const rdlength = address > 0 ? address : SOA_RDLENGTH;
   const payload = ednsPayload(message, question);
   const response = new Uint8Array(12 + questionBytes.length + 12 + rdlength + (payload > 0 ? OPT_LENGTH : 0));
@@ -70,7 +70,7 @@ export function blockedResponse(message, question, ttl, rcode = 0) {
 
   response.set(message.subarray(0, 2), 0);
   response[2] = 0x80 | (message[2] & 0x01);
-  response[3] = 0x80 | rcode;
+  response[3] = 0x80;
   view.setUint16(4, 1);
   view.setUint16(6, address > 0 ? 1 : 0);
   view.setUint16(8, address > 0 ? 0 : 1);

@@ -273,7 +273,7 @@ async function handleDns(request, env, ctx, url, token) {
   let failure = null;
 
   if (verdict.action === "block") {
-    body = blockedResponse(message, question, BLOCK_TTL, verdict.rcode);
+    body = blockedResponse(message, question, BLOCK_TTL);
   } else {
     const resolvers = settings.resolvers.map(parseResolver).filter(Boolean);
     const key = cacheKey(question);
@@ -319,7 +319,7 @@ async function handleDns(request, env, ctx, url, token) {
           verdict.action = "block";
           verdict.rule = outcome.rule;
           verdict.source = "cname";
-          body = blockedResponse(message, question, BLOCK_TTL, outcome.rcode);
+          body = blockedResponse(message, question, BLOCK_TTL);
           ttl = BLOCK_TTL;
         } else {
           ttl = outcome.life;
