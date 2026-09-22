@@ -3,21 +3,33 @@ import { t } from "../i18n.js";
 import { currentState, saveSettings } from "../api.js";
 import { navigate } from "../router.js";
 
+const motion = matchMedia("(prefers-reduced-motion: no-preference)");
+
 function paint(label, track, enabled) {
-  label.textContent = enabled ? t("protectionOn") : t("protectionOff");
+  const text = enabled ? t("protectionOn") : t("protectionOff");
   track.setAttribute("aria-pressed", enabled ? "true" : "false");
+  if (label.textContent === text) return;
+  const card = label.parentElement;
+  const from = card.getBoundingClientRect().width;
+  label.textContent = text;
+  if (!motion.matches) return;
+  const style = getComputedStyle(card);
+  const timing = { duration: parseFloat(style.getPropertyValue("--speed")) * 1000, easing: style.getPropertyValue("--ease").trim() };
+  card.animate({ width: [`${from}px`, `${card.getBoundingClientRect().width}px`] }, timing);
+  label.animate({ opacity: [0, 1] }, timing);
 }
 
 export function renderHome(container) {
   const state = currentState();
   if (!state) return;
   const { settings } = state;
-  const label = el("div", { class: "hero-label" });
+  const label = el("div", { class: "hero-label", text: settings.enabled ? t("protectionOn") : t("protectionOff") });
   const track = el(
     "button",
     {
       class: "switch-track large",
       type: "button",
+      "aria-pressed": settings.enabled ? "true" : "false",
       "aria-label": t("protection"),
       onclick: async () => {
         const next = track.getAttribute("aria-pressed") !== "true";
@@ -32,7 +44,6 @@ export function renderHome(container) {
     },
     [el("span", { class: "switch-knob" })]
   );
-  paint(label, track, settings.enabled);
   const hero = el("div", { class: "hero" }, [el("div", { class: "card hero-card" }, [label, track])]);
   if (settings.resolvers.length === 0) {
     hero.append(

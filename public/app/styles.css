@@ -787,16 +787,22 @@ textarea {
 }
 
 .hero-card {
+  align-self: center;
+  width: fit-content;
+  max-width: 100%;
   align-items: center;
-  gap: clamp(1.1rem, 3.2dvh, 1.75rem);
-  padding: clamp(1.75rem, 6dvh, 2.75rem) 16px;
+  gap: 12px;
+  padding: 14px;
+  overflow: hidden;
   text-align: center;
 }
 
 .hero-label {
   font-size: clamp(1.3rem, 5vw, 1.75rem);
   font-weight: 660;
+  line-height: 1.2;
   letter-spacing: -0.015em;
+  white-space: nowrap;
 }
 
 .switch-track {
