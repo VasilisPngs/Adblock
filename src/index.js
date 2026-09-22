@@ -13,17 +13,7 @@ import {
 } from "./dns.js";
 import { decide } from "./blocklist.js";
 import { parseResolver, resolve } from "./upstream.js";
-import {
-  checkPassword,
-  hashPassword,
-  hashText,
-  outdatedHash,
-  equalText,
-  issueSession,
-  validSession,
-  sessionCookie,
-  MIN_PASSWORD_LENGTH
-} from "./auth.js";
+import { checkAccess } from "./access.js";
 import meta from "./blocklist-meta.json";
 
 const CACHE_TTL_MS = 60000;
@@ -35,8 +25,6 @@ const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
 const LOG_RETENTION_MS = 86400000;
 const MAX_RESOLVERS = 2;
-const LOGIN_WINDOW_MS = 600000;
-const LOGIN_ATTEMPTS = 10;
 const HOUR_MS = 3600000;
 const SEEN_INTERVAL_MS = 300000;
 const PRUNE_LIMIT = 20000;
@@ -103,7 +91,7 @@ function firstThisHour(key, hour) {
   return true;
 }
 
-let cache = { at: 0, settings: null, rules: null, tokens: null, auth: null };
+let cache = { at: 0, settings: null, rules: null, tokens: null };
 let d1DownUntil = 0;
 
 const DEGRADED = {
@@ -116,8 +104,7 @@ const DEGRADED = {
   },
   deployHook: null,
   rules: { allow: new Set(), block: new Set() },
-  tokens: null,
-  auth: { hash: null, setupCode: null }
+  tokens: null
 };
 
 const json = (body, status = 200) =>
@@ -140,7 +127,7 @@ let stateRefresh = null;
 async function readState(env) {
   const [settings, rules, devices] = await Promise.all([
     env.DB.prepare(
-      "SELECT enabled, resolvers, log_enabled, password_hash, setup_code, deploy_hook FROM settings WHERE id = 1"
+      "SELECT enabled, resolvers, log_enabled, deploy_hook FROM settings WHERE id = 1"
     ).first(),
     env.DB.prepare("SELECT host, action FROM rules").all(),
     env.DB.prepare("SELECT token FROM devices").all()
@@ -158,8 +145,7 @@ async function readState(env) {
     },
     deployHook: settings?.deploy_hook || null,
     rules: { allow, block },
-    tokens: new Set((devices.results || []).map((row) => row.token)),
-    auth: { hash: settings?.password_hash || null, setupCode: settings?.setup_code || null }
+    tokens: new Set((devices.results || []).map((row) => row.token))
   };
   return cache;
 }
@@ -193,7 +179,7 @@ async function dnsState(env) {
 }
 
 function invalidate() {
-  cache = { at: 0, settings: null, rules: null, tokens: null, auth: null };
+  cache = { at: 0, settings: null, rules: null, tokens: null };
   answers.clear();
 }
 
@@ -324,98 +310,6 @@ async function handleDns(request, env, ctx, url, token) {
   return dnsResponse(body, ttl);
 }
 
-async function sessionSecret(env) {
-  if (env.DASHBOARD_PASSWORD) return hashText(env.DASHBOARD_PASSWORD);
-  return (await loadState(env)).auth.hash;
-}
-
-const signedIn = (token) =>
-  new Response(JSON.stringify({ ok: true }), {
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "set-cookie": sessionCookie(token)
-    }
-  });
-
-function clientIp(request) {
-  return request.headers.get("cf-connecting-ip") || "unknown";
-}
-
-async function attemptsLeft(env, ip) {
-  const failures = await env.DB.prepare("SELECT COUNT(*) AS total FROM login_attempts WHERE ip = ?1 AND at >= ?2")
-    .bind(ip, Date.now() - LOGIN_WINDOW_MS)
-    .first();
-  return LOGIN_ATTEMPTS - (failures?.total || 0);
-}
-
-const recordFailure = (env, ip) =>
-  env.DB.prepare("INSERT INTO login_attempts (at, ip) VALUES (?1, ?2)").bind(Date.now(), ip).run().catch(() => {});
-
-const clearFailures = (env, ip) =>
-  env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?1").bind(ip).run().catch(() => {});
-
-async function handleLogin(request, env) {
-  const secret = await sessionSecret(env);
-  if (!secret) return json({ error: "setup_required" }, 503);
-
-  const ip = clientIp(request);
-  const remaining = await attemptsLeft(env, ip);
-  if (remaining <= 0) return json({ error: "too_many_attempts" }, 429);
-
-  const payload = await request.json().catch(() => null);
-  const password = payload && typeof payload.password === "string" ? payload.password : "";
-  if (!(await checkPassword(password, secret))) {
-    await recordFailure(env, ip);
-    return json({ error: "wrong_password", remaining: remaining - 1 }, 401);
-  }
-  await clearFailures(env, ip);
-  if (env.DASHBOARD_PASSWORD || !outdatedHash(secret)) return signedIn(await issueSession(secret));
-  const upgraded = await hashPassword(password);
-  await env.DB.prepare("UPDATE settings SET password_hash = ?1 WHERE id = 1").bind(upgraded).run();
-  invalidate();
-  return signedIn(await issueSession(upgraded));
-}
-
-async function handleSetup(request, env) {
-  if (await sessionSecret(env)) return json({ error: "already_configured" }, 409);
-
-  const ip = clientIp(request);
-  const remaining = await attemptsLeft(env, ip);
-  if (remaining <= 0) return json({ error: "too_many_attempts" }, 429);
-
-  const payload = await request.json().catch(() => null);
-  const code = payload && typeof payload.code === "string" ? payload.code.trim().toLowerCase() : "";
-  const password = payload && typeof payload.password === "string" ? payload.password : "";
-  const { auth } = await loadState(env);
-  if (!equalText(code, auth.setupCode)) {
-    await recordFailure(env, ip);
-    return json({ error: "wrong_code", remaining: remaining - 1 }, 401);
-  }
-  if (password.length < MIN_PASSWORD_LENGTH) return json({ error: "weak_password", detail: MIN_PASSWORD_LENGTH }, 400);
-
-  const hash = await hashPassword(password);
-  await env.DB.prepare("UPDATE settings SET password_hash = ?1, setup_code = NULL WHERE id = 1").bind(hash).run();
-  invalidate();
-  await clearFailures(env, ip);
-  return signedIn(await issueSession(hash));
-}
-
-async function handlePassword(request, env) {
-  if (env.DASHBOARD_PASSWORD) return json({ error: "managed_by_secret" }, 409);
-  const payload = await request.json().catch(() => null);
-  const current = payload && typeof payload.current === "string" ? payload.current : "";
-  const next = payload && typeof payload.next === "string" ? payload.next : "";
-  const { auth } = await loadState(env);
-  if (!(await checkPassword(current, auth.hash))) return json({ error: "wrong_password" }, 401);
-  if (next.length < MIN_PASSWORD_LENGTH) return json({ error: "weak_password", detail: MIN_PASSWORD_LENGTH }, 400);
-
-  const hash = await hashPassword(next);
-  await env.DB.prepare("UPDATE settings SET password_hash = ?1 WHERE id = 1").bind(hash).run();
-  invalidate();
-  return signedIn(await issueSession(hash));
-}
-
 const REPORT_WINDOW_MS = 60000;
 const REPORT_LIMIT = 20;
 let reportWindow = 0;
@@ -450,16 +344,6 @@ async function handleReport(request, env) {
   return json({ ok: true });
 }
 
-function handleLogout() {
-  return new Response(JSON.stringify({ ok: true }), {
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "set-cookie": sessionCookie("", 0)
-    }
-  });
-}
-
 async function handleState(request, env) {
   const { settings } = await loadState(env);
   const [devices, sources] = await Promise.all([
@@ -470,7 +354,7 @@ async function handleState(request, env) {
     settings,
     list: { builtAt: meta.builtAt, compiled: meta.sources, sources: sources.results || [] },
     devices: devices.results || [],
-    host: new URL(request.url).host
+    host: env.DNS_HOST || new URL(request.url).host
   });
 }
 
@@ -727,7 +611,7 @@ async function handleProfile(env, url) {
   const token = url.searchParams.get("token") || "";
   const device = await env.DB.prepare("SELECT name FROM devices WHERE token = ?1").bind(token).first();
   if (!device) return json({ error: "unknown_device" }, 404);
-  return new Response(mobileconfig(url.host, token, device.name), {
+  return new Response(mobileconfig(env.DNS_HOST || url.host, token, device.name), {
     headers: {
       "content-type": "application/x-apple-aspen-config",
       "content-disposition": `attachment; filename="${device.name.replace(/[^\w.-]+/g, "-")}.mobileconfig"`,
@@ -742,7 +626,6 @@ async function runScheduled(env, ctx, now) {
     env.DB.prepare(`DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY id LIMIT ${PRUNE_LIMIT})`).bind(
       now - LOG_RETENTION_MS
     ),
-    env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(now - LOGIN_WINDOW_MS),
     env.DB.prepare("DELETE FROM errors WHERE at < ?1").bind(now - ERROR_RETENTION_MS)
   ]);
 }
@@ -753,50 +636,34 @@ const API = {
   "/api/rules": { method: "ANY", handler: handleRules },
   "/api/log": { method: "GET", handler: handleLog },
   "/api/devices": { method: "POST", handler: handleDevices },
-  "/api/password": { method: "POST", handler: handlePassword },
   "/api/sources": { method: "POST", handler: handleSources },
-  "/api/rebuild": { method: "POST", handler: handleRebuild }
-};
-
-const OPEN = {
-  "/api/login": handleLogin,
-  "/api/setup": handleSetup,
-  "/api/logout": () => handleLogout(),
-  "/api/report": handleReport
+  "/api/rebuild": { method: "POST", handler: handleRebuild },
+  "/api/report": { method: "POST", handler: handleReport }
 };
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const dns = url.pathname.match(/^\/dns-query\/([0-9a-f]{8,64})$/);
-    if (dns) {
-      if (request.method !== "GET" && request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-      try {
-        return await handleDns(request, env, ctx, url, dns[1]);
-      } catch (error) {
-        return json({ error: "dns_failed", detail: String(error && error.message).slice(0, 200) }, 500);
+    if (env.ROLE === "dns") {
+      const dns = url.pathname.match(/^\/dns-query\/([0-9a-f]{8,64})$/);
+      if (dns) {
+        if (request.method !== "GET" && request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+        try {
+          return await handleDns(request, env, ctx, url, dns[1]);
+        } catch (error) {
+          return json({ error: "dns_failed", detail: String(error && error.message).slice(0, 200) }, 500);
+        }
       }
+      if (url.pathname === "/dns-query" || url.pathname.startsWith("/dns-query/")) return json({ error: "unknown_device" }, 403);
+      if (url.pathname === "/api/sources" && request.method === "GET") return handleSourcesRead(env);
+      return Response.redirect(env.APP_URL, 302);
     }
-
-    if (url.pathname === "/dns-query" || url.pathname.startsWith("/dns-query/")) {
-      return json({ error: "unknown_device" }, 403);
-    }
-
-    const open = OPEN[url.pathname];
-    if (open) {
-      if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-      try {
-        return await open(request, env);
-      } catch (error) {
-        return json({ error: "request_failed", detail: String(error && error.message).slice(0, 200) }, 500);
-      }
-    }
-
-    if (url.pathname === "/api/sources" && request.method === "GET") return handleSourcesRead(env);
 
     const route = API[url.pathname];
     if (route || url.pathname === "/profile.mobileconfig") {
-      if (!(await validSession(request, await sessionSecret(env)))) return json({ error: "unauthorized" }, 401);
+      const access = await checkAccess(request, url, env, ctx);
+      if (access === "unavailable") return json({ error: "access_unavailable" }, 503);
+      if (access !== "ok") return json({ error: "forbidden" }, 403);
       if (url.pathname === "/profile.mobileconfig") return handleProfile(env, url);
       if (route.method !== "ANY" && request.method !== route.method && !(route.method === "POST" && request.method === "DELETE")) {
         return json({ error: "method_not_allowed" }, 405);

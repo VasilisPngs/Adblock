@@ -37,16 +37,15 @@ pretending the change is live.
 
 1. `npm install`
 2. The database id in `wrangler.jsonc` points at the `adblock` D1 database.
-3. `npm run deploy` — builds the lists, applies migrations, deploys.
-4. Set the dashboard password on first run. Read the one-time setup code from the D1
-   console with `SELECT setup_code FROM settings;`, open the app, and enter that code
-   together with the password you want. The Worker stores only a salted PBKDF2-SHA256
-   derivation of it and clears the setup code, so the screen cannot be used twice. Until a password exists the
-   dashboard refuses every request, and the code is the only way to set one, so nobody
-   who finds the URL first can claim it.
-   A `DASHBOARD_PASSWORD` secret on the Worker still wins if one is set, which is the
-   better place for it when the dashboard lets you save it.
-5. Open the app, sign in, and add a device to get its DoH URL and profile. It already
+3. `npm run deploy` — builds the lists, applies migrations, deploys the dashboard Worker
+   (`adblock-app`, `wrangler.app.jsonc`) and then the resolver (`adblock`, `wrangler.jsonc`).
+   The dashboard goes first, so a failed deploy never leaves the resolver redirecting to a
+   dashboard that does not exist.
+4. Protect the dashboard: Workers & Pages → `adblock-app` → Access → Protect this Worker
+   behind Access → All traffic → your policy → Apply Access. Until then the dashboard
+   refuses every API request, because the Worker only trusts requests Access authenticated.
+5. Open `https://adblock-app.<subdomain>.workers.dev`, sign in through Access, and add a
+   device to get its DoH URL and profile. It already
    resolves through `https://cloudflare-dns.com/dns-query`; change it or add a second
    resolver on the Protection tab whenever you want.
 
@@ -55,15 +54,20 @@ which makes Workers Builds deploy the fresh list. `npm run lists` does the same 
 
 ## Who can reach what
 
-| Path | Who |
-| --- | --- |
-| `/dns-query/<device token>` | open by design: DoH clients cannot log in. The 32-character token is the credential, and a request without a known token is refused, so the resolver cannot be used by strangers. |
-| everything else | the dashboard password, at least 12 characters, stored as `pbkdf2$<iterations>$<salt>$<hash>` so a copy of the database cannot be run through a rainbow table. A hash written by an older version is re-derived silently on the next successful sign-in. The iteration count lives inside the record, so raising it needs no migration: 10,000 is what fits the free plan's 10 ms CPU budget with room for the two derivations a password change costs — measured in workerd at 1–2 ms each, against 14 ms for 100,000 and 29 ms for 210,000. A successful sign-in sets an HMAC-signed, `HttpOnly` `Secure` cookie for 30 days; the signing key is the stored record, so changing the password invalidates every cookie ever issued. Wrong guesses are counted per client IP, ten per ten minutes, which stops a script without letting anyone lock the owner out of their own dashboard. |
+One codebase and one D1 database, deployed as two Workers chosen by the `ROLE` variable.
 
-No Cloudflare Access, no Zero Trust, no third-party login: Access cannot exclude a single
-path on a Worker, and its hostname-level policies need a Zero Trust plan with payment
-details on file. The password check costs 0.2 ms of the 10 ms CPU budget and never runs
-on a DNS query.
+| Worker | Path | Who |
+| --- | --- | --- |
+| `adblock` | `/dns-query/<device token>` | open by design: DoH clients cannot log in. The 32-character token is the credential, and a request without a known token is refused, so the resolver cannot be used by strangers. |
+| `adblock` | `GET /api/sources` | open: it lists the blocklist URLs, which the nightly build reads. |
+| `adblock` | everything else | redirected to the dashboard. |
+| `adblock-app` | everything | Cloudflare Access on the whole Worker, the same one-click protection as the reader and GymTracker. The Worker also refuses every API call that Access did not authenticate. |
+
+The resolver and the dashboard are separate Workers because Worker-level Access covers the
+whole Worker with no path exceptions, and leaving one path public needs hostname-level
+Access, which requires a Zero Trust plan with payment details on file. The resolver reads
+settings, rules and devices from D1 at most once a minute, so a change made in the
+dashboard reaches DNS within a minute.
 
 ## Devices
 

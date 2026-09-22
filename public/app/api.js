@@ -14,7 +14,7 @@ function setStatus(next) {
   apiEvents.dispatchEvent(new CustomEvent("status"));
 }
 
-async function call(path, { expectAuthError = false, ...options } = {}) {
+async function call(path, options = {}) {
   const response = await fetch(path, {
     ...options,
     headers: options.body ? { "content-type": "application/json" } : undefined,
@@ -22,7 +22,7 @@ async function call(path, { expectAuthError = false, ...options } = {}) {
     cache: "no-store",
     signal: AbortSignal.timeout(TIMEOUT)
   });
-  if (!expectAuthError && (response.type === "opaqueredirect" || response.status === 401 || response.status === 403)) {
+  if (response.type === "opaqueredirect" || response.status === 401 || response.status === 403) {
     setStatus("auth");
     const error = new Error("auth_required");
     error.code = "auth";
@@ -98,25 +98,4 @@ export async function addDevice(name, platform) {
 export async function removeDevice(token) {
   await call("/api/devices", { method: "POST", body: JSON.stringify({ action: "remove", token }) });
   await refresh();
-}
-
-export async function signIn(password) {
-  await call("/api/login", { method: "POST", body: JSON.stringify({ password }), expectAuthError: true });
-  await refresh();
-}
-
-export async function setUpPassword(code, password) {
-  await call("/api/setup", { method: "POST", body: JSON.stringify({ code, password }), expectAuthError: true });
-  await refresh();
-}
-
-export function changePassword(current, next) {
-  return call("/api/password", { method: "POST", body: JSON.stringify({ current, next }), expectAuthError: true });
-}
-
-export async function signOut() {
-  await call("/api/logout", { method: "POST", body: "{}", expectAuthError: true });
-  state = null;
-  setStatus("auth");
-  apiEvents.dispatchEvent(new CustomEvent("changed"));
 }

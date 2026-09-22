@@ -17,43 +17,10 @@ const STRINGS = {
     "The dashboard is private. Your devices keep resolving DNS either way.",
     "Ο πίνακας είναι ιδιωτικός. Οι συσκευές σου συνεχίζουν κανονικά."
   ],
-  passwordLabel: ["Password", "Κωδικός"],
-  wrongPassword: ["Wrong password.", "Λάθος κωδικός."],
-  wrongPasswordLeft: [
-    "Wrong password. {count} attempts left before a pause.",
-    "Λάθος κωδικός. Απομένουν {count} προσπάθειες πριν την παύση."
-  ],
-  tooManyAttempts: [
-    "Too many wrong attempts. Try again in a few minutes.",
-    "Πολλές λάθος προσπάθειες. Δοκίμασε ξανά σε λίγα λεπτά."
-  ],
-  setupTitle: ["First run", "Πρώτη εκκίνηση"],
-  setupNote: [
-    "Cloudflare → Storage & Databases → D1 → adblock → Console, and run: SELECT setup_code FROM settings;",
-    "Cloudflare → Storage & Databases → D1 → adblock → Console, και τρέξε: SELECT setup_code FROM settings;"
-  ],
-  setupCode: ["Setup code", "Κωδικός εγκατάστασης"],
-  newPassword: ["New password", "Νέος κωδικός"],
-  setupSubmit: ["Set the password", "Ορισμός κωδικού"],
-  wrongCode: ["Wrong setup code.", "Λάθος κωδικός εγκατάστασης."],
-  weakPassword: [
-    "At least {count} characters, and nothing easy to guess.",
-    "Τουλάχιστον {count} χαρακτήρες, και τίποτα που μαντεύεται εύκολα."
-  ],
-  passwordTitle: ["Dashboard password", "Κωδικός πίνακα"],
-  currentPassword: ["Current password", "Τρέχων κωδικός"],
-  changePassword: ["Change password", "Αλλαγή κωδικού"],
-  passwordChanged: ["Password changed. Other devices are signed out.", "Ο κωδικός άλλαξε. Οι άλλες συσκευές αποσυνδέθηκαν."],
-  managedBySecret: [
-    "The password comes from the DASHBOARD_PASSWORD secret, so change it there.",
-    "Ο κωδικός έρχεται από το secret DASHBOARD_PASSWORD, άλλαξέ τον εκεί."
-  ],
-  signOut: ["Sign out", "Αποσύνδεση"],
 
   protection: ["Protection", "Προστασία"],
   protectionOn: ["Protection is enabled", "Προστασία ενεργή"],
   protectionOff: ["Protection is disabled", "Προστασία ανενεργή"],
-
 
   listBuilt: ["Built {when}", "Χτίστηκε {when}"],
 
