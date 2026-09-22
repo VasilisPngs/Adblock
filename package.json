@@ -8,9 +8,10 @@
     "deploy": "npm run lists && npx wrangler d1 migrations apply DB --remote && npx wrangler deploy",
     "lists": "node scripts/build-blocklist.mjs",
     "db:migrate": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "tail": "wrangler tail"
   },
   "devDependencies": {
-    "wrangler": "4.131.2"
+    "wrangler": "4.136.3"
   }
 }

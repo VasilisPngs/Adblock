@@ -421,6 +421,20 @@ const REPORT_LIMIT = 20;
 let reportWindow = 0;
 let reportCount = 0;
 
+function recordError(env, entry) {
+  return env.DB.prepare("INSERT INTO errors (at, kind, message, stack, route, agent) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+    .bind(
+      Date.now(),
+      String(entry.kind || "error").slice(0, 20),
+      String(entry.message || "").slice(0, 300),
+      String(entry.stack || "").slice(0, 1000) || null,
+      String(entry.route || "").slice(0, 120) || null,
+      String(entry.agent || "").slice(0, 200) || null
+    )
+    .run()
+    .catch(() => {});
+}
+
 async function handleReport(request, env) {
   const now = Date.now();
   if (now - reportWindow > REPORT_WINDOW_MS) {
@@ -432,17 +446,7 @@ async function handleReport(request, env) {
   const payload = await request.json().catch(() => null);
   const message = payload && typeof payload.message === "string" ? payload.message.trim() : "";
   if (!message) return json({ ok: true });
-  await env.DB.prepare("INSERT INTO errors (at, kind, message, stack, route, agent) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
-    .bind(
-      now,
-      String(payload.kind || "error").slice(0, 20),
-      message.slice(0, 300),
-      String(payload.stack || "").slice(0, 1000) || null,
-      String(payload.route || "").slice(0, 120) || null,
-      (request.headers.get("user-agent") || "").slice(0, 200) || null
-    )
-    .run()
-    .catch(() => {});
+  await recordError(env, { ...payload, message, agent: request.headers.get("user-agent") });
   return json({ ok: true });
 }
 
@@ -732,6 +736,17 @@ async function handleProfile(env, url) {
   });
 }
 
+async function runScheduled(env, ctx, now) {
+  await rebuild(env, ctx);
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY id LIMIT ${PRUNE_LIMIT})`).bind(
+      now - LOG_RETENTION_MS
+    ),
+    env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(now - LOGIN_WINDOW_MS),
+    env.DB.prepare("DELETE FROM errors WHERE at < ?1").bind(now - ERROR_RETENTION_MS)
+  ]);
+}
+
 const API = {
   "/api/state": { method: "GET", handler: handleState },
   "/api/settings": { method: "POST", handler: handleSettings },
@@ -759,7 +774,7 @@ export default {
       try {
         return await handleDns(request, env, ctx, url, dns[1]);
       } catch (error) {
-        return json({ error: "dns_failed", detail: String(error && error.message).slice(0, 120) }, 500);
+        return json({ error: "dns_failed", detail: String(error && error.message).slice(0, 200) }, 500);
       }
     }
 
@@ -773,7 +788,7 @@ export default {
       try {
         return await open(request, env);
       } catch (error) {
-        return json({ error: "request_failed", detail: String(error && error.message).slice(0, 160) }, 500);
+        return json({ error: "request_failed", detail: String(error && error.message).slice(0, 200) }, 500);
       }
     }
 
@@ -789,7 +804,7 @@ export default {
       try {
         return await route.handler(request, env, ctx);
       } catch (error) {
-        return json({ error: "request_failed", detail: String(error && error.message).slice(0, 160) }, 500);
+        return json({ error: "request_failed", detail: String(error && error.message).slice(0, 200) }, 500);
       }
     }
 
@@ -799,15 +814,15 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
-    await rebuild(env, ctx);
     ctx.waitUntil(
-      env.DB.batch([
-        env.DB.prepare(
-          `DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY id LIMIT ${PRUNE_LIMIT})`
-        ).bind(controller.scheduledTime - LOG_RETENTION_MS),
-        env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS),
-        env.DB.prepare("DELETE FROM errors WHERE at < ?1").bind(controller.scheduledTime - ERROR_RETENTION_MS)
-      ]).catch(() => {})
+      runScheduled(env, ctx, controller.scheduledTime).catch((error) =>
+        recordError(env, {
+          kind: "cron",
+          message: String(error && error.message ? error.message : error),
+          stack: error && error.stack,
+          route: "/cron"
+        })
+      )
     );
   }
 };
