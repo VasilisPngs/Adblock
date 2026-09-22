@@ -5,7 +5,7 @@ import { applyTheme, themeEvents } from "./theme.js";
 import { currentRoute, startRouter } from "./router.js";
 import { apiEvents, currentStatus, refresh, signIn, setUpPassword } from "./api.js";
 import { renderHome, updateHome } from "./views/home.js";
-import { renderLog } from "./views/log.js";
+import { refreshLog } from "./views/log.js";
 import { renderProtection } from "./views/protection.js";
 import { renderSettings } from "./views/settings.js";
 
@@ -13,8 +13,8 @@ const view = document.getElementById("view");
 const pill = document.getElementById("state-pill");
 const tabs = [...document.querySelectorAll(".tab")];
 
-const VIEWS = { home: renderHome, log: renderLog, protection: renderProtection, settings: renderSettings };
-const TAB_LABELS = { home: "tabHome", log: "tabLog", protection: "tabProtection", settings: "tabSettings" };
+const VIEWS = { home: renderHome, protection: renderProtection, settings: renderSettings };
+const TAB_LABELS = { home: "tabHome", protection: "tabProtection", settings: "tabSettings" };
 const PILL_LABELS = { on: "statusOn", off: "statusOff", loading: "statusLoading", failed: "statusFailed", auth: "statusSignIn" };
 const PILL_STATE = { on: "idle", off: "pending", loading: "syncing", failed: "error", auth: "auth" };
 
@@ -150,11 +150,11 @@ function render(force = false) {
 }
 
 pill.addEventListener("click", () => {
-  refresh().catch(() => {});
+  refresh().then(refreshLog).catch(() => {});
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") refresh().catch(() => {});
+  if (document.visibilityState === "visible") refresh().then(refreshLog).catch(() => {});
 });
 
 async function boot() {

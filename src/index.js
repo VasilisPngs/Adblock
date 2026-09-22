@@ -296,11 +296,11 @@ async function handleDns(request, env, ctx, url, token) {
     }
   }
 
-  const action = failure ? "error" : verdict.action;
+  const action = verdict.action;
   const hour = Math.floor(started / HOUR_MS);
   const type = QUERY_TYPES[question.type] || String(question.type);
 
-  if (settings.logEnabled && firstThisHour(`${token}|${question.name}|${type}|${action}`, hour)) {
+  if (settings.logEnabled && !failure && firstThisHour(`${token}|${question.name}|${type}|${action}`, hour)) {
     ctx.waitUntil(
       logQuery(env, {
         at: started,
@@ -308,7 +308,7 @@ async function handleDns(request, env, ctx, url, token) {
         name: question.name,
         type,
         action,
-        source: failure || verdict.source,
+        source: verdict.source,
         rule: verdict.rule,
         ms: Date.now() - started
       })
@@ -590,7 +590,7 @@ async function handleLog(request, env) {
   const token = url.searchParams.get("token");
   const clauses = ["at >= ?1"];
   const binds = [Date.now() - LOG_RETENTION_MS];
-  if (action === "block" || action === "allow" || action === "error") {
+  if (action === "block" || action === "allow") {
     clauses.push(`action = ?${binds.length + 1}`);
     binds.push(action);
   }

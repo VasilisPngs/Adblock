@@ -3,7 +3,6 @@ const LANGUAGES = ["en", "el"];
 
 const STRINGS = {
   tabHome: ["Home", "Αρχική"],
-  tabLog: ["Activity", "Κινήσεις"],
   tabProtection: ["Protection", "Προστασία"],
   tabSettings: ["Settings", "Ρυθμίσεις"],
 
@@ -64,7 +63,6 @@ const STRINGS = {
   filterAll: ["All", "Όλα"],
   filterBlocked: ["Blocked", "Μπλοκαρισμένα"],
   filterAllowed: ["Allowed", "Πέρασαν"],
-  filterErrors: ["Failures", "Αποτυχίες"],
   searchDomains: ["Search last 24 hours", "Αναζήτηση τελευταίου 24ώρου"],
   allDevices: ["All devices", "Όλες οι συσκευές"],
   actionAllow: ["Allow", "Εξαίρεση"],
@@ -80,7 +78,6 @@ const STRINGS = {
   viaAllow: ["Allowed by your rule", "Πέρασε από δικό σου κανόνα"],
   viaNone: ["Allowed", "Πέρασε"],
   viaOff: ["Protection off", "Προστασία ανενεργή"],
-  viaNoResolver: ["No resolver set", "Δεν έχει οριστεί resolver"],
 
   protectionTitle: ["Protection", "Προστασία"],
   noSources: ["No list is set, so only your own rules apply.", "Δεν έχει οριστεί λίστα, οπότε ισχύουν μόνο οι δικοί σου κανόνες."],
@@ -215,6 +212,6 @@ export function relativeTime(value) {
 }
 
 export function sourceLabel(source) {
-  const map = { list: "viaList", custom: "viaCustom", allow: "viaAllow", none: "viaNone", off: "viaOff", cname: "viaCname", cache: "viaCache", stale: "viaStale", no_resolver: "viaNoResolver" };
+  const map = { list: "viaList", custom: "viaCustom", allow: "viaAllow", none: "viaNone", off: "viaOff", cname: "viaCname", cache: "viaCache", stale: "viaStale" };
   return map[source] ? t(map[source]) : source;
 }

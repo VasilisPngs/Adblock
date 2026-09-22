@@ -5,13 +5,13 @@ import { currentState, loadLog, loadRules, setRule } from "../api.js";
 const FILTERS = [
   ["", "filterAll"],
   ["block", "filterBlocked"],
-  ["allow", "filterAllowed"],
-  ["error", "filterErrors"]
+  ["allow", "filterAllowed"]
 ];
 
 let filter = "";
 let search = "";
 let device = "";
+let live = null;
 
 function timeFormatter() {
   return new Intl.DateTimeFormat(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
@@ -20,7 +20,6 @@ function timeFormatter() {
 function rowNode(entry, ruleMap, deviceNames, repaint) {
   const classes = ["log-row"];
   if (entry.action === "block") classes.push("blocked");
-  if (entry.action === "error") classes.push("error");
   const known = ruleMap.get(entry.name);
   const actions = el("div", { class: "log-actions" });
 
@@ -59,6 +58,10 @@ function rowNode(entry, ruleMap, deviceNames, repaint) {
     el("div", { class: "log-meta", text: meta.join(" · ") }),
     actions
   ]);
+}
+
+export function refreshLog() {
+  if (live && live.node.isConnected) live.paint();
 }
 
 export function renderLog(container) {
@@ -147,5 +150,6 @@ export function renderLog(container) {
   }
   bar.append(controls);
   container.append(listNode);
+  live = { node: listNode, paint };
   paint();
 }

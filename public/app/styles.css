@@ -266,7 +266,7 @@ svg {
   right: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 2px;
   padding: 6px 8px max(env(safe-area-inset-bottom), 6px);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
@@ -778,40 +778,19 @@ textarea {
   margin-top: -4px;
 }
 
-.view > .hero {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 14px;
+.home-switch > .switch {
+  padding: 0;
 }
 
-.hero-card {
-  align-self: center;
-  width: fit-content;
-  max-width: 100%;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  overflow: hidden;
-  text-align: center;
-}
-
-.hero-label {
-  font-size: clamp(1.3rem, 5vw, 1.75rem);
-  font-weight: 660;
-  line-height: 1.2;
-  letter-spacing: -0.015em;
-  white-space: nowrap;
+.switch-label {
+  font-size: 17px;
+  font-weight: 640;
 }
 
 .switch-track {
-  --w: 58px;
-  --h: calc(var(--w) * 34 / 58);
-  --inset: calc(var(--w) * 3 / 58);
   position: relative;
-  width: var(--w);
-  height: var(--h);
+  width: 58px;
+  height: 34px;
   border: 0;
   border-radius: 999px;
   background: var(--surface-3);
@@ -824,16 +803,12 @@ textarea {
   background: var(--accent);
 }
 
-.switch-track.large {
-  --w: clamp(6.5rem, 30vw, 8rem);
-}
-
 .switch-knob {
   position: absolute;
-  top: var(--inset);
-  left: var(--inset);
-  width: calc(var(--h) - 2 * var(--inset));
-  height: calc(var(--h) - 2 * var(--inset));
+  top: 3px;
+  left: 3px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -841,7 +816,7 @@ textarea {
 }
 
 .switch-track[aria-pressed="true"] .switch-knob {
-  transform: translateX(calc(var(--w) - var(--h)));
+  transform: translateX(24px);
 }
 
 .log-row {
@@ -865,10 +840,6 @@ textarea {
 
 .log-row.blocked .log-name {
   color: var(--danger);
-}
-
-.log-row.error .log-name {
-  color: var(--warning);
 }
 
 .log-meta {

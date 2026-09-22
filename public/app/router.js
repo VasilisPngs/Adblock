@@ -1,6 +1,5 @@
 const ROUTES = [
   { pattern: /^\/$/, name: "home", params: () => ({}) },
-  { pattern: /^\/log$/, name: "log", params: () => ({}) },
   { pattern: /^\/protection$/, name: "protection", params: () => ({}) },
   { pattern: /^\/settings$/, name: "settings", params: () => ({}) }
 ];
