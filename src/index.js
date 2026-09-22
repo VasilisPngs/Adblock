@@ -33,12 +33,11 @@ const TTL_FLOOR = 300;
 const TTL_CEILING = 3600;
 const MAX_MESSAGE_BYTES = 4096;
 const LOG_LIMIT = 200;
-const LOG_DAYS = 3;
+const LOG_RETENTION_MS = 86400000;
 const LOGIN_WINDOW_MS = 600000;
 const LOGIN_ATTEMPTS = 10;
 const HOUR_MS = 3600000;
 const SEEN_INTERVAL_MS = 300000;
-const TOP_TTL_MS = 300000;
 const TOP_LIMIT = 10;
 const PRUNE_LIMIT = 20000;
 const ERROR_RETENTION_MS = 30 * 86400000;
@@ -102,7 +101,6 @@ const pendingCounters = new Map();
 const pendingBlocked = new Map();
 let countersFlushedAt = 0;
 let pendingQueries = 0;
-let topCache = { at: 0, rows: null };
 
 function countQuery(action, name) {
   pendingCounters.set(action, (pendingCounters.get(action) || 0) + 1);
@@ -569,13 +567,20 @@ async function handleRules(request, env) {
   return json({ ok: true });
 }
 
+async function handleReset(request, env) {
+  pendingCounters.clear();
+  pendingBlocked.clear();
+  pendingQueries = 0;
+  countersFlushedAt = Date.now();
+  await env.DB.batch([env.DB.prepare("DELETE FROM totals"), env.DB.prepare("DELETE FROM blocked_totals")]);
+  return json({ ok: true });
+}
+
 async function handleTop(request, env) {
-  if (topCache.rows && Date.now() - topCache.at < TOP_TTL_MS) return json({ top: topCache.rows });
   const rows = await env.DB.prepare(
     `SELECT name, total FROM blocked_totals ORDER BY total DESC LIMIT ${TOP_LIMIT}`
   ).all();
-  topCache = { at: Date.now(), rows: rows.results || [] };
-  return json({ top: topCache.rows });
+  return json({ top: rows.results || [] });
 }
 
 const listSources = (env) =>
@@ -642,9 +647,8 @@ async function handleLog(request, env) {
   const action = url.searchParams.get("action");
   const query = (url.searchParams.get("q") || "").trim().toLowerCase();
   const token = url.searchParams.get("token");
-  const { settings } = await loadState(env);
   const clauses = ["at >= ?1"];
-  const binds = [Date.now() - 86400000 * LOG_DAYS];
+  const binds = [Date.now() - LOG_RETENTION_MS];
   if (action === "block" || action === "allow" || action === "error") {
     clauses.push(`action = ?${binds.length + 1}`);
     binds.push(action);
@@ -793,6 +797,7 @@ const API = {
   "/api/rules": { method: "ANY", handler: handleRules },
   "/api/log": { method: "GET", handler: handleLog },
   "/api/top": { method: "GET", handler: handleTop },
+  "/api/reset": { method: "POST", handler: handleReset },
   "/api/devices": { method: "POST", handler: handleDevices },
   "/api/password": { method: "POST", handler: handlePassword },
   "/api/sources": { method: "POST", handler: handleSources },
@@ -860,7 +865,7 @@ export default {
       env.DB.batch([
         env.DB.prepare(
           `DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY id LIMIT ${PRUNE_LIMIT})`
-        ).bind(controller.scheduledTime - LOG_DAYS * 86400000),
+        ).bind(controller.scheduledTime - LOG_RETENTION_MS),
         env.DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(controller.scheduledTime - LOGIN_WINDOW_MS),
         env.DB.prepare("DELETE FROM errors WHERE at < ?1").bind(controller.scheduledTime - ERROR_RETENTION_MS)
       ]).catch(() => {})

@@ -74,7 +74,7 @@ export function renderHome(container) {
     .then(({ top }) => {
       clear(rows);
       if (top.length === 0) {
-        rows.append(el("div", { class: "empty", text: t("noActivity") }));
+        rows.append(el("div", { class: "empty", text: t("noBlocked") }));
         return;
       }
       for (const row of top) {

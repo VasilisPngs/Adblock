@@ -1,7 +1,7 @@
 import { el, toast, confirmSheet } from "../dom.js";
 import { t, relativeTime, languages, language, setLanguage } from "../i18n.js";
 import { themeMode, themeModes, setTheme } from "../theme.js";
-import { currentState, saveSettings, addDevice, removeDevice, signOut, changePassword } from "../api.js";
+import { currentState, saveSettings, addDevice, removeDevice, signOut, changePassword, resetCounters } from "../api.js";
 
 function field(label, control) {
   return el("label", { class: "field" }, [el("span", { class: "tiny", text: label }), control]);
@@ -230,7 +230,30 @@ export function renderSettings(container) {
           },
           [el("span", { class: "switch-knob" })]
         )
-      ])
+      ]),
+      el("div", { class: "tiny", text: t("loggingNote") })
+    ])
+  );
+
+  container.append(
+    el("div", { class: "card" }, [
+      el("h2", { text: t("countersTitle") }),
+      el("div", { class: "tiny", text: t("countersNote") }),
+      el("button", {
+        class: "btn ghost danger",
+        type: "button",
+        text: t("resetCounters"),
+        onclick: async () => {
+          const confirmed = await confirmSheet(t("resetCounters"), t("resetCountersBody"), t("reset"));
+          if (!confirmed) return;
+          try {
+            await resetCounters();
+            toast(t("countersCleared"));
+          } catch {
+            toast(t("requestFailed"));
+          }
+        }
+      })
     ])
   );
 

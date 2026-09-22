@@ -795,6 +795,11 @@ textarea {
   padding: 8px 12px;
 }
 
+.switch.boxed + .tiny {
+  padding: 0 13px;
+  margin-top: -4px;
+}
+
 .switch-label {
   font-size: 17px;
   font-weight: 640;
