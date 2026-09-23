@@ -2,7 +2,7 @@
 
 DNS-level ad and tracker blocking on Cloudflare Workers. The Worker is the resolver:
 it answers DNS-over-HTTPS, blocks what is on the lists, and forwards everything else
-to the upstream resolver you choose, with an optional second one as a fallback.
+to the one upstream DoH resolver you choose.
 
 ## How it works
 
