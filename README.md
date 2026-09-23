@@ -38,7 +38,7 @@ pretending the change is live.
 3. Workers Builds on this repository runs `npm run deploy`: lists, migrations, Worker.
 4. Protect the dashboard in Zero Trust (Free plan) with two self-hosted applications on
    `adblock.<subdomain>.workers.dev`, the public one first so DNS never stops:
-   - `Adblock public`: paths `dns-query` and `icons`, its own Bypass policy `Adblock bypass`
+   - `Adblock public`: paths `dns-query` and `icons`, its own Bypass policy `Adblock public`
      for Everyone. The icons are open because iOS fetches the home-screen icon without the
      Access cookie.
    - `Adblock`: the whole hostname, its own Allow policy `Adblock` (the owner's email
