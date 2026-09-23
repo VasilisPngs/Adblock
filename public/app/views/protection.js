@@ -186,7 +186,8 @@ function resolverCard(settings) {
       input.value = value;
       toast(t("saved"));
     } catch (error) {
-      toast(error.code === "invalid_resolver" ? t("invalidResolver") : t("requestFailed"));
+      const key = { invalid_resolver: "invalidResolver", resolver_unreachable: "resolverUnreachable" }[error.code];
+      toast(t(key || "requestFailed"));
     }
   };
   input.addEventListener("keydown", (event) => {

@@ -118,6 +118,10 @@ const STRINGS = {
   cancel: ["Cancel", "Άκυρο"],
   requestFailed: ["Something went wrong.", "Κάτι πήγε στραβά."],
   invalidResolver: ["Not a DoH URL. It must start with https://", "Δεν είναι DoH URL. Πρέπει να ξεκινά με https://"],
+  resolverUnreachable: [
+    "That resolver did not answer a test query, so it was not saved.",
+    "Ο resolver δεν απάντησε σε δοκιμαστικό ερώτημα, οπότε δεν αποθηκεύτηκε."
+  ],
   justNow: ["just now", "μόλις τώρα"],
   minutesAgo: ["{count} minutes ago", "πριν από {count} λεπτά"],
   hoursAgo: ["{count} hours ago", "πριν από {count} ώρες"],

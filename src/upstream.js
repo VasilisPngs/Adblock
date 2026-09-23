@@ -1,4 +1,6 @@
 const DOH_TIMEOUT = 2500;
+const label = (text) => [text.length, ...new TextEncoder().encode(text)];
+const PROBE = Uint8Array.from([0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, ...label("example"), ...label("com"), 0, 0, 1, 0, 1]);
 
 export function parseResolver(value) {
   const trimmed = String(value || "").trim();
@@ -28,4 +30,9 @@ export async function resolve(resolver, message) {
   } catch (error) {
     return { body: null, failure: String(error && error.message).slice(0, 60) };
   }
+}
+
+export async function probe(resolver) {
+  const { body } = await resolve(resolver, PROBE);
+  return Boolean(body && body[2] & 0x80 && (body[3] & 0x0f) === 0);
 }

@@ -12,7 +12,7 @@ import {
   QUERY_TYPES
 } from "./dns.js";
 import { decide } from "./blocklist.js";
-import { parseResolver, resolve } from "./upstream.js";
+import { parseResolver, probe, resolve } from "./upstream.js";
 import { checkAccess } from "./access.js";
 import meta from "./blocklist-meta.json";
 
@@ -359,6 +359,7 @@ async function handleSettings(request, env) {
   const current = (await loadState(env)).settings;
   const resolver = payload.resolver === undefined ? current.resolver : parseResolver(payload.resolver);
   if (!resolver) return json({ error: "invalid_resolver" }, 400);
+  if (resolver !== current.resolver && !(await probe(resolver))) return json({ error: "resolver_unreachable" }, 400);
 
   const enabled = payload.enabled === undefined ? current.enabled : Boolean(payload.enabled);
   const logEnabled = payload.logEnabled === undefined ? current.logEnabled : Boolean(payload.logEnabled);

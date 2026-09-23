@@ -80,9 +80,10 @@ request. Copy puts the full address on the clipboard without ever putting it on 
 One DoH URL, `https://cloudflare-dns.com/dns-query` by default, changeable on the
 Protection tab. Every query that is not blocked or answered from the cache is sent there
 once: no second resolver, no hedged request, no retry. If it fails or has not answered
-within 2.5 s the device gets SERVFAIL and asks again on its own. A name you allow
-yourself is never blocked by the CNAME check either: your rule wins over the list,
-wherever the answer points.
+within 2.5 s the device gets SERVFAIL and asks again on its own. A new URL is saved only
+after it answers a test query for `example.com`, so a typo cannot cut every device off,
+including the phone you would fix it from. A name you allow yourself is never blocked
+by the CNAME check either: your rule wins over the list, wherever the answer points.
 
 Plain DNS on port 53 is not offered. It is unencrypted, which is the one thing this
 resolver exists to avoid, and it costs a fresh TCP handshake on every query that cannot
