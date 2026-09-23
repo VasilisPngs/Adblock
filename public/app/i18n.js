@@ -77,13 +77,12 @@ const STRINGS = {
 
   settingsTitle: ["Settings", "Ρυθμίσεις"],
   appearance: ["Appearance", "Εμφάνιση"],
-  resolversTitle: ["Upstream resolvers", "Resolvers"],
-  resolversNote: [
-    "Up to two encrypted DoH URLs. The second is asked only if the first fails or takes longer than 150 ms, and the first answer wins.",
-    "Έως δύο κρυπτογραφημένα DoH URL. Ο δεύτερος ρωτιέται μόνο αν ο πρώτος αποτύχει ή αργήσει πάνω από 150 ms, και κερδίζει όποιος απαντήσει πρώτος."
+  resolverTitle: ["Upstream resolver", "Resolver"],
+  resolverNote: [
+    "One encrypted DoH URL. Every query that is not blocked or cached is sent there once, with no second resolver and no retry.",
+    "Ένα κρυπτογραφημένο DoH URL. Κάθε ερώτημα που δεν μπλοκάρεται και δεν είναι στην cache στέλνεται εκεί μία φορά, χωρίς δεύτερο resolver και χωρίς επανάληψη."
   ],
   resolverPlaceholder: ["https://…/dns-query", "https://…/dns-query"],
-  addResolver: ["Add resolver", "Προσθήκη resolver"],
   logging: ["Log DNS queries", "Καταγραφή ερωτημάτων DNS"],
   loggingNote: ["Kept for 24 hours, then deleted automatically.", "Κρατιούνται για 24 ώρες και μετά σβήνονται αυτόματα."],
   devicesTitle: ["Devices", "Συσκευές"],
@@ -118,11 +117,7 @@ const STRINGS = {
   remove: ["Remove", "Αφαίρεση"],
   cancel: ["Cancel", "Άκυρο"],
   requestFailed: ["Something went wrong.", "Κάτι πήγε στραβά."],
-  invalidResolver: ["Not a DoH URL: {detail}", "Δεν είναι DoH URL: {detail}"],
-  noResolver: [
-    "No resolver is set, so nothing can be answered.",
-    "Δεν έχει οριστεί resolver, άρα τίποτα δεν μπορεί να απαντηθεί."
-  ],
+  invalidResolver: ["Not a DoH URL. It must start with https://", "Δεν είναι DoH URL. Πρέπει να ξεκινά με https://"],
   justNow: ["just now", "μόλις τώρα"],
   minutesAgo: ["{count} minutes ago", "πριν από {count} λεπτά"],
   hoursAgo: ["{count} hours ago", "πριν από {count} ώρες"],

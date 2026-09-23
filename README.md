@@ -45,8 +45,8 @@ pretending the change is live.
    carrying a valid Access token for that audience.
 5. Open `https://adblock.<subdomain>.workers.dev`, sign in through Access, and add a
    device to get its DoH URL and profile. It already
-   resolves through `https://cloudflare-dns.com/dns-query`; change it or add a second
-   resolver on the Protection tab whenever you want.
+   resolves through `https://cloudflare-dns.com/dns-query`; change it on the Protection
+   tab whenever you want.
 
 `npm run lists` rebuilds the list by hand; without Cloudflare credentials it compiles the
 sources already in `blocklists.json`.
@@ -75,15 +75,14 @@ behind Access.
 The device address is the credential, so the app shows it masked and reveals it on
 request. Copy puts the full address on the clipboard without ever putting it on screen.
 
-## Upstream resolvers
+## Upstream resolver
 
-`https://cloudflare-dns.com/dns-query` ships as the default so the resolver works the
-moment it is deployed. Up to two DoH URLs are accepted. Every query goes to the first;
-if it fails or has not answered within 150 ms the second is asked as well, and whichever
-answers first wins. With one resolver a slow answer is simply awaited, because a second
-request to the same resolver waits on the same recursive lookup; only a failed request is
-retried once. A name you allow yourself is never blocked by the CNAME check either: your
-rule wins over the list, wherever the answer points.
+One DoH URL, `https://cloudflare-dns.com/dns-query` by default, changeable on the
+Protection tab. Every query that is not blocked or answered from the cache is sent there
+once: no second resolver, no hedged request, no retry. If it fails or has not answered
+within 2.5 s the device gets SERVFAIL and asks again on its own. A name you allow
+yourself is never blocked by the CNAME check either: your rule wins over the list,
+wherever the answer points.
 
 Plain DNS on port 53 is not offered. It is unencrypted, which is the one thing this
 resolver exists to avoid, and it costs a fresh TCP handshake on every query that cannot

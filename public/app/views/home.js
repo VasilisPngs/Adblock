@@ -1,7 +1,6 @@
 import { el, toast } from "../dom.js";
 import { t } from "../i18n.js";
 import { currentState, saveSettings } from "../api.js";
-import { navigate } from "../router.js";
 import { renderLog } from "./log.js";
 
 function paint(label, track, enabled) {
@@ -35,14 +34,6 @@ export function renderHome(container) {
   );
   paint(label, track, settings.enabled);
   container.append(el("div", { class: "card tight home-switch" }, [el("div", { class: "switch" }, [label, track])]));
-  if (settings.resolvers.length === 0) {
-    container.append(
-      el("div", { class: "banner" }, [
-        el("span", { text: t("noResolver") }),
-        el("button", { class: "btn small", type: "button", text: t("tabProtection"), onclick: () => navigate("/protection") })
-      ])
-    );
-  }
   renderLog(container);
 }
 
@@ -51,7 +42,6 @@ export function updateHome(container) {
   const label = container.querySelector(".home-switch .switch-label");
   const track = container.querySelector(".home-switch .switch-track");
   if (!state || !label || !track) return false;
-  if (Boolean(container.querySelector(".banner")) !== (state.settings.resolvers.length === 0)) return false;
   paint(label, track, state.settings.enabled);
   return true;
 }

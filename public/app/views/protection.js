@@ -164,81 +164,42 @@ function rebuildCard(settings) {
   return card;
 }
 
-const MAX_RESOLVERS = 2;
-
 function resolverCard(settings) {
-  const card = el("div", { class: "card" }, [
-    el("h2", { text: t("resolversTitle") }),
-    el("div", { class: "tiny", text: t("resolversNote") })
-  ]);
-  let values = settings.resolvers.length > 0 ? [...settings.resolvers] : [""];
-  const rows = el("div", { class: "list" });
-  const add = el("button", {
-    class: "btn small grow",
-    type: "button",
-    text: t("addResolver"),
-    onclick: () => {
-      values.push("");
-      paint();
+  let value = settings.resolver;
+  const input = el("input", {
+    type: "text",
+    inputMode: "url",
+    autocapitalize: "none",
+    autocomplete: "off",
+    spellcheck: "false",
+    placeholder: t("resolverPlaceholder"),
+    value,
+    oninput: (event) => {
+      value = event.target.value;
     }
   });
-
-  const commit = async () => {
-    const resolvers = values.map((value) => value.trim()).filter(Boolean);
+  const save = async () => {
+    input.blur();
     try {
-      const saved = await saveSettings({ resolvers });
-      values = saved.resolvers.length > 0 ? [...saved.resolvers] : [""];
-      paint();
+      const saved = await saveSettings({ resolver: value.trim() });
+      value = saved.resolver;
+      input.value = value;
       toast(t("saved"));
     } catch (error) {
-      const detail = Array.isArray(error.detail) ? error.detail.join(", ") : error.detail || "";
-      if (error.code === "invalid_resolver") toast(t("invalidResolver", { detail }));
-      else toast(t("requestFailed"));
+      toast(error.code === "invalid_resolver" ? t("invalidResolver") : t("requestFailed"));
     }
   };
-
-  const paint = () => {
-    clear(rows);
-    add.style.display = values.length >= MAX_RESOLVERS ? "none" : "";
-    values.forEach((value, index) => {
-      rows.append(
-        el("div", { class: "resolver-row" }, [
-          el("input", {
-            type: "text",
-            inputMode: "url",
-            autocapitalize: "none",
-            autocomplete: "off",
-            spellcheck: "false",
-            placeholder: t("resolverPlaceholder"),
-            value,
-            oninput: (event) => {
-              values[index] = event.target.value;
-            }
-          }),
-          el("button", {
-            class: "btn small ghost",
-            type: "button",
-            text: t("remove"),
-            onclick: () => {
-              values.splice(index, 1);
-              if (values.length === 0) values.push("");
-              paint();
-            }
-          })
-        ])
-      );
-    });
-  };
-
-  paint();
-  card.append(rows);
-  card.append(
-    el("div", { class: "row", style: "gap:8px" }, [
-      add,
-      el("button", { class: "btn small primary grow", type: "button", text: t("save"), onclick: commit })
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") save();
+  });
+  return el("div", { class: "card" }, [
+    el("h2", { text: t("resolverTitle") }),
+    el("div", { class: "tiny", text: t("resolverNote") }),
+    el("div", { class: "resolver-row" }, [
+      input,
+      el("button", { class: "btn small primary", type: "button", text: t("save"), onclick: save })
     ])
-  );
-  return card;
+  ]);
 }
 
 function ruleCard() {
