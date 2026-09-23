@@ -6,8 +6,14 @@
   "workers_dev": true,
   "preview_urls": false,
   "vars": {
-    "ROLE": "dns",
-    "APP_URL": "https://adblock-app.vasilispngs.workers.dev/"
+    "ACCESS_TEAM_DOMAIN": "vasilispngs.cloudflareaccess.com",
+    "ACCESS_AUD": ""
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/dns-query", "/dns-query/*", "/profile.mobileconfig"]
   },
   "rules": [{ "type": "Text", "globs": ["**/*.txt"], "fallthrough": false }],
   "d1_databases": [

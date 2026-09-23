@@ -354,7 +354,7 @@ async function handleState(request, env) {
     settings,
     list: { builtAt: meta.builtAt, compiled: meta.sources, sources: sources.results || [] },
     devices: devices.results || [],
-    host: env.DNS_HOST || new URL(request.url).host
+    host: new URL(request.url).host
   });
 }
 
@@ -611,7 +611,7 @@ async function handleProfile(env, url) {
   const token = url.searchParams.get("token") || "";
   const device = await env.DB.prepare("SELECT name FROM devices WHERE token = ?1").bind(token).first();
   if (!device) return json({ error: "unknown_device" }, 404);
-  return new Response(mobileconfig(env.DNS_HOST || url.host, token, device.name), {
+  return new Response(mobileconfig(url.host, token, device.name), {
     headers: {
       "content-type": "application/x-apple-aspen-config",
       "content-disposition": `attachment; filename="${device.name.replace(/[^\w.-]+/g, "-")}.mobileconfig"`,
@@ -644,20 +644,17 @@ const API = {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (env.ROLE === "dns") {
-      const dns = url.pathname.match(/^\/dns-query\/([0-9a-f]{8,64})$/);
-      if (dns) {
-        if (request.method !== "GET" && request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-        try {
-          return await handleDns(request, env, ctx, url, dns[1]);
-        } catch (error) {
-          return json({ error: "dns_failed", detail: String(error && error.message).slice(0, 200) }, 500);
-        }
+    const dns = url.pathname.match(/^\/dns-query\/([0-9a-f]{8,64})$/);
+    if (dns) {
+      if (request.method !== "GET" && request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+      try {
+        return await handleDns(request, env, ctx, url, dns[1]);
+      } catch (error) {
+        return json({ error: "dns_failed", detail: String(error && error.message).slice(0, 200) }, 500);
       }
-      if (url.pathname === "/dns-query" || url.pathname.startsWith("/dns-query/")) return json({ error: "unknown_device" }, 403);
-      if (url.pathname === "/api/sources" && request.method === "GET") return handleSourcesRead(env);
-      return Response.redirect(env.APP_URL, 302);
     }
+    if (url.pathname === "/dns-query" || url.pathname.startsWith("/dns-query/")) return json({ error: "unknown_device" }, 403);
+    if (url.pathname === "/api/sources" && request.method === "GET") return handleSourcesRead(env);
 
     const route = API[url.pathname];
     if (route || url.pathname === "/profile.mobileconfig") {

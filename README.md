@@ -37,13 +37,15 @@ pretending the change is live.
 
 1. `npm install`
 2. The database id in `wrangler.jsonc` points at the `adblock` D1 database.
-3. Two Workers Builds connections on this repository, because a build always deploys to
-   the Worker it is connected to: `adblock` runs `npm run deploy` (lists, migrations,
-   resolver) and `adblock-app` runs `npm run deploy:app` (dashboard).
-4. Protect the dashboard: Workers & Pages → `adblock-app` → Access → Protect this Worker
-   behind Access → All traffic → your policy → Apply Access. Until then the dashboard
-   refuses every API request, because the Worker only trusts requests Access authenticated.
-5. Open `https://adblock-app.<subdomain>.workers.dev`, sign in through Access, and add a
+3. Workers Builds on this repository runs `npm run deploy`: lists, migrations, Worker.
+4. Protect the dashboard in Zero Trust (Free plan) with two self-hosted applications on
+   `adblock.<subdomain>.workers.dev`, the public one first so DNS never stops:
+   - `Adblock public`: paths `dns-query` and `api/sources`, policy Bypass, Everyone.
+   - `Adblock`: the whole hostname, the same Allow policy as the reader and GymTracker.
+     Put its Application Audience (AUD) tag in `ACCESS_AUD` in `wrangler.jsonc`.
+   Until then the Worker refuses every API request, because it only trusts requests
+   carrying a valid Access token for that audience.
+5. Open `https://adblock.<subdomain>.workers.dev`, sign in through Access, and add a
    device to get its DoH URL and profile. It already
    resolves through `https://cloudflare-dns.com/dns-query`; change it or add a second
    resolver on the Protection tab whenever you want.
@@ -53,20 +55,16 @@ which makes Workers Builds deploy the fresh list. `npm run lists` does the same 
 
 ## Who can reach what
 
-One codebase and one D1 database, deployed as two Workers chosen by the `ROLE` variable.
+| Path | Who |
+| --- | --- |
+| `/dns-query/<device token>` | open by design: DoH clients cannot log in. The 32-character token is the credential, and a request without a known token is refused, so the resolver cannot be used by strangers. |
+| `GET /api/sources` | open: it lists the blocklist URLs, which the nightly build reads. |
+| everything else | Cloudflare Access. The Worker also verifies the Access token itself and refuses every API call without one, so a misconfigured Access application fails closed. |
 
-| Worker | Path | Who |
-| --- | --- | --- |
-| `adblock` | `/dns-query/<device token>` | open by design: DoH clients cannot log in. The 32-character token is the credential, and a request without a known token is refused, so the resolver cannot be used by strangers. |
-| `adblock` | `GET /api/sources` | open: it lists the blocklist URLs, which the nightly build reads. |
-| `adblock` | everything else | redirected to the dashboard. |
-| `adblock-app` | everything | Cloudflare Access on the whole Worker, the same one-click protection as the reader and GymTracker. The Worker also refuses every API call that Access did not authenticate. |
-
-The resolver and the dashboard are separate Workers because Worker-level Access covers the
-whole Worker with no path exceptions, and leaving one path public needs hostname-level
-Access, which requires a Zero Trust plan with payment details on file. The resolver reads
-settings, rules and devices from D1 at most once a minute, so a change made in the
-dashboard reaches DNS within a minute.
+The two open paths need a hostname-level Access application with a Bypass policy, because
+Worker-level Access covers the whole Worker with no path exceptions. The most specific
+path wins, so the bypass applies to those two paths and the rest of the hostname stays
+behind Access.
 
 ## Devices
 
