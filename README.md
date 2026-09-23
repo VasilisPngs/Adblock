@@ -38,8 +38,11 @@ pretending the change is live.
 3. Workers Builds on this repository runs `npm run deploy`: lists, migrations, Worker.
 4. Protect the dashboard in Zero Trust (Free plan) with two self-hosted applications on
    `adblock.<subdomain>.workers.dev`, the public one first so DNS never stops:
-   - `Adblock public`: path `dns-query`, policy Bypass, Everyone.
-   - `Adblock`: the whole hostname, the same Allow policy as the reader and GymTracker.
+   - `Adblock public`: paths `dns-query` and `icons`, its own Bypass policy `Adblock bypass`
+     for Everyone. The icons are open because iOS fetches the home-screen icon without the
+     Access cookie.
+   - `Adblock`: the whole hostname, its own Allow policy `Adblock` (the owner's email
+     address), session of one month. No policy is shared with the other apps.
      Put its Application Audience (AUD) tag in `ACCESS_AUD` in `wrangler.jsonc`.
    Until then the Worker refuses every API request, because it only trusts requests
    carrying a valid Access token for that audience.
