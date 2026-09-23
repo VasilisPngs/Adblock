@@ -410,6 +410,14 @@ h3 {
   border-radius: var(--radius-s);
 }
 
+.link {
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 570;
+  padding: 7px 4px;
+  text-underline-offset: 3px;
+}
+
 .btn.icon {
   padding: 8px;
   border-radius: 50%;
