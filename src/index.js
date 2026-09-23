@@ -234,7 +234,7 @@ async function handleDns(request, env, ctx, url, token) {
     const usable = entry && entry.body.length >= question.end;
 
     const accept = (fresh) => {
-      const cloaked = cloakedBy(fresh, settings, rules);
+      const cloaked = verdict.source === "allow" ? null : cloakedBy(fresh, settings, rules);
       if (cloaked) return cloaked;
       const answer = boostTtl(new Uint8Array(fresh), TTL_FLOOR);
       const life = ttlOf(answer);

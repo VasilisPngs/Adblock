@@ -29,7 +29,6 @@ async function ask(resolver, message) {
 
 export async function resolve(resolvers, message) {
   if (resolvers.length === 0) return { body: null, failure: "no_resolver" };
-  const hedge = resolvers.length > 1 ? resolvers[1] : resolvers[0];
   let failure = "upstream_failed";
 
   const attempt = (resolver) =>
@@ -41,11 +40,11 @@ export async function resolve(resolvers, message) {
   const attempts = [attempt(resolvers[0])];
   const early = await Promise.race([
     attempts[0].then((body) => body, () => null),
-    new Promise((done) => setTimeout(() => done(null), HEDGE_MS))
+    ...(resolvers.length > 1 ? [new Promise((done) => setTimeout(() => done(null), HEDGE_MS))] : [])
   ]);
   if (early) return { body: early, failure: null };
 
-  attempts.push(attempt(hedge));
+  attempts.push(attempt(resolvers[1] || resolvers[0]));
   try {
     return { body: await Promise.any(attempts), failure: null };
   } catch {

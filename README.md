@@ -80,7 +80,10 @@ request. Copy puts the full address on the clipboard without ever putting it on 
 `https://cloudflare-dns.com/dns-query` ships as the default so the resolver works the
 moment it is deployed. Up to two DoH URLs are accepted. Every query goes to the first;
 if it fails or has not answered within 150 ms the second is asked as well, and whichever
-answers first wins. With one resolver the second request goes to the same one.
+answers first wins. With one resolver a slow answer is simply awaited, because a second
+request to the same resolver waits on the same recursive lookup; only a failed request is
+retried once. A name you allow yourself is never blocked by the CNAME check either: your
+rule wins over the list, wherever the answer points.
 
 Plain DNS on port 53 is not offered. It is unencrypted, which is the one thing this
 resolver exists to avoid, and it costs a fresh TCP handshake on every query that cannot
