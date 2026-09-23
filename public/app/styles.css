@@ -169,7 +169,7 @@ svg {
 .pill {
   border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--muted);
+  color: var(--text);
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 12.5px;
@@ -283,14 +283,13 @@ svg {
   padding: 6px 0;
   border-radius: var(--radius-m);
   text-decoration: none;
-  color: var(--muted);
+  color: var(--text);
   font-size: 11px;
   font-weight: 560;
   transition: color var(--speed) var(--ease), background var(--speed) var(--ease);
 }
 
 .tab[aria-current="page"] {
-  color: var(--text);
   background: var(--surface-2);
 }
 
@@ -352,13 +351,13 @@ h3 {
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--text);
   font-size: 13px;
 }
 
 .tiny {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text);
 }
 
 .num {
@@ -377,6 +376,8 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-decoration: none;
+  color: inherit;
   transition: transform var(--speed) var(--ease), background var(--speed) var(--ease), opacity var(--speed) var(--ease);
 }
 
@@ -511,7 +512,7 @@ textarea {
 
 .empty {
   text-align: center;
-  color: var(--muted);
+  color: var(--text);
   padding: 34px 16px;
   border: 1px dashed var(--border);
   border-radius: var(--radius-l);
@@ -832,7 +833,7 @@ textarea {
 
 .log-meta {
   grid-column: 1;
-  color: var(--muted);
+  color: var(--text);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
