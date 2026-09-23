@@ -44,9 +44,12 @@ addEventListener(
   (event) => {
     const target = event.target;
     if (target && target !== globalThis && target.tagName) {
-      post("resource", `${target.tagName.toLowerCase()} failed to load`, target.currentSrc || target.src || target.href || "");
+      const source = target.currentSrc || target.src || target.href || "";
+      if (source && new URL(source, location.href).origin !== location.origin) return;
+      post("resource", `${target.tagName.toLowerCase()} failed to load`, source);
       return;
     }
+    if (!event.error && /^ResizeObserver loop/.test(event.message || "")) return;
     if (event.error) post("error", event.error.message, event.error.stack);
     else post("error", event.message, `${event.filename}:${event.lineno}`);
   },
