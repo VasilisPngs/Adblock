@@ -88,7 +88,7 @@ function sourceCard(state) {
   card.append(
     el("div", { class: "resolver-row" }, [
       nameInput,
-      el("button", { class: "btn small primary", type: "button", text: t("addSource"), onclick: submit })
+      el("button", { class: "btn primary", type: "button", text: t("addSource"), onclick: submit })
     ])
   );
   return card;
@@ -121,7 +121,7 @@ function rebuildCard(settings) {
 
   const field = el("div", { class: "resolver-row" }, [
     input,
-    el("button", { class: "btn small", type: "button", text: t("save"), onclick: save })
+    el("button", { class: "btn", type: "button", text: t("save"), onclick: save })
   ]);
   const card = el("div", { class: "card" }, [
     el("div", { class: "row between" }, [
@@ -198,7 +198,7 @@ function resolverCard(settings) {
     el("div", { class: "tiny", text: t("resolverNote") }),
     el("div", { class: "resolver-row" }, [
       input,
-      el("button", { class: "btn small primary", type: "button", text: t("save"), onclick: save })
+      el("button", { class: "btn primary", type: "button", text: t("save"), onclick: save })
     ])
   ]);
 }
@@ -278,8 +278,8 @@ function ruleCard() {
   card.append(
     el("div", { class: "resolver-row" }, [
       input,
-      el("button", { class: "btn small", type: "button", text: t("actionAllow"), onclick: () => submit("allow") }),
-      el("button", { class: "btn small primary", type: "button", text: t("actionBlock"), onclick: () => submit("block") })
+      el("button", { class: "btn", type: "button", text: t("actionAllow"), onclick: () => submit("allow") }),
+      el("button", { class: "btn primary", type: "button", text: t("actionBlock"), onclick: () => submit("block") })
     ])
   );
   paint();

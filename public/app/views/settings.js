@@ -42,7 +42,7 @@ function deviceCard(state) {
           }),
           address
         ]),
-        el("span", { class: "row wrap", style: "gap:6px;justify-content:flex-end" }, [
+        el("span", { class: "device-actions" }, [
           reveal,
           el("button", {
             class: "btn small ghost",
@@ -108,7 +108,7 @@ function deviceCard(state) {
       input,
       platformInput,
       el("button", {
-        class: "btn small primary",
+        class: "btn primary",
         type: "button",
         text: t("addDevice"),
         onclick: async () => {
