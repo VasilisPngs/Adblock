@@ -21,15 +21,13 @@ needs. `npm run lists` reads the source URLs, merges and sorts them, and writes
 over the sorted text.
 
 The sources themselves are edited in the app, on the Protection tab, and stored in D1.
-Every build reads them from `GET /api/sources`, writes them back into `blocklists.json`,
-and recompiles. With a Cloudflare deploy hook saved in the app, the Worker's own cron fires
+Every build reads them straight from D1 with the build's own Cloudflare credentials,
+writes them back into `blocklists.json`, and recompiles. With a Cloudflare deploy hook saved in the app, the Worker's own cron fires
 a build twice a day, and a change to the sources fires one immediately. Nothing has to be
 pressed. The schedule is deliberately not tighter than that: every deploy replaces every
 isolate, and with it the in-memory answer cache, so a rebuild that gains a few hours of
-list freshness costs every cached answer. The nightly GitHub Action is a third refresh
-point. The hook is stored in D1 and never sent back to
-the browser. That endpoint is the only unauthenticated read in the
-app: it returns public blocklist URLs and nothing else. A source added in the app
+list freshness costs every cached answer. The hook is stored in D1 and never sent back to
+the browser. A source added in the app
 therefore takes effect at the next build, which the app says plainly rather than
 pretending the change is live.
 
@@ -40,7 +38,7 @@ pretending the change is live.
 3. Workers Builds on this repository runs `npm run deploy`: lists, migrations, Worker.
 4. Protect the dashboard in Zero Trust (Free plan) with two self-hosted applications on
    `adblock.<subdomain>.workers.dev`, the public one first so DNS never stops:
-   - `Adblock public`: paths `dns-query` and `api/sources`, policy Bypass, Everyone.
+   - `Adblock public`: path `dns-query`, policy Bypass, Everyone.
    - `Adblock`: the whole hostname, the same Allow policy as the reader and GymTracker.
      Put its Application Audience (AUD) tag in `ACCESS_AUD` in `wrangler.jsonc`.
    Until then the Worker refuses every API request, because it only trusts requests
@@ -50,20 +48,19 @@ pretending the change is live.
    resolves through `https://cloudflare-dns.com/dns-query`; change it or add a second
    resolver on the Protection tab whenever you want.
 
-A GitHub Action rebuilds the lists every night and commits them when they changed,
-which makes Workers Builds deploy the fresh list. `npm run lists` does the same by hand.
+`npm run lists` rebuilds the list by hand; without Cloudflare credentials it compiles the
+sources already in `blocklists.json`.
 
 ## Who can reach what
 
 | Path | Who |
 | --- | --- |
 | `/dns-query/<device token>` | open by design: DoH clients cannot log in. The 32-character token is the credential, and a request without a known token is refused, so the resolver cannot be used by strangers. |
-| `GET /api/sources` | open: it lists the blocklist URLs, which the nightly build reads. |
 | everything else | Cloudflare Access. The Worker also verifies the Access token itself and refuses every API call without one, so a misconfigured Access application fails closed. |
 
-The two open paths need a hostname-level Access application with a Bypass policy, because
+The open path needs a hostname-level Access application with a Bypass policy, because
 Worker-level Access covers the whole Worker with no path exceptions. The most specific
-path wins, so the bypass applies to those two paths and the rest of the hostname stays
+path wins, so the bypass applies to `/dns-query` and the rest of the hostname stays
 behind Access.
 
 ## Devices

@@ -1,5 +1,4 @@
 {
-  "endpoint": "https://adblock.vasilispngs.workers.dev/api/sources",
   "sources": [
     {
       "url": "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.mini.txt",

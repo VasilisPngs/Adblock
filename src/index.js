@@ -415,11 +415,6 @@ async function handleRules(request, env) {
 const listSources = (env) =>
   env.DB.prepare("SELECT url, name FROM sources ORDER BY created_at, url").all();
 
-async function handleSourcesRead(env) {
-  const rows = await listSources(env);
-  return json({ sources: rows.results || [] });
-}
-
 async function listTitle(url) {
   try {
     const response = await fetch(url, { headers: { range: "bytes=0-4095", "user-agent": "adblock-list-builder" } });
@@ -654,7 +649,6 @@ export default {
       }
     }
     if (url.pathname === "/dns-query" || url.pathname.startsWith("/dns-query/")) return json({ error: "unknown_device" }, 403);
-    if (url.pathname === "/api/sources" && request.method === "GET") return handleSourcesRead(env);
 
     const route = API[url.pathname];
     if (route || url.pathname === "/profile.mobileconfig") {

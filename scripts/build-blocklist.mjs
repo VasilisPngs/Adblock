@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -69,30 +70,33 @@ function collapse(hosts) {
   return kept;
 }
 
-async function configuredSources() {
+function storedSources() {
+  const output = execFileSync(
+    "npx",
+    ["wrangler", "d1", "execute", "DB", "--remote", "--json", "--command", "SELECT url, name FROM sources ORDER BY created_at, url"],
+    { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 120000 }
+  );
+  return (JSON.parse(output)[0]?.results || []).filter((source) => typeof source.url === "string");
+}
+
+function configuredSources() {
   const config = JSON.parse(readFileSync(join(root, "blocklists.json"), "utf8"));
-  const endpoint = process.env.SOURCES_URL || config.endpoint;
-  if (endpoint) {
-    try {
-      const response = await fetch(endpoint, { headers: { "user-agent": "adblock-list-builder" } });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json();
-      const sources = (payload.sources || []).filter((source) => typeof source.url === "string");
-      if (sources.length > 0) {
-        writeFileSync(join(root, "blocklists.json"), `${JSON.stringify({ endpoint: config.endpoint, sources }, null, 2)}\n`);
-        console.log(`sources: ${sources.length} from ${endpoint}`);
-        return sources;
-      }
-      console.log(`sources: ${endpoint} returned none, keeping blocklists.json`);
-    } catch (error) {
-      console.log(`sources: ${endpoint} unreachable (${error.message}), keeping blocklists.json`);
+  try {
+    const sources = storedSources();
+    if (sources.length > 0) {
+      writeFileSync(join(root, "blocklists.json"), `${JSON.stringify({ sources }, null, 2)}\n`);
+      console.log(`sources: ${sources.length} from D1`);
+      return sources;
     }
+    console.log("sources: D1 returned none, keeping blocklists.json");
+  } catch (error) {
+    console.log(`sources: D1 unreachable (${String(error.message).split("\n")[0]}), keeping blocklists.json`);
   }
   return (config.sources || []).filter((source) => source.enabled !== false);
 }
 
 async function main() {
-  const sources = await configuredSources();
+  const sources = configuredSources();
   if (sources.length === 0) throw new Error("no sources configured");
 
   const block = new Set();
