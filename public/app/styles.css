@@ -246,10 +246,10 @@ svg {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   background: color-mix(in srgb, var(--bg) 78%, transparent);
   backdrop-filter: saturate(180%) blur(18px);
-  padding: var(--view-pad-top) 0 12px;
+  padding: var(--view-pad-top) 0 var(--space-3);
 }
 
 .view > .list-bar:first-child {
