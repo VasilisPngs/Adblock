@@ -69,7 +69,7 @@ export function renderLog(container) {
   if (!state) return;
   const ruleMap = new Map();
   const deviceNames = new Map((state.devices || []).map((item) => [item.token, item.name]));
-  const listNode = el("div", { class: "card tight" });
+  const listNode = el("div", { class: "card flush" });
   let generation = 0;
 
   const paint = async () => {
@@ -121,7 +121,7 @@ export function renderLog(container) {
   bar.append(el("h1", { text: t("logTitle") }));
   bar.append(chips);
 
-  const fields = el("div", { class: "row" }, [
+  const fields = el("div", { class: "fields" }, [
     el("input", {
       type: "search",
       class: "grow",

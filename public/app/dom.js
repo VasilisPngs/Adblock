@@ -33,9 +33,9 @@ export function toast(message) {
   const node = el("div", { class: "toast", text: message });
   host.append(node);
   setTimeout(() => {
-    node.style.opacity = "0";
-    node.style.transition = "opacity .25s ease";
-    setTimeout(() => node.remove(), 260);
+    node.classList.add("leaving");
+    node.addEventListener("transitionend", () => node.remove(), { once: true });
+    setTimeout(() => node.remove(), 600);
   }, 2200);
 }
 
@@ -47,9 +47,9 @@ function openSheet(build, onClose) {
   const close = () => {
     if (closed) return;
     closed = true;
-    backdrop.style.opacity = "0";
-    backdrop.style.transition = "opacity .2s ease";
-    setTimeout(() => backdrop.remove(), 200);
+    backdrop.classList.add("closing");
+    sheet.addEventListener("transitionend", () => backdrop.remove(), { once: true });
+    setTimeout(() => backdrop.remove(), 700);
     document.removeEventListener("keydown", onKey);
     if (onClose) onClose();
   };
