@@ -924,3 +924,20 @@ textarea {
     justify-content: center;
   }
 }
+
+@media (min-width: 37.5rem) {
+  .sheet-backdrop {
+    padding: 0 16px max(24px, env(safe-area-inset-bottom));
+  }
+
+  .sheet {
+    border-radius: var(--radius-l);
+    padding-bottom: 18px;
+  }
+}
+
+@media (min-width: 56.25rem) {
+  .tabbar {
+    box-shadow: none;
+  }
+}
