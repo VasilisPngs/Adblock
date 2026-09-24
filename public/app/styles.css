@@ -428,7 +428,19 @@ h2 {
   font-size: 13px;
   font-weight: var(--fw-medium);
   padding: 0 var(--space-1);
-  text-underline-offset: 3px;
+  text-decoration: none;
+}
+
+.link.inline {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  font-size: inherit;
+  overflow-wrap: anywhere;
+}
+
+.link.inline::after {
+  content: none;
 }
 
 .btn:disabled,
@@ -998,9 +1010,5 @@ textarea {
 
   .tab:not([aria-current="page"]):hover {
     background: color-mix(in srgb, var(--surface-2) 60%, transparent);
-  }
-
-  .link:hover {
-    text-decoration: underline;
   }
 }

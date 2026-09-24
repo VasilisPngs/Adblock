@@ -21,7 +21,9 @@ function sourceCard(state) {
       el("div", { class: "list-item" }, [
         el("span", { class: "grow" }, [
           el("div", { text: source.name || source.url }),
-          el("div", { class: "tiny", style: "overflow-wrap:anywhere", text: source.url }),
+          el("div", { class: "tiny" }, [
+            el("a", { class: "link inline", href: source.url, target: "_blank", rel: "noopener noreferrer", text: source.url })
+          ]),
           el("div", {
             class: "tiny",
             style: built ? "" : "color:var(--accent-text)",
