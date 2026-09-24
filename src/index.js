@@ -426,9 +426,7 @@ async function listTitle(url) {
 
 async function rebuild(env, ctx) {
   const { deployHook } = await loadState(env);
-  if (!deployHook) return false;
-  ctx.waitUntil(fetch(deployHook, { method: "POST" }).catch(() => {}));
-  return true;
+  if (deployHook) ctx.waitUntil(fetch(deployHook, { method: "POST" }).catch(() => {}));
 }
 
 async function handleSources(request, env, ctx) {
@@ -437,7 +435,8 @@ async function handleSources(request, env, ctx) {
   const url = String(payload.url || "").trim();
   if (payload.action === "remove") {
     await env.DB.prepare("DELETE FROM sources WHERE url = ?1").bind(url).run();
-    return json({ ok: true, rebuilding: await rebuild(env, ctx) });
+    await rebuild(env, ctx);
+    return json({ ok: true });
   }
   let parsed;
   try {
@@ -453,7 +452,8 @@ async function handleSources(request, env, ctx) {
   )
     .bind(parsed.toString(), name, Date.now())
     .run();
-  return json({ ok: true, rebuilding: await rebuild(env, ctx) });
+  await rebuild(env, ctx);
+  return json({ ok: true });
 }
 
 async function handleLog(request, env) {

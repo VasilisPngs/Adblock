@@ -13,16 +13,13 @@
   --success: #23c56e;
   --warning: #ffb020;
   --danger: #ff5470;
-  --radius-xs: 8px;
   --radius-s: 12px;
   --radius-m: 14px;
   --radius-l: 30px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
-  --space-4: 16px;
   --space-5: 20px;
-  --space-6: 24px;
   --pad: 16px;
   --field-pad: 12px;
   --control: 44px;
@@ -340,10 +337,6 @@ svg {
   justify-content: space-between;
 }
 
-.row.wrap {
-  flex-wrap: wrap;
-}
-
 .grow {
   flex: 1;
   min-width: 0;
@@ -361,7 +354,6 @@ h2 {
   margin: 0;
 }
 
-
 .muted {
   color: var(--text);
   font-size: 13px;
@@ -371,7 +363,6 @@ h2 {
   font-size: 12px;
   color: var(--text);
 }
-
 
 .btn {
   border: 1px solid var(--border);
@@ -467,10 +458,6 @@ textarea:disabled {
   scrollbar-width: none;
 }
 
-.chips::-webkit-scrollbar {
-  display: none;
-}
-
 input[type="text"],
 input[type="date"],
 input[type="number"],
@@ -535,7 +522,6 @@ textarea {
   border-radius: var(--radius-l);
   font-size: 13px;
 }
-
 
 .sheet-backdrop {
   position: fixed;
