@@ -256,14 +256,6 @@ svg {
   margin-top: 0;
 }
 
-.list-bar > .card,
-.list-bar .chip:not([aria-pressed="true"]),
-.list-bar input,
-.list-bar input[type],
-.list-bar select {
-  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
-}
-
 .view.enter {
   animation: enter var(--speed) var(--ease);
 }
