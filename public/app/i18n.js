@@ -3,7 +3,7 @@ const LANGUAGES = ["en", "el"];
 
 const STRINGS = {
   tabHome: ["Home", "Αρχική"],
-  tabFilters: ["Filters", "Φίλτρα"],
+  tabProtection: ["Protection", "Προστασία"],
   tabSettings: ["Settings", "Ρυθμίσεις"],
 
   statusOn: ["Active", "Ενεργό"],
@@ -46,7 +46,7 @@ const STRINGS = {
   viaNone: ["Allowed", "Πέρασε"],
   viaOff: ["Protection off", "Προστασία ανενεργή"],
 
-  filtersTitle: ["Filters", "Φίλτρα"],
+  protectionTitle: ["Protection", "Προστασία"],
   noSources: ["No list is set, so only your own rules apply.", "Δεν έχει οριστεί λίστα, οπότε ισχύουν μόνο οι δικοί σου κανόνες."],
   sourceUrl: ["https://… list URL", "https://… URL λίστας"],
   sourceName: ["Name, or leave it blank", "Όνομα, ή άφησέ το κενό"],

@@ -7,45 +7,6 @@ function field(label, control) {
   return el("label", { class: "field" }, [el("span", { class: "tiny", text: label }), control]);
 }
 
-function resolverCard(settings) {
-  let value = settings.resolver;
-  const input = el("input", {
-    type: "text",
-    inputMode: "url",
-    autocapitalize: "none",
-    autocomplete: "off",
-    spellcheck: "false",
-    placeholder: t("resolverPlaceholder"),
-    value,
-    oninput: (event) => {
-      value = event.target.value;
-    }
-  });
-  const save = async () => {
-    input.blur();
-    try {
-      const saved = await saveSettings({ resolver: value.trim() });
-      value = saved.resolver;
-      input.value = value;
-      toast(t("saved"));
-    } catch (error) {
-      const key = { invalid_resolver: "invalidResolver", resolver_unreachable: "resolverUnreachable" }[error.code];
-      toast(t(key || "requestFailed"));
-    }
-  };
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") save();
-  });
-  return el("div", { class: "card" }, [
-    el("h2", { text: t("resolverTitle") }),
-    el("div", { class: "tiny", text: t("resolverNote") }),
-    el("div", { class: "resolver-row" }, [
-      input,
-      el("button", { class: "btn primary", type: "button", text: t("save"), onclick: save })
-    ])
-  ]);
-}
-
 function deviceCard(state) {
   const card = el("div", { class: "card" }, [
     el("h2", { text: t("devicesTitle") }),
@@ -231,5 +192,4 @@ export function renderSettings(container) {
   );
 
   container.append(deviceCard(state));
-  container.append(resolverCard(settings));
 }

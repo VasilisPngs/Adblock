@@ -1,6 +1,6 @@
 import { el, clear, toast } from "../dom.js";
 import { t, relativeTime } from "../i18n.js";
-import { currentState, loadRules, setRule, setSource, removeSource } from "../api.js";
+import { currentState, loadRules, setRule, saveSettings, setSource, removeSource } from "../api.js";
 
 function sourceCard(state) {
   const compiled = new Map((state.list.compiled || []).map((entry) => [entry.url, entry]));
@@ -94,6 +94,45 @@ function sourceCard(state) {
   return card;
 }
 
+function resolverCard(settings) {
+  let value = settings.resolver;
+  const input = el("input", {
+    type: "text",
+    inputMode: "url",
+    autocapitalize: "none",
+    autocomplete: "off",
+    spellcheck: "false",
+    placeholder: t("resolverPlaceholder"),
+    value,
+    oninput: (event) => {
+      value = event.target.value;
+    }
+  });
+  const save = async () => {
+    input.blur();
+    try {
+      const saved = await saveSettings({ resolver: value.trim() });
+      value = saved.resolver;
+      input.value = value;
+      toast(t("saved"));
+    } catch (error) {
+      const key = { invalid_resolver: "invalidResolver", resolver_unreachable: "resolverUnreachable" }[error.code];
+      toast(t(key || "requestFailed"));
+    }
+  };
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") save();
+  });
+  return el("div", { class: "card" }, [
+    el("h2", { text: t("resolverTitle") }),
+    el("div", { class: "tiny", text: t("resolverNote") }),
+    el("div", { class: "resolver-row" }, [
+      input,
+      el("button", { class: "btn primary", type: "button", text: t("save"), onclick: save })
+    ])
+  ]);
+}
+
 function ruleCard() {
   const card = el("div", { class: "card" }, [el("h2", { text: t("myRules") })]);
   const list = el("div", { class: "list" });
@@ -182,11 +221,12 @@ function ruleCard() {
   return card;
 }
 
-export function renderFilters(container) {
+export function renderProtection(container) {
   const state = currentState();
   if (!state) return;
 
-  container.append(el("div", { class: "list-bar" }, [el("h1", { text: t("filtersTitle") })]));
+  container.append(el("div", { class: "list-bar" }, [el("h1", { text: t("protectionTitle") })]));
   container.append(sourceCard(state));
   container.append(ruleCard());
+  container.append(resolverCard(state.settings));
 }
