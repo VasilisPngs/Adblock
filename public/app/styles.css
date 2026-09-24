@@ -162,7 +162,7 @@ svg {
   display: block;
   width: 26px;
   height: 26px;
-  border-radius: var(--radius-xs);
+  border-radius: 22.37%;
   box-shadow: 0 6px 18px var(--accent-soft);
 }
 
