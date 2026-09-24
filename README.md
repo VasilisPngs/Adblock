@@ -92,7 +92,8 @@ by the CNAME check either: your rule wins over the list, wherever the answer poi
 
 If D1 cannot be read and the Worker has no settings in memory yet, DNS keeps resolving
 and blocking with the bundled list, without your own rules and without logging, and D1
-is tried again every 5 seconds. Protection fails closed, never open.
+is tried again every 5 seconds. Blocking stays on; the device check is skipped until D1
+answers again, because refusing every token would leave your own devices without DNS.
 
 Plain DNS on port 53 is not offered. It is unencrypted, which is the one thing this
 resolver exists to avoid, and it costs a fresh TCP handshake on every query that cannot
