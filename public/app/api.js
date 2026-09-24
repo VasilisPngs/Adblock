@@ -75,10 +75,6 @@ export async function removeSource(url) {
   await refresh();
 }
 
-export function rebuildNow() {
-  return call("/api/rebuild", { method: "POST", body: "{}" });
-}
-
 export function loadRules() {
   return call("/api/rules");
 }

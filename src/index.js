@@ -371,12 +371,6 @@ async function handleSettings(request, env) {
   const enabled = payload.enabled === undefined ? current.enabled : Boolean(payload.enabled);
   const logEnabled = payload.logEnabled === undefined ? current.logEnabled : Boolean(payload.logEnabled);
 
-  if (typeof payload.deployHook === "string") {
-    const hook = payload.deployHook.trim();
-    if (hook && !/^https:\/\//.test(hook)) return json({ error: "invalid_url" }, 400);
-    await env.DB.prepare("UPDATE settings SET deploy_hook = ?1 WHERE id = 1").bind(hook || null).run();
-  }
-
   await env.DB.prepare(
     "UPDATE settings SET enabled = ?1, resolver = ?2, log_enabled = ?3, updated_at = ?4 WHERE id = 1"
   )
@@ -435,10 +429,6 @@ async function rebuild(env, ctx) {
   if (!deployHook) return false;
   ctx.waitUntil(fetch(deployHook, { method: "POST" }).catch(() => {}));
   return true;
-}
-
-async function handleRebuild(request, env, ctx) {
-  return json({ started: await rebuild(env, ctx) });
 }
 
 async function handleSources(request, env, ctx) {
@@ -632,7 +622,6 @@ const API = {
   "/api/log": { method: "GET", handler: handleLog },
   "/api/devices": { method: "POST", handler: handleDevices },
   "/api/sources": { method: "POST", handler: handleSources },
-  "/api/rebuild": { method: "POST", handler: handleRebuild },
   "/api/report": { method: "POST", handler: handleReport }
 };
 

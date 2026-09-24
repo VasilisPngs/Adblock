@@ -1,6 +1,6 @@
 import { el, clear, toast } from "../dom.js";
 import { t, relativeTime } from "../i18n.js";
-import { currentState, loadRules, setRule, saveSettings, setSource, removeSource, rebuildNow } from "../api.js";
+import { currentState, loadRules, setRule, saveSettings, setSource, removeSource } from "../api.js";
 
 function sourceCard(state) {
   const compiled = new Map((state.list.compiled || []).map((entry) => [entry.url, entry]));
@@ -91,76 +91,6 @@ function sourceCard(state) {
       el("button", { class: "btn primary", type: "button", text: t("addSource"), onclick: submit })
     ])
   );
-  return card;
-}
-
-function rebuildCard(settings) {
-  let hook = "";
-  const input = el("input", {
-    type: "password",
-    autocomplete: "off",
-    placeholder: t("deployHook"),
-    oninput: (event) => {
-      hook = event.target.value;
-    }
-  });
-  const save = async () => {
-    input.blur();
-    try {
-      await saveSettings({ deployHook: hook.trim() });
-      input.value = "";
-      hook = "";
-      toast(t("deployHookSaved"));
-    } catch (error) {
-      toast(error.code === "invalid_url" ? t("invalidUrl") : t("requestFailed"));
-    }
-  };
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") save();
-  });
-
-  const field = el("div", { class: "resolver-row" }, [
-    input,
-    el("button", { class: "btn", type: "button", text: t("save"), onclick: save })
-  ]);
-  const card = el("div", { class: "card" }, [
-    el("div", { class: "row between" }, [
-      el("h2", { text: t("rebuildTitle") }),
-      el("button", {
-        class: "btn small primary",
-        type: "button",
-        text: t("rebuildNow"),
-        onclick: async () => {
-          try {
-            const { started } = await rebuildNow();
-            toast(started ? t("rebuildStarted") : t("rebuildNoHook"));
-          } catch {
-            toast(t("requestFailed"));
-          }
-        }
-      })
-    ])
-  ]);
-
-  if (settings.deployHookSet) {
-    card.append(el("div", { class: "tiny", text: t("deployHookReady") }));
-    card.append(
-      el("button", {
-        class: "btn small ghost",
-        type: "button",
-        text: t("changeHook"),
-        onclick: (event) => {
-          event.currentTarget.remove();
-          card.append(field);
-          input.focus();
-        }
-      })
-    );
-    return card;
-  }
-
-  card.append(field);
-  card.append(el("div", { class: "tiny", text: t("deployHookNote") }));
   return card;
 }
 
@@ -299,5 +229,4 @@ export function renderProtection(container) {
   container.append(sourceCard(state));
   container.append(ruleCard());
   container.append(resolverCard(state.settings));
-  container.append(rebuildCard(state.settings));
 }

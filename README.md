@@ -23,9 +23,10 @@ preview alike, compiles a fresh one, so the repository never carries a stale cop
 
 The sources themselves are edited in the app, on the Protection tab, and stored in D1.
 Every build reads them straight from D1 with the build's own Cloudflare credentials,
-writes them back into `blocklists.json`, and recompiles. With a Cloudflare deploy hook saved in the app, the Worker's own cron fires
-a build twice a day, and a change to the sources fires one immediately. Nothing has to be
-pressed. The schedule is deliberately not tighter than that: every deploy replaces every
+writes them back into `blocklists.json`, and recompiles. With a Cloudflare deploy hook
+stored in D1 (set once, see Setup), the Worker's own cron fires a build twice a day, and a
+change to the sources fires one immediately. Nothing has to be pressed, and the app has
+no rebuild button. The schedule is deliberately not tighter than that: every deploy replaces every
 isolate, and with it the in-memory answer cache, so a rebuild that gains a few hours of
 list freshness costs every cached answer. The hook is stored in D1 and never sent back to
 the browser. A source added in the app
@@ -37,6 +38,8 @@ pretending the change is live.
 1. `npm install`
 2. The database id in `wrangler.jsonc` points at the `adblock` D1 database.
 3. Workers Builds on this repository runs `npm run deploy`: lists, migrations, Worker.
+   Create a deploy hook under Worker → Settings → Builds → Deploy Hooks and store it once:
+   `npx wrangler d1 execute DB --remote --command "UPDATE settings SET deploy_hook = '<hook URL>'"`.
 4. Protect the dashboard in Zero Trust (Free plan) with two self-hosted applications on
    `adblock.<subdomain>.workers.dev`, the public one first so DNS never stops:
    - `Adblock public`: paths `dns-query` and `icons`, its own Bypass policy `Adblock public`

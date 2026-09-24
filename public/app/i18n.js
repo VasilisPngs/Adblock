@@ -53,21 +53,6 @@ const STRINGS = {
   addSource: ["Add list", "Προσθήκη λίστας"],
   sourcePending: ["Applies on the next build", "Θα ισχύσει στο επόμενο build"],
   sourceBuilding: ["Building now", "Χτίζεται τώρα"],
-  rebuildTitle: ["Rebuild", "Ανανέωση λιστών"],
-  deployHook: ["Deploy hook URL", "Deploy hook URL"],
-  deployHookNote: [
-    "Cloudflare → Worker → Settings → Builds → Deploy Hooks. Once it is saved, changing a list starts a build at once instead of waiting for the next scheduled one, which takes two to four minutes.",
-    "Cloudflare → Worker → Settings → Builds → Deploy Hooks. Μόλις αποθηκευτεί, κάθε αλλαγή λίστας ξεκινά build αμέσως, χωρίς να περιμένει το επόμενο προγραμματισμένο. Το build θέλει δύο με τέσσερα λεπτά."
-  ],
-  deployHookSaved: ["Deploy hook saved", "Το deploy hook αποθηκεύτηκε"],
-  deployHookReady: [
-    "The lists rebuild by themselves every three hours, and again whenever you change one. This button is only for when you do not want to wait.",
-    "Οι λίστες ξαναχτίζονται μόνες τους κάθε τρεις ώρες, και ξανά όποτε αλλάξεις κάποια. Αυτό το κουμπί είναι μόνο για όταν δεν θες να περιμένεις."
-  ],
-  changeHook: ["Change hook", "Αλλαγή hook"],
-  rebuildNow: ["Rebuild now", "Ανανέωση τώρα"],
-  rebuildStarted: ["Build started", "Το build ξεκίνησε"],
-  rebuildNoHook: ["Save a deploy hook first.", "Αποθήκευσε πρώτα ένα deploy hook."],
   invalidUrl: ["That is not an https URL.", "Δεν είναι https URL."],
   sourcesTitle: ["Sources", "Πηγές"],
   sourceDomains: ["{count} domains", "{count} domains"],
