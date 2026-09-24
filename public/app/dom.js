@@ -48,7 +48,9 @@ function openSheet(build, onClose) {
     if (closed) return;
     closed = true;
     backdrop.classList.add("closing");
-    sheet.addEventListener("transitionend", () => backdrop.remove(), { once: true });
+    sheet.addEventListener("transitionend", (event) => {
+      if (event.target === sheet) backdrop.remove();
+    });
     setTimeout(() => backdrop.remove(), 700);
     document.removeEventListener("keydown", onKey);
     if (onClose) onClose();

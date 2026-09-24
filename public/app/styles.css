@@ -155,7 +155,7 @@ svg {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: calc(env(safe-area-inset-top) + 12px) 16px 12px;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: saturate(180%) blur(18px);
   border-bottom: 1px solid var(--border);
@@ -493,6 +493,7 @@ textarea {
   border-radius: var(--radius-m);
   padding: 10px var(--field-pad);
   outline: none;
+  text-overflow: ellipsis;
   transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease);
 }
 
@@ -532,12 +533,6 @@ textarea {
   border-radius: var(--radius-m);
   text-decoration: none;
   color: inherit;
-  cursor: pointer;
-  transition: transform var(--speed) var(--ease), border-color var(--speed) var(--ease);
-}
-
-.list-item:active {
-  transform: scale(0.99);
 }
 
 .empty {
@@ -598,6 +593,9 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: max-content;
+  max-width: min(100vw - 32px, 34rem);
+  text-align: center;
   pointer-events: none;
 }
 
@@ -714,13 +712,11 @@ textarea {
   transform: scale(0.96);
 }
 
-.tab,
-.list-item {
+.tab {
   transition: opacity var(--speed-fast) var(--ease), background var(--speed) var(--ease), color var(--speed) var(--ease);
 }
 
-.tab:active,
-.list-item:active {
+.tab:active {
   opacity: 0.55;
 }
 
@@ -774,7 +770,7 @@ textarea {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
-  padding: 0 var(--space-1) 0 var(--field-pad);
+  padding: var(--space-2) var(--field-pad);
 }
 
 .switch.boxed + .tiny {
@@ -988,8 +984,7 @@ textarea {
   transition: opacity var(--speed) var(--ease), transform var(--speed) var(--ease);
 }
 
-.card .list-item,
-.sheet .list-item {
+.card .list-item {
   background: var(--surface-2);
   padding-inline: var(--field-pad);
 }
@@ -1007,10 +1002,6 @@ textarea {
 
   .btn.primary:not(:disabled):hover {
     filter: brightness(1.08);
-  }
-
-  .list-item:hover {
-    border-color: color-mix(in srgb, var(--border), var(--text) 22%);
   }
 
   .tab:not([aria-current="page"]):hover {
