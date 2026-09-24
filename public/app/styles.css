@@ -409,6 +409,10 @@ h2 {
   color: var(--danger);
 }
 
+.btn.accent {
+  color: var(--accent-text);
+}
+
 .btn.block {
   width: 100%;
 }
@@ -421,26 +425,10 @@ h2 {
 }
 
 .link {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--control-s);
   color: var(--accent-text);
-  font-size: 13px;
   font-weight: var(--fw-medium);
-  padding: 0 var(--space-1);
   text-decoration: none;
-}
-
-.link.inline {
-  display: inline;
-  min-height: 0;
-  padding: 0;
-  font-size: inherit;
   overflow-wrap: anywhere;
-}
-
-.link.inline::after {
-  content: none;
 }
 
 .btn:disabled,
@@ -678,7 +666,6 @@ textarea {
 .pill,
 .btn.small,
 .chip,
-.link,
 .switch-track,
 .brand {
   position: relative;
@@ -687,7 +674,6 @@ textarea {
 .pill::after,
 .btn.small::after,
 .chip::after,
-.link::after,
 .switch-track::after,
 .brand::after {
   content: "";
@@ -945,12 +931,6 @@ textarea {
 
   .device-actions > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
-  }
-
-  .device-actions .link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
   }
 }
 

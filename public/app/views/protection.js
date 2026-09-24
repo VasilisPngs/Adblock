@@ -22,7 +22,7 @@ function sourceCard(state) {
         el("span", { class: "grow" }, [
           el("div", { text: source.name || source.url }),
           el("div", { class: "tiny" }, [
-            el("a", { class: "link inline", href: source.url, target: "_blank", rel: "noopener noreferrer", text: source.url })
+            el("a", { class: "link", href: source.url, target: "_blank", rel: "noopener noreferrer", text: source.url })
           ]),
           el("div", {
             class: "tiny",

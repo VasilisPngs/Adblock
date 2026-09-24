@@ -59,7 +59,7 @@ function deviceCard(state) {
           }),
           device.platform === "other"
             ? null
-            : el("a", { class: "link", href: `/profile.mobileconfig?token=${device.token}`, text: t("appleProfile") }),
+            : el("a", { class: "btn small ghost accent", href: `/profile.mobileconfig?token=${device.token}`, text: t("appleProfile") }),
           el("button", {
             class: "btn small ghost danger",
             type: "button",
