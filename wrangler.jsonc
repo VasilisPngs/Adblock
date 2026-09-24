@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "adblock",
   "main": "src/index.js",
-  "compatibility_date": "2026-09-13",
+  "compatibility_date": "2026-09-21",
   "workers_dev": true,
   "preview_urls": false,
   "vars": {
