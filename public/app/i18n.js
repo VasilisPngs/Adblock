@@ -3,7 +3,7 @@ const LANGUAGES = ["en", "el"];
 
 const STRINGS = {
   tabHome: ["Home", "Αρχική"],
-  tabProtection: ["Protection", "Προστασία"],
+  tabFilters: ["Filters", "Φίλτρα"],
   tabSettings: ["Settings", "Ρυθμίσεις"],
 
   statusOn: ["Active", "Ενεργό"],
@@ -26,7 +26,7 @@ const STRINGS = {
 
   noActivity: ["No queries yet.", "Κανένα ερώτημα ακόμα."],
 
-  logTitle: ["Activity", "Κινήσεις"],
+  logTitle: ["Activity", "Δραστηριότητα"],
   filterAll: ["All", "Όλα"],
   filterBlocked: ["Blocked", "Μπλοκαρισμένα"],
   filterAllowed: ["Allowed", "Πέρασαν"],
@@ -46,7 +46,7 @@ const STRINGS = {
   viaNone: ["Allowed", "Πέρασε"],
   viaOff: ["Protection off", "Προστασία ανενεργή"],
 
-  protectionTitle: ["Protection", "Προστασία"],
+  filtersTitle: ["Filters", "Φίλτρα"],
   noSources: ["No list is set, so only your own rules apply.", "Δεν έχει οριστεί λίστα, οπότε ισχύουν μόνο οι δικοί σου κανόνες."],
   sourceUrl: ["https://… list URL", "https://… URL λίστας"],
   sourceName: ["Name, or leave it blank", "Όνομα, ή άφησέ το κενό"],
@@ -72,8 +72,8 @@ const STRINGS = {
   loggingNote: ["Kept for 24 hours, then deleted automatically.", "Κρατιούνται για 24 ώρες και μετά σβήνονται αυτόματα."],
   devicesTitle: ["Devices", "Συσκευές"],
   devicesNote: [
-    "Each device gets its own address, so the log can tell them apart.",
-    "Κάθε συσκευή παίρνει δική της διεύθυνση, ώστε το ιστορικό να τις ξεχωρίζει."
+    "Each device gets its own address, so Activity can tell them apart.",
+    "Κάθε συσκευή παίρνει δική της διεύθυνση, ώστε η Δραστηριότητα να τις ξεχωρίζει."
   ],
   deviceName: ["Device name", "Όνομα συσκευής"],
   platformApple: ["Apple", "Apple"],

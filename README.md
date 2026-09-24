@@ -21,7 +21,7 @@ needs. `npm run lists` reads the source URLs, merges and sorts them, and writes
 over the sorted text. The compiled list is not committed: every build, production and
 preview alike, compiles a fresh one, so the repository never carries a stale copy.
 
-The sources themselves are edited in the app, on the Protection tab, and stored in D1.
+The sources themselves are edited in the app, on the Filters tab, and stored in D1.
 Every build reads them straight from D1 with the build's own Cloudflare credentials,
 writes them back into `blocklists.json`, and recompiles. With a Cloudflare deploy hook
 stored in D1 (set once, see Setup), the Worker's own cron fires a build twice a day, and a
@@ -52,7 +52,7 @@ pretending the change is live.
    carrying a valid Access token for that audience.
 5. Open `https://adblock.<subdomain>.workers.dev`, sign in through Access, and add a
    device to get its DoH URL and profile. It already
-   resolves through `https://cloudflare-dns.com/dns-query`; change it on the Protection
+   resolves through `https://cloudflare-dns.com/dns-query`; change it on the Settings
    tab whenever you want.
 
 `npm run lists` rebuilds the list by hand; without Cloudflare credentials it compiles the
@@ -85,7 +85,7 @@ request. Copy puts the full address on the clipboard without ever putting it on 
 ## Upstream resolver
 
 One DoH URL, `https://cloudflare-dns.com/dns-query` by default, changeable on the
-Protection tab. Every query that is not blocked or answered from the cache is sent there
+Settings tab. Every query that is not blocked or answered from the cache is sent there
 once: no second resolver, no hedged request, no retry. If it fails or has not answered
 within 2.5 s the device gets SERVFAIL and asks again on its own, and the failure is
 written to Workers Logs with the name, type and reason. A new URL is saved only

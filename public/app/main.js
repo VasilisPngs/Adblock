@@ -6,15 +6,15 @@ import { currentRoute, startRouter } from "./router.js";
 import { apiEvents, currentStatus, refresh } from "./api.js";
 import { renderHome, updateHome } from "./views/home.js";
 import { refreshLog } from "./views/log.js";
-import { renderProtection } from "./views/protection.js";
+import { renderFilters } from "./views/filters.js";
 import { renderSettings } from "./views/settings.js";
 
 const view = document.getElementById("view");
 const pill = document.getElementById("state-pill");
 const tabs = [...document.querySelectorAll(".tab")];
 
-const VIEWS = { home: renderHome, protection: renderProtection, settings: renderSettings };
-const TAB_LABELS = { home: "tabHome", protection: "tabProtection", settings: "tabSettings" };
+const VIEWS = { home: renderHome, filters: renderFilters, settings: renderSettings };
+const TAB_LABELS = { home: "tabHome", filters: "tabFilters", settings: "tabSettings" };
 const PILL_LABELS = { on: "statusOn", off: "statusOff", loading: "statusLoading", failed: "statusFailed", auth: "statusSignIn" };
 const PILL_STATE = { on: "idle", off: "pending", loading: "syncing", failed: "error", auth: "auth" };
 
