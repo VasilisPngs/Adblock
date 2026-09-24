@@ -217,6 +217,7 @@ async function handleDns(request, env, ctx, url, token) {
   if (!message) return json({ error: "bad_request" }, 400);
   const question = readQuestion(message);
   if (!question) return json({ error: "bad_query" }, 400);
+  const type = QUERY_TYPES[question.type] || String(question.type);
 
   const verdict = settings.enabled ? decide(question.name, rules) : { action: "allow", rule: null, source: "off" };
   const forward = stripClientSubnet(message, question);
@@ -261,6 +262,7 @@ async function handleDns(request, env, ctx, url, token) {
       if (!fresh.body) {
         body = servfail(message);
         ttl = 0;
+        console.error(JSON.stringify({ servfail: { name: question.name, type, failure, ms: Date.now() - started } }));
       } else {
         const outcome = accept(fresh.body);
         if (outcome.rule) {
@@ -279,7 +281,6 @@ async function handleDns(request, env, ctx, url, token) {
 
   const action = verdict.action;
   const hour = Math.floor(started / HOUR_MS);
-  const type = QUERY_TYPES[question.type] || String(question.type);
 
   if (settings.logEnabled && !failure && firstThisHour(`${token}|${question.name}|${type}|${action}`, hour)) {
     ctx.waitUntil(
