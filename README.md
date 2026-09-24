@@ -18,7 +18,8 @@ Blocklists are compiled at build time, not at runtime: the Workers free plan all
 enough to download and parse a 180 000-line filter, but is 6 000× more than a lookup
 needs. `npm run lists` reads the source URLs, merges and sorts them, and writes
 `src/blocklist.txt`, which is bundled into the Worker and searched with a binary search
-over the sorted text.
+over the sorted text. The compiled list is not committed: every build, production and
+preview alike, compiles a fresh one, so the repository never carries a stale copy.
 
 The sources themselves are edited in the app, on the Protection tab, and stored in D1.
 Every build reads them straight from D1 with the build's own Cloudflare credentials,
@@ -83,10 +84,15 @@ request. Copy puts the full address on the clipboard without ever putting it on 
 One DoH URL, `https://cloudflare-dns.com/dns-query` by default, changeable on the
 Protection tab. Every query that is not blocked or answered from the cache is sent there
 once: no second resolver, no hedged request, no retry. If it fails or has not answered
-within 2.5 s the device gets SERVFAIL and asks again on its own. A new URL is saved only
+within 2.5 s the device gets SERVFAIL and asks again on its own, and the failure is
+written to Workers Logs with the name, type and reason. A new URL is saved only
 after it answers a test query for `example.com`, so a typo cannot cut every device off,
 including the phone you would fix it from. A name you allow yourself is never blocked
 by the CNAME check either: your rule wins over the list, wherever the answer points.
+
+If D1 cannot be read and the Worker has no settings in memory yet, DNS keeps resolving
+and blocking with the bundled list, without your own rules and without logging, and D1
+is tried again every 5 seconds. Protection fails closed, never open.
 
 Plain DNS on port 53 is not offered. It is unencrypted, which is the one thing this
 resolver exists to avoid, and it costs a fresh TCP handshake on every query that cannot

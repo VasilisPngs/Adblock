@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "npm run lists && wrangler dev",
     "deploy": "npm run lists && npx wrangler d1 migrations apply DB --remote && npx wrangler deploy",
     "lists": "node scripts/build-blocklist.mjs",
     "db:migrate": "wrangler d1 migrations apply DB --local",

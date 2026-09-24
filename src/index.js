@@ -97,7 +97,7 @@ let d1DownUntil = 0;
 const DEGRADED = {
   at: 0,
   settings: {
-    enabled: false,
+    enabled: true,
     resolver: DEFAULT_RESOLVER,
     logEnabled: false,
     deployHookSet: false
