@@ -38,6 +38,8 @@ const answers = new Map();
 const inflight = new Map();
 
 const ttlOf = (body) => Math.min(Math.max(minimumTtl(body) || 0, TTL_FLOOR), TTL_CEILING);
+const rcodeOf = (body) => body[3] & 0x0f;
+const cacheable = (body) => rcodeOf(body) === 0 || rcodeOf(body) === 3;
 
 function cacheKey(question) {
   return `${question.name}|${question.type}|${question.class}`;
@@ -123,8 +125,10 @@ const dnsResponse = (body, ttl) =>
   });
 
 let stateRefresh = null;
+let generation = 0;
 
 async function readState(env) {
+  const current = generation;
   const [settings, rules, devices] = await Promise.all([
     env.DB.prepare(
       "SELECT enabled, resolver, log_enabled, deploy_hook FROM settings WHERE id = 1"
@@ -135,7 +139,7 @@ async function readState(env) {
   const allow = new Set();
   const block = new Set();
   for (const row of rules.results || []) (row.action === "allow" ? allow : block).add(row.host);
-  cache = {
+  const next = {
     at: Date.now(),
     settings: {
       enabled: Boolean(settings?.enabled),
@@ -147,7 +151,8 @@ async function readState(env) {
     rules: { allow, block },
     tokens: new Set((devices.results || []).map((row) => row.token))
   };
-  return cache;
+  if (current === generation) cache = next;
+  return next;
 }
 
 function loadState(env) {
@@ -158,27 +163,23 @@ function loadState(env) {
 async function dnsState(env) {
   if (Date.now() < d1DownUntil) return cache.settings ? cache : DEGRADED;
   if (cache.settings && Date.now() - cache.at < CACHE_TTL_MS) return cache;
-  if (cache.settings) {
-    if (!stateRefresh) {
-      stateRefresh = readState(env)
-        .catch(() => {
-          d1DownUntil = Date.now() + D1_RETRY_MS;
-        })
-        .finally(() => {
-          stateRefresh = null;
-        });
-    }
-    return cache;
+  if (!stateRefresh) {
+    stateRefresh = readState(env)
+      .catch(() => {
+        d1DownUntil = Date.now() + D1_RETRY_MS;
+        return null;
+      })
+      .finally(() => {
+        stateRefresh = null;
+      });
   }
-  try {
-    return await readState(env);
-  } catch {
-    d1DownUntil = Date.now() + D1_RETRY_MS;
-    return DEGRADED;
-  }
+  if (cache.settings) return cache;
+  return (await stateRefresh) || DEGRADED;
 }
 
 function invalidate() {
+  generation += 1;
+  stateRefresh = null;
   cache = { at: 0, settings: null, rules: null, tokens: null };
   answers.clear();
 }
@@ -220,6 +221,7 @@ async function handleDns(request, env, ctx, url, token) {
   const type = QUERY_TYPES[question.type] || String(question.type);
 
   const verdict = settings.enabled ? decide(question.name, rules) : { action: "allow", rule: null, source: "off" };
+  const allowed = verdict.source === "allow";
   const forward = stripClientSubnet(message, question);
 
   let body;
@@ -234,7 +236,7 @@ async function handleDns(request, env, ctx, url, token) {
     const usable = entry && entry.body.length >= question.end;
 
     const accept = (fresh) => {
-      const cloaked = verdict.source === "allow" ? null : cloakedBy(fresh, settings, rules);
+      const cloaked = allowed ? null : cloakedBy(fresh, settings, rules);
       if (cloaked) return cloaked;
       const answer = boostTtl(new Uint8Array(fresh), TTL_FLOOR);
       const life = ttlOf(answer);
@@ -252,7 +254,7 @@ async function handleDns(request, env, ctx, url, token) {
       verdict.source = "stale";
       ctx.waitUntil(
         fetchUpstream(key, settings.resolver, forward).then((fresh) => {
-          if (!fresh.body) return;
+          if (!fresh.body || !cacheable(fresh.body)) return;
           if (accept(fresh.body).rule) answers.delete(key);
         })
       );
@@ -263,6 +265,10 @@ async function handleDns(request, env, ctx, url, token) {
         body = servfail(message);
         ttl = 0;
         console.error(JSON.stringify({ servfail: { name: question.name, type, failure, ms: Date.now() - started } }));
+      } else if (!cacheable(fresh.body)) {
+        body = fresh.body.length >= question.end ? adopt(fresh.body, message, question) : fresh.body;
+        ttl = 0;
+        console.error(JSON.stringify({ servfail: { name: question.name, type, failure: `upstream_rcode_${rcodeOf(fresh.body)}`, ms: Date.now() - started } }));
       } else {
         const outcome = accept(fresh.body);
         if (outcome.rule) {
@@ -639,6 +645,7 @@ export default {
       try {
         return await handleDns(request, env, ctx, url, dns[1]);
       } catch (error) {
+        console.error(JSON.stringify({ dns_failed: String(error && error.message).slice(0, 200) }));
         return json({ error: "dns_failed", detail: String(error && error.message).slice(0, 200) }, 500);
       }
     }

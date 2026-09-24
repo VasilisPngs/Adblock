@@ -17,7 +17,7 @@ function timeFormatter() {
   return new Intl.DateTimeFormat(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
 }
 
-function rowNode(entry, ruleMap, deviceNames, repaint) {
+function rowNode(entry, ruleMap, deviceNames, repaint, clock) {
   const classes = ["log-row"];
   if (entry.action === "block") classes.push("blocked");
   const known = ruleMap.get(entry.name);
@@ -47,7 +47,7 @@ function rowNode(entry, ruleMap, deviceNames, repaint) {
     );
   }
 
-  const meta = [timeFormatter().format(new Date(entry.at)), entry.type, sourceLabel(entry.source)];
+  const meta = [clock.format(new Date(entry.at)), entry.type, sourceLabel(entry.source)];
   const deviceName = deviceNames.get(entry.token);
   if (deviceName) meta.push(deviceName);
   if (entry.rule && entry.rule !== entry.name) meta.push(entry.rule);
@@ -70,8 +70,10 @@ export function renderLog(container) {
   const ruleMap = new Map();
   const deviceNames = new Map((state.devices || []).map((item) => [item.token, item.name]));
   const listNode = el("div", { class: "card tight" });
+  let generation = 0;
 
   const paint = async () => {
+    const run = ++generation;
     clear(listNode);
     listNode.append(el("div", { class: "empty", text: t("statusLoading") }));
     try {
@@ -79,6 +81,7 @@ export function renderLog(container) {
         loadLog({ action: filter, q: search, token: device }),
         loadRules()
       ]);
+      if (run !== generation) return;
       ruleMap.clear();
       for (const rule of rules) ruleMap.set(rule.host, rule.action);
       clear(listNode);
@@ -86,8 +89,10 @@ export function renderLog(container) {
         listNode.append(el("div", { class: "empty", text: t("noActivity") }));
         return;
       }
-      for (const entry of log) listNode.append(rowNode(entry, ruleMap, deviceNames, paint));
+      const clock = timeFormatter();
+      for (const entry of log) listNode.append(rowNode(entry, ruleMap, deviceNames, paint, clock));
     } catch {
+      if (run !== generation) return;
       clear(listNode);
       listNode.append(el("div", { class: "empty", text: t("requestFailed") }));
     }

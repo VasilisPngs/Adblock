@@ -207,11 +207,14 @@ function ruleCard() {
   const card = el("div", { class: "card" }, [el("h2", { text: t("myRules") })]);
   const list = el("div", { class: "list" });
   let pending = "";
+  let generation = 0;
 
   const paint = async () => {
-    clear(list);
+    const run = ++generation;
     try {
       const { rules } = await loadRules();
+      if (run !== generation) return;
+      clear(list);
       if (rules.length === 0) {
         list.append(el("div", { class: "empty", text: t("noRules") }));
         return;
@@ -241,6 +244,8 @@ function ruleCard() {
         );
       }
     } catch {
+      if (run !== generation) return;
+      clear(list);
       list.append(el("div", { class: "empty", text: t("requestFailed") }));
     }
   };
