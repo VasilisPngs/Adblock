@@ -160,8 +160,8 @@ svg {
 
 .brand-mark {
   display: block;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-xs);
   box-shadow: 0 6px 18px var(--accent-soft);
 }
