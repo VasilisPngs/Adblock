@@ -23,7 +23,8 @@ preview alike, compiles a fresh one, so the repository never carries a stale cop
 
 The sources themselves are edited in the app, on the Protection tab, and stored in D1.
 Every build reads them straight from D1 with the build's own Cloudflare credentials,
-writes them back into `blocklists.json`, and recompiles. With a Cloudflare deploy hook
+writes them back into `blocklists.json`, and recompiles; with no source left the list is
+empty and only your own rules apply. With a Cloudflare deploy hook
 stored in D1 (set once, see Setup), the Worker's own cron fires a build twice a day, and a
 change to the sources fires one immediately. Nothing has to be pressed, and the app has
 no rebuild button. The schedule is deliberately not tighter than that: every deploy replaces every
@@ -98,9 +99,8 @@ and blocking with the bundled list, without your own rules and without logging, 
 is tried again every 5 seconds. Blocking stays on; the device check is skipped until D1
 answers again, because refusing every token would leave your own devices without DNS.
 
-Plain DNS on port 53 is not offered. It is unencrypted, which is the one thing this
-resolver exists to avoid, and it costs a fresh TCP handshake on every query that cannot
-be reused between requests. A resolver that is not an `https://` URL is refused.
+An upstream that is not an `https://` URL is refused: plain DNS on port 53 is
+unencrypted, which is the one thing this resolver exists to avoid.
 
 ## Toolchain
 

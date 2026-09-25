@@ -74,10 +74,11 @@ function replay(entry, message, question, age) {
 }
 
 function fetchUpstream(key, resolver, message) {
-  const pending = inflight.get(key);
+  const flight = `${resolver} ${key}`;
+  const pending = inflight.get(flight);
   if (pending) return pending;
-  const attempt = resolve(resolver, message).finally(() => inflight.delete(key));
-  inflight.set(key, attempt);
+  const attempt = resolve(resolver, message).finally(() => inflight.delete(flight));
+  inflight.set(flight, attempt);
   return attempt;
 }
 
@@ -236,8 +237,6 @@ async function handleDns(request, env, ctx, url, token) {
     const usable = entry && entry.body.length >= question.end;
 
     const accept = (fresh) => {
-      const cloaked = allowed ? null : cloakedBy(fresh, settings, rules);
-      if (cloaked) return cloaked;
       const answer = boostTtl(new Uint8Array(fresh), TTL_FLOOR);
       const life = ttlOf(answer);
       remember(key, answer, life);
@@ -254,8 +253,7 @@ async function handleDns(request, env, ctx, url, token) {
       verdict.source = "stale";
       ctx.waitUntil(
         fetchUpstream(key, settings.resolver, forward).then((fresh) => {
-          if (!fresh.body || !cacheable(fresh.body)) return;
-          if (accept(fresh.body).rule) answers.delete(key);
+          if (fresh.body && cacheable(fresh.body)) accept(fresh.body);
         })
       );
     } else {
@@ -271,17 +269,18 @@ async function handleDns(request, env, ctx, url, token) {
         console.error(JSON.stringify({ servfail: { name: question.name, type, failure: `upstream_rcode_${rcodeOf(fresh.body)}`, ms: Date.now() - started } }));
       } else {
         const outcome = accept(fresh.body);
-        if (outcome.rule) {
-          verdict.action = "block";
-          verdict.rule = outcome.rule;
-          verdict.source = "cname";
-          body = blockedResponse(message, question, BLOCK_TTL);
-          ttl = BLOCK_TTL;
-        } else {
-          ttl = outcome.life;
-          body = outcome.answer.length >= question.end ? adopt(outcome.answer, message, question) : outcome.answer;
-        }
+        ttl = outcome.life;
+        body = outcome.answer.length >= question.end ? adopt(outcome.answer, message, question) : outcome.answer;
       }
+    }
+
+    const cloaked = allowed ? null : cloakedBy(body, settings, rules);
+    if (cloaked) {
+      verdict.action = "block";
+      verdict.rule = cloaked.rule;
+      verdict.source = "cname";
+      body = blockedResponse(message, question, BLOCK_TTL);
+      ttl = BLOCK_TTL;
     }
   }
 

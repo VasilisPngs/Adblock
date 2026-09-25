@@ -83,12 +83,9 @@ function configuredSources() {
   const config = JSON.parse(readFileSync(join(root, "blocklists.json"), "utf8"));
   try {
     const sources = storedSources();
-    if (sources.length > 0) {
-      writeFileSync(join(root, "blocklists.json"), `${JSON.stringify({ sources }, null, 2)}\n`);
-      console.log(`sources: ${sources.length} from D1`);
-      return sources;
-    }
-    console.log("sources: D1 returned none, keeping blocklists.json");
+    writeFileSync(join(root, "blocklists.json"), `${JSON.stringify({ sources }, null, 2)}\n`);
+    console.log(`sources: ${sources.length} from D1`);
+    return sources;
   } catch (error) {
     console.log(`sources: D1 unreachable (${String(error.message).split("\n")[0]}), keeping blocklists.json`);
   }
@@ -97,7 +94,6 @@ function configuredSources() {
 
 async function main() {
   const sources = configuredSources();
-  if (sources.length === 0) throw new Error("no sources configured");
 
   const block = new Set();
   const allow = new Set();
