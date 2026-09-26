@@ -1,4 +1,4 @@
-import { sameQuestion } from "./dns.js";
+import { answersQuery } from "./dns.js";
 
 const DOH_TIMEOUT = 2500;
 const label = (text) => [text.length, ...new TextEncoder().encode(text)];
@@ -28,7 +28,7 @@ export async function resolve(resolver, message) {
     if (!response.ok) throw new Error(`upstream_http_${response.status}`);
     const body = new Uint8Array(await response.arrayBuffer());
     if (body.length < 12) throw new Error("upstream_short");
-    if (!sameQuestion(message, body)) throw new Error("upstream_mismatch");
+    if (!answersQuery(message, body)) throw new Error("upstream_mismatch");
     return { body, failure: null };
   } catch (error) {
     return { body: null, failure: String(error && error.message).slice(0, 60) };

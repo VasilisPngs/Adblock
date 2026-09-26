@@ -286,8 +286,11 @@ export function validationFlags(message, question) {
   return `${dnssecOk ? 1 : 0}${checkingDisabled ? 1 : 0}`;
 }
 
-export function sameQuestion(query, response) {
+const opcode = (message) => (message[2] >> 3) & 0x0f;
+
+export function answersQuery(query, response) {
   if (response.length < 12 || (response[2] & 0x80) === 0) return false;
+  if (response[0] !== query[0] || response[1] !== query[1] || opcode(response) !== opcode(query)) return false;
   const asked = readQuestion(query);
   const answered = readQuestion(response);
   return Boolean(asked && answered && asked.name === answered.name && asked.type === answered.type && asked.class === answered.class);
