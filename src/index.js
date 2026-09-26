@@ -8,7 +8,7 @@ import {
   stripClientSubnet,
   boostTtl,
   decrementTtl,
-  validationFlags,
+  queryVariant,
   setTtl,
   QUERY_TYPES
 } from "./dns.js";
@@ -43,7 +43,7 @@ const rcodeOf = (body) => body[3] & 0x0f;
 const cacheable = (body) => rcodeOf(body) === 0 || rcodeOf(body) === 3;
 
 function cacheKey(message, question) {
-  return `${question.name}|${question.type}|${question.class}|${validationFlags(message, question)}`;
+  return `${question.name}|${question.type}|${question.class}|${queryVariant(message, question)}`;
 }
 
 function remember(key, body, ttl) {

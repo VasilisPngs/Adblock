@@ -277,13 +277,13 @@ export function minimumTtl(message) {
 const FLAG_CD = 0x10;
 const FLAG_DO = 0x8000;
 
-export function validationFlags(message, question) {
+export function queryVariant(message, question) {
   const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
   const checkingDisabled = (message[3] & FLAG_CD) !== 0;
   const at = question.end;
   const opt = view.getUint16(10) > 0 && at + OPT_LENGTH <= message.length && message[at] === 0 && view.getUint16(at + 1) === TYPE_OPT;
   const dnssecOk = opt && (view.getUint16(at + 7) & FLAG_DO) !== 0;
-  return `${dnssecOk ? 1 : 0}${checkingDisabled ? 1 : 0}`;
+  return `${opt ? 1 : 0}${dnssecOk ? 1 : 0}${checkingDisabled ? 1 : 0}`;
 }
 
 const opcode = (message) => (message[2] >> 3) & 0x0f;
