@@ -183,13 +183,13 @@ function readName(message, start) {
   return "";
 }
 
-function walkAnswers(message, visit) {
+function walkRecords(message, visit, withAuthority) {
   const question = readQuestion(message);
   if (!question) return;
   const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
-  const answers = view.getUint16(6);
+  const records = view.getUint16(6) + (withAuthority ? view.getUint16(8) : 0);
   let offset = question.end;
-  for (let index = 0; index < answers && offset + 12 <= message.length; index += 1) {
+  for (let index = 0; index < records && offset + 12 <= message.length; index += 1) {
     while (offset < message.length) {
       const length = message[offset];
       if (length === 0) {
@@ -205,46 +205,90 @@ function walkAnswers(message, visit) {
     if (offset + 10 > message.length) return;
     const type = view.getUint16(offset);
     const length = view.getUint16(offset + 8);
-    visit(type, offset, view);
+    if (offset + 10 + length > message.length) return;
+    visit(type, offset, view, length);
     offset += 10 + length;
   }
 }
 
 export function cnameTargets(message) {
   const targets = [];
-  walkAnswers(message, (type, offset) => {
-    if (type !== TYPE_CNAME) return;
-    const target = readName(message, offset + 10);
-    if (target) targets.push(target);
-  });
+  walkRecords(
+    message,
+    (type, offset) => {
+      if (type !== TYPE_CNAME) return;
+      const target = readName(message, offset + 10);
+      if (target) targets.push(target);
+    },
+    false
+  );
   return targets;
 }
 
 export function decrementTtl(message, seconds) {
   if (seconds <= 0) return message;
-  walkAnswers(message, (type, offset, view) => {
-    const ttl = view.getUint32(offset + 4);
-    view.setUint32(offset + 4, ttl > seconds ? ttl - seconds : 1);
-  });
+  walkRecords(
+    message,
+    (type, offset, view) => {
+      const ttl = view.getUint32(offset + 4);
+      view.setUint32(offset + 4, ttl > seconds ? ttl - seconds : 1);
+    },
+    true
+  );
   return message;
 }
 
 export function setTtl(message, ttl) {
-  walkAnswers(message, (type, offset, view) => view.setUint32(offset + 4, ttl));
+  walkRecords(message, (type, offset, view) => view.setUint32(offset + 4, ttl), true);
   return message;
 }
 
 export function boostTtl(message, floor) {
-  walkAnswers(message, (type, offset, view) => {
-    if (view.getUint32(offset + 4) < floor) view.setUint32(offset + 4, floor);
-  });
+  walkRecords(
+    message,
+    (type, offset, view) => {
+      if (view.getUint32(offset + 4) < floor) view.setUint32(offset + 4, floor);
+    },
+    true
+  );
   return message;
 }
 
 export function minimumTtl(message) {
   let ttl = Infinity;
-  walkAnswers(message, (type, offset, view) => {
-    ttl = Math.min(ttl, view.getUint32(offset + 4));
-  });
+  walkRecords(
+    message,
+    (type, offset, view) => {
+      ttl = Math.min(ttl, view.getUint32(offset + 4));
+    },
+    false
+  );
+  if (Number.isFinite(ttl)) return ttl;
+  walkRecords(
+    message,
+    (type, offset, view, length) => {
+      if (type === TYPE_SOA && length >= 22) ttl = Math.min(ttl, view.getUint32(offset + 4), view.getUint32(offset + 6 + length));
+    },
+    true
+  );
   return Number.isFinite(ttl) ? ttl : 0;
+}
+
+const FLAG_CD = 0x10;
+const FLAG_DO = 0x8000;
+
+export function validationFlags(message, question) {
+  const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
+  const checkingDisabled = (message[3] & FLAG_CD) !== 0;
+  const at = question.end;
+  const opt = view.getUint16(10) > 0 && at + OPT_LENGTH <= message.length && message[at] === 0 && view.getUint16(at + 1) === TYPE_OPT;
+  const dnssecOk = opt && (view.getUint16(at + 7) & FLAG_DO) !== 0;
+  return `${dnssecOk ? 1 : 0}${checkingDisabled ? 1 : 0}`;
+}
+
+export function sameQuestion(query, response) {
+  if (response.length < 12 || (response[2] & 0x80) === 0) return false;
+  const asked = readQuestion(query);
+  const answered = readQuestion(response);
+  return Boolean(asked && answered && asked.name === answered.name && asked.type === answered.type && asked.class === answered.class);
 }

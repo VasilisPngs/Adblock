@@ -8,6 +8,7 @@ import {
   stripClientSubnet,
   boostTtl,
   decrementTtl,
+  validationFlags,
   setTtl,
   QUERY_TYPES
 } from "./dns.js";
@@ -41,8 +42,8 @@ const ttlOf = (body) => Math.min(Math.max(minimumTtl(body) || 0, TTL_FLOOR), TTL
 const rcodeOf = (body) => body[3] & 0x0f;
 const cacheable = (body) => rcodeOf(body) === 0 || rcodeOf(body) === 3;
 
-function cacheKey(question) {
-  return `${question.name}|${question.type}|${question.class}`;
+function cacheKey(message, question) {
+  return `${question.name}|${question.type}|${question.class}|${validationFlags(message, question)}`;
 }
 
 function remember(key, body, ttl) {
@@ -165,14 +166,15 @@ async function dnsState(env) {
   if (Date.now() < d1DownUntil) return cache.settings ? cache : DEGRADED;
   if (cache.settings && Date.now() - cache.at < CACHE_TTL_MS) return cache;
   if (!stateRefresh) {
-    stateRefresh = readState(env)
+    const refresh = readState(env)
       .catch(() => {
         d1DownUntil = Date.now() + D1_RETRY_MS;
         return null;
       })
       .finally(() => {
-        stateRefresh = null;
+        if (stateRefresh === refresh) stateRefresh = null;
       });
+    stateRefresh = refresh;
   }
   if (cache.settings) return cache;
   return (await stateRefresh) || DEGRADED;
@@ -232,7 +234,7 @@ async function handleDns(request, env, ctx, url, token) {
   if (verdict.action === "block") {
     body = blockedResponse(message, question, BLOCK_TTL);
   } else {
-    const key = cacheKey(question);
+    const key = cacheKey(message, question);
     const entry = answers.get(key);
     const usable = entry && entry.body.length >= question.end;
 
