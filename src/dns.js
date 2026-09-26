@@ -269,7 +269,7 @@ export function answersQuery(query, response) {
   return Boolean(asked && answered && asked.name === answered.name && asked.type === answered.type && asked.class === answered.class);
 }
 
-function findOpt(message) {
+function optTypeOffset(message) {
   let found = -1;
   walkRecords(
     message,
@@ -282,12 +282,12 @@ function findOpt(message) {
 }
 
 export function extendedRcode(message) {
-  const opt = findOpt(message);
+  const opt = optTypeOffset(message);
   return opt < 0 ? 0 : message[opt + 4];
 }
 
 export function edeOptions(message) {
-  const opt = findOpt(message);
+  const opt = optTypeOffset(message);
   if (opt < 0) return [];
   const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
   const rdataEnd = opt + 10 + view.getUint16(opt + 8);
@@ -302,7 +302,7 @@ export function edeOptions(message) {
 }
 
 export function withoutOpt(message) {
-  const opt = findOpt(message);
+  const opt = optTypeOffset(message);
   if (opt < 1 || message[opt - 1] !== 0) return message;
   const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
   const start = opt - 1;
