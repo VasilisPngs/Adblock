@@ -639,8 +639,6 @@ function mobileconfig(host, token, name) {
   <string>${identifier}</string>
   <key>PayloadOrganization</key>
   <string>Adblock</string>
-  <key>PayloadRemovalDisallowed</key>
-  <false/>
   <key>PayloadScope</key>
   <string>System</string>
   <key>PayloadType</key>
