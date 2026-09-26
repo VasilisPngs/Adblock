@@ -121,7 +121,10 @@ unencrypted, which is the one thing this resolver exists to avoid.
 ## Usage counts
 
 Every DNS request is counted per device and hour: total, answered after waiting for the
-upstream, answered from the cache, and blocked. With the activity log on, the Worker also
+upstream (`waited_upstream`), answered from the cache, and blocked. A stale answer served
+from the cache counts as cached even though it refreshes the entry in the background, so
+the total upstream traffic is the Worker's subrequest count in Cloudflare analytics, not
+this column. With the activity log on, the Worker also
 counts names, and every five minutes writes the ten most asked names per device and hour
 together with the totals, adding to what other isolates wrote. Counting happens in memory
 and D1 sees one write batch per isolate every five minutes, instead of a write per query,

@@ -104,8 +104,8 @@ function flushUsage(env) {
   for (const entry of entries) {
     statements.push(
       env.DB.prepare(
-        "INSERT INTO usage (hour, token, requests, upstream, cached, blocked) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(hour, token) DO UPDATE SET requests = requests + excluded.requests, upstream = upstream + excluded.upstream, cached = cached + excluded.cached, blocked = blocked + excluded.blocked"
-      ).bind(entry.hour, entry.token, entry.requests, entry.upstream, entry.cached, entry.blocked)
+        "INSERT INTO usage (hour, token, requests, waited_upstream, cached, blocked) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(hour, token) DO UPDATE SET requests = requests + excluded.requests, waited_upstream = waited_upstream + excluded.waited_upstream, cached = cached + excluded.cached, blocked = blocked + excluded.blocked"
+      ).bind(entry.hour, entry.token, entry.requests, entry.waited, entry.cached, entry.blocked)
     );
     const top = [...entry.names].sort((a, b) => b[1] - a[1]).slice(0, USAGE_TOP);
     for (const [key, count] of top) {
@@ -124,7 +124,7 @@ function countUsage(env, ctx, now, hour, token, name, outcome) {
   const key = `${hour}|${token}`;
   let entry = usage.get(key);
   if (!entry) {
-    entry = { hour, token, requests: 0, upstream: 0, cached: 0, blocked: 0, names: new Map() };
+    entry = { hour, token, requests: 0, waited: 0, cached: 0, blocked: 0, names: new Map() };
     usage.set(key, entry);
   }
   entry.requests += 1;
@@ -349,7 +349,7 @@ async function handleDns(request, env, ctx, url, token) {
 
   const action = verdict.action;
   const hour = Math.floor(started / HOUR_MS);
-  countUsage(env, ctx, started, hour, token, settings.logEnabled ? `${type}\n${question.name}` : null, action === "block" ? "blocked" : waited ? "upstream" : "cached");
+  countUsage(env, ctx, started, hour, token, settings.logEnabled ? `${type}\n${question.name}` : null, action === "block" ? "blocked" : waited ? "waited" : "cached");
 
   if (settings.logEnabled && !failure && firstThisHour(`${token}|${question.name}|${type}|${action}`, hour)) {
     ctx.waitUntil(
