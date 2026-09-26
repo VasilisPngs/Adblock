@@ -99,6 +99,13 @@ after it answers a test query for `example.com`, so a typo cannot cut every devi
 including the phone you would fix it from. A name you allow yourself is never blocked
 by the CNAME check either: your rule wins over the list, wherever the answer points.
 
+Queries reach the upstream without EDNS options: the client subnet, NSID, cookies,
+padding and anything else a client adds are options the Worker does not implement, and
+RFC 6891 lets a responder ignore those. Answers are cached per question, EDNS presence,
+DO and CD bit, keep only Extended DNS Errors from the upstream's options, and are padded
+to 468-byte blocks (RFC 8467) for clients that ask for padding. One cached answer can
+therefore serve every client correctly, whatever it sends.
+
 If D1 cannot be read and the Worker has no settings in memory yet, DNS keeps resolving
 and blocking with the bundled list, without your own rules and without logging, and D1
 is tried again every 5 seconds. Blocking stays on; the device check is skipped until D1

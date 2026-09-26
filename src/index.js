@@ -5,7 +5,9 @@ import {
   base64UrlDecode,
   minimumTtl,
   cnameTargets,
-  stripClientSubnet,
+  normalizeQuery,
+  stripOptions,
+  pad,
   boostTtl,
   decrementTtl,
   queryVariant,
@@ -225,7 +227,7 @@ async function handleDns(request, env, ctx, url, token) {
 
   const verdict = settings.enabled ? decide(question.name, rules) : { action: "allow", rule: null, source: "off" };
   const allowed = verdict.source === "allow";
-  const forward = stripClientSubnet(message, question);
+  const { forward, padding } = normalizeQuery(message, question);
 
   let body;
   let ttl = BLOCK_TTL;
@@ -239,7 +241,7 @@ async function handleDns(request, env, ctx, url, token) {
     const usable = entry && entry.body.length >= question.end;
 
     const accept = (fresh) => {
-      const answer = boostTtl(new Uint8Array(fresh), TTL_FLOOR);
+      const answer = boostTtl(stripOptions(new Uint8Array(fresh)), TTL_FLOOR);
       const life = ttlOf(answer);
       remember(key, answer, life);
       return { answer, life };
@@ -262,11 +264,12 @@ async function handleDns(request, env, ctx, url, token) {
       const fresh = await fetchUpstream(key, settings.resolver, forward);
       failure = fresh.failure;
       if (!fresh.body) {
-        body = servfail(message);
+        body = servfail(forward);
         ttl = 0;
         console.error(JSON.stringify({ servfail: { name: question.name, type, failure, ms: Date.now() - started } }));
       } else if (!cacheable(fresh.body)) {
-        body = fresh.body.length >= question.end ? adopt(fresh.body, message, question) : fresh.body;
+        const stripped = stripOptions(fresh.body);
+        body = stripped.length >= question.end ? adopt(stripped, message, question) : stripped;
         ttl = 0;
         console.error(JSON.stringify({ servfail: { name: question.name, type, failure: `upstream_rcode_${rcodeOf(fresh.body)}`, ms: Date.now() - started } }));
       } else {
@@ -310,7 +313,7 @@ async function handleDns(request, env, ctx, url, token) {
     );
   }
 
-  return dnsResponse(body, ttl);
+  return dnsResponse(padding ? pad(body) : body, ttl);
 }
 
 const REPORT_WINDOW_MS = 60000;

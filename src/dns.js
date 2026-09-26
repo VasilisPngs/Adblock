@@ -49,6 +49,8 @@ export function readQuestion(message) {
 
 const TYPE_OPT = 41;
 const OPT_LENGTH = 11;
+const FLAG_CD = 0x10;
+const FLAG_DO = 0x8000;
 const MIN_PAYLOAD = 512;
 const MAX_PAYLOAD = 4096;
 
@@ -65,6 +67,7 @@ export function blockedResponse(message, question, ttl) {
   const address = question.type === TYPE_A ? 4 : question.type === TYPE_AAAA ? 16 : 0;
   const rdlength = address > 0 ? address : SOA_RDLENGTH;
   const payload = ednsPayload(message, question);
+  const flags = payload > 0 ? new DataView(message.buffer, message.byteOffset, message.byteLength).getUint16(question.end + 7) & FLAG_DO : 0;
   const response = new Uint8Array(12 + questionBytes.length + 12 + rdlength + (payload > 0 ? OPT_LENGTH : 0));
   const view = new DataView(response.buffer);
 
@@ -85,7 +88,7 @@ export function blockedResponse(message, question, ttl) {
   view.setUint16(offset + 10, rdlength);
   const optAt = offset + 12 + rdlength;
   if (address > 0) {
-    writeOpt(view, optAt, payload);
+    writeOpt(view, optAt, payload, flags);
     return response;
   }
 
@@ -96,55 +99,47 @@ export function blockedResponse(message, question, ttl) {
   view.setUint32(offset + 24, 600);
   view.setUint32(offset + 28, 86400);
   view.setUint32(offset + 32, ttl);
-  writeOpt(view, optAt, payload);
+  writeOpt(view, optAt, payload, flags);
   return response;
 }
 
-function writeOpt(view, offset, payload) {
+function writeOpt(view, offset, payload, flags) {
   if (payload === 0) return;
   view.setUint8(offset, 0);
   view.setUint16(offset + 1, TYPE_OPT);
   view.setUint16(offset + 3, payload);
-  view.setUint32(offset + 5, 0);
+  view.setUint16(offset + 5, 0);
+  view.setUint16(offset + 7, flags);
   view.setUint16(offset + 9, 0);
 }
 
-const OPTION_ECS = 8;
+const OPTION_PADDING = 12;
+const OPTION_EDE = 15;
+const PADDING_BLOCK = 468;
 
-export function stripClientSubnet(message, question) {
+export function normalizeQuery(message, question) {
   const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
-  if (view.getUint16(6) !== 0 || view.getUint16(8) !== 0 || view.getUint16(10) === 0) return message;
+  const untouched = { forward: message, padding: false };
+  if (view.getUint16(6) !== 0 || view.getUint16(8) !== 0 || view.getUint16(10) === 0) return untouched;
   const at = question.end;
-  if (at + OPT_LENGTH > message.length || message[at] !== 0 || view.getUint16(at + 1) !== TYPE_OPT) return message;
-
+  if (at + OPT_LENGTH > message.length || message[at] !== 0 || view.getUint16(at + 1) !== TYPE_OPT) return untouched;
   const rdlength = view.getUint16(at + 9);
   const rdata = at + OPT_LENGTH;
   const rdataEnd = rdata + rdlength;
-  if (rdataEnd > message.length) return message;
-
-  const keep = [];
-  let cursor = rdata;
-  let found = false;
-  while (cursor + 4 <= rdataEnd) {
+  if (rdataEnd > message.length) return untouched;
+  let padding = false;
+  for (let cursor = rdata; cursor + 4 <= rdataEnd; ) {
     const length = view.getUint16(cursor + 2);
-    if (cursor + 4 + length > rdataEnd) return message;
-    if (view.getUint16(cursor) === OPTION_ECS) found = true;
-    else keep.push([cursor, 4 + length]);
+    if (cursor + 4 + length > rdataEnd) break;
+    if (view.getUint16(cursor) === OPTION_PADDING) padding = true;
     cursor += 4 + length;
   }
-  if (!found) return message;
-
-  const kept = keep.reduce((total, [, length]) => total + length, 0);
-  const out = new Uint8Array(message.length - (rdlength - kept));
-  out.set(message.subarray(0, rdata), 0);
-  let write = rdata;
-  for (const [from, length] of keep) {
-    out.set(message.subarray(from, from + length), write);
-    write += length;
-  }
-  out.set(message.subarray(rdataEnd), write);
-  new DataView(out.buffer).setUint16(at + 9, kept);
-  return out;
+  if (rdlength === 0) return { forward: message, padding };
+  const forward = new Uint8Array(message.length - rdlength);
+  forward.set(message.subarray(0, rdata), 0);
+  forward.set(message.subarray(rdataEnd), rdata);
+  new DataView(forward.buffer).setUint16(at + 9, 0);
+  return { forward, padding };
 }
 
 export function servfail(message) {
@@ -183,13 +178,17 @@ function readName(message, start) {
   return "";
 }
 
-function walkRecords(message, visit, withAuthority) {
+const ANSWERS = 1;
+const WITH_AUTHORITY = 2;
+const ALL_RECORDS = 3;
+
+function walkRecords(message, visit, sections) {
   const question = readQuestion(message);
   if (!question) return;
   const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
-  const records = view.getUint16(6) + (withAuthority ? view.getUint16(8) : 0);
+  const records = view.getUint16(6) + (sections > 1 ? view.getUint16(8) : 0) + (sections > 2 ? view.getUint16(10) : 0);
   let offset = question.end;
-  for (let index = 0; index < records && offset + 12 <= message.length; index += 1) {
+  for (let index = 0; index < records && offset + 11 <= message.length; index += 1) {
     while (offset < message.length) {
       const length = message[offset];
       if (length === 0) {
@@ -220,7 +219,7 @@ export function cnameTargets(message) {
       const target = readName(message, offset + 10);
       if (target) targets.push(target);
     },
-    false
+    ANSWERS
   );
   return targets;
 }
@@ -233,13 +232,13 @@ export function decrementTtl(message, seconds) {
       const ttl = view.getUint32(offset + 4);
       view.setUint32(offset + 4, ttl > seconds ? ttl - seconds : 1);
     },
-    true
+    WITH_AUTHORITY
   );
   return message;
 }
 
 export function setTtl(message, ttl) {
-  walkRecords(message, (type, offset, view) => view.setUint32(offset + 4, ttl), true);
+  walkRecords(message, (type, offset, view) => view.setUint32(offset + 4, ttl), WITH_AUTHORITY);
   return message;
 }
 
@@ -249,7 +248,7 @@ export function boostTtl(message, floor) {
     (type, offset, view) => {
       if (view.getUint32(offset + 4) < floor) view.setUint32(offset + 4, floor);
     },
-    true
+    WITH_AUTHORITY
   );
   return message;
 }
@@ -261,7 +260,7 @@ export function minimumTtl(message) {
     (type, offset, view) => {
       ttl = Math.min(ttl, view.getUint32(offset + 4));
     },
-    false
+    ANSWERS
   );
   if (Number.isFinite(ttl)) return ttl;
   walkRecords(
@@ -269,13 +268,10 @@ export function minimumTtl(message) {
     (type, offset, view, length) => {
       if (type === TYPE_SOA && length >= 22) ttl = Math.min(ttl, view.getUint32(offset + 4), view.getUint32(offset + 6 + length));
     },
-    true
+    WITH_AUTHORITY
   );
   return Number.isFinite(ttl) ? ttl : 0;
 }
-
-const FLAG_CD = 0x10;
-const FLAG_DO = 0x8000;
 
 export function queryVariant(message, question) {
   const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
@@ -294,4 +290,61 @@ export function answersQuery(query, response) {
   const asked = readQuestion(query);
   const answered = readQuestion(response);
   return Boolean(asked && answered && asked.name === answered.name && asked.type === answered.type && asked.class === answered.class);
+}
+
+function findOpt(message) {
+  let found = -1;
+  walkRecords(
+    message,
+    (type, offset) => {
+      if (type === TYPE_OPT && found < 0) found = offset;
+    },
+    ALL_RECORDS
+  );
+  return found;
+}
+
+export function stripOptions(message) {
+  const opt = findOpt(message);
+  if (opt < 0) return message;
+  const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
+  const rdata = opt + 10;
+  const rdataEnd = rdata + view.getUint16(opt + 8);
+  const keep = [];
+  for (let cursor = rdata; cursor + 4 <= rdataEnd; ) {
+    const length = view.getUint16(cursor + 2);
+    if (cursor + 4 + length > rdataEnd) break;
+    if (view.getUint16(cursor) === OPTION_EDE) keep.push([cursor, 4 + length]);
+    cursor += 4 + length;
+  }
+  const kept = keep.reduce((total, [, length]) => total + length, 0);
+  if (kept === rdataEnd - rdata) return message;
+  const out = new Uint8Array(message.length - (rdataEnd - rdata) + kept);
+  out.set(message.subarray(0, rdata), 0);
+  let write = rdata;
+  for (const [from, length] of keep) {
+    out.set(message.subarray(from, from + length), write);
+    write += length;
+  }
+  out.set(message.subarray(rdataEnd), write);
+  new DataView(out.buffer).setUint16(opt + 8, kept);
+  return out;
+}
+
+export function pad(message) {
+  const opt = findOpt(message);
+  if (opt < 0) return message;
+  const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
+  const rdlength = view.getUint16(opt + 8);
+  const rdataEnd = opt + 10 + rdlength;
+  const size = Math.ceil((message.length + 4) / PADDING_BLOCK) * PADDING_BLOCK;
+  const fill = size - message.length - 4;
+  const out = new Uint8Array(size);
+  const outView = new DataView(out.buffer);
+  out.set(message.subarray(0, rdataEnd), 0);
+  outView.setUint16(rdataEnd, OPTION_PADDING);
+  outView.setUint16(rdataEnd + 2, fill);
+  out.set(message.subarray(rdataEnd), rdataEnd + 4 + fill);
+  outView.setUint16(opt + 8, rdlength + 4 + fill);
+  return out;
 }
