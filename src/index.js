@@ -564,27 +564,10 @@ async function handleDevices(request, env) {
   return json({ ok: true, token });
 }
 
-function mobileconfig(host, token, name) {
-  const endpoint = `https://${host}/dns-query/${token}`;
-  const identifier = `gr.adblock.${token.slice(0, 12)}`;
-  const uuid = [
-    token.slice(0, 8),
-    token.slice(8, 12),
-    token.slice(12, 16),
-    token.slice(16, 20),
-    token.slice(20, 32)
-  ]
-    .join("-")
-    .toUpperCase();
-  const escape = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const label = escape(name);
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>PayloadContent</key>
-  <array>
-    <dict>
+const PROFILE_EXCEPTIONS = ["captive.apple.com", "3gppnetwork.org"];
+
+function dnsSettingsPayload(endpoint, identifier, uuid, label) {
+  return `    <dict>
       <key>DNSSettings</key>
       <dict>
         <key>DNSProtocol</key>
@@ -604,8 +587,7 @@ function mobileconfig(host, token, name) {
               <string>NeverConnect</string>
               <key>Domains</key>
               <array>
-                <string>captive.apple.com</string>
-                <string>3gppnetwork.org</string>
+${PROFILE_EXCEPTIONS.map((domain) => `                <string>${domain}</string>`).join("\n")}
               </array>
             </dict>
           </array>
@@ -629,7 +611,72 @@ function mobileconfig(host, token, name) {
       <string>${uuid}.dnsSettings.managed</string>
       <key>PayloadVersion</key>
       <integer>1</integer>
-    </dict>
+    </dict>`;
+}
+
+function declarationsPayload(endpoint, identifier, name, label) {
+  const id = () => crypto.randomUUID().toUpperCase();
+  const configuration = id();
+  const declarations = [
+    { Type: "com.apple.activation.simple", Identifier: id(), ServerToken: id(), Payload: { StandardConfigurations: [configuration] } },
+    {
+      Type: "com.apple.configuration.network.dns-settings",
+      Identifier: configuration,
+      ServerToken: id(),
+      Payload: {
+        VisibleName: name,
+        DNSSettings: { DNSProtocol: "HTTPS", ServerURL: endpoint },
+        OnDemandRules: [
+          { Action: "EvaluateConnection", ActionParameters: [{ DomainAction: "NeverConnect", Domains: PROFILE_EXCEPTIONS }] },
+          { Action: "Connect" }
+        ]
+      }
+    }
+  ];
+  const encode = (value) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(value))));
+  return `    <dict>
+      <key>Declarations</key>
+      <array>
+${declarations.map((declaration) => `        <data>${encode(declaration)}</data>`).join("\n")}
+      </array>
+      <key>PayloadDescription</key>
+      <string>Encrypted DNS for ${label}</string>
+      <key>PayloadDisplayName</key>
+      <string>${label}</string>
+      <key>PayloadIdentifier</key>
+      <string>${identifier}.declarations</string>
+      <key>PayloadOrganization</key>
+      <string>Adblock</string>
+      <key>PayloadType</key>
+      <string>com.apple.declarations</string>
+      <key>PayloadUUID</key>
+      <string>${id()}</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+    </dict>`;
+}
+
+function mobileconfig(host, token, name, declarative) {
+  const endpoint = `https://${host}/dns-query/${token}`;
+  const identifier = `gr.adblock.${token.slice(0, 12)}`;
+  const uuid = [
+    token.slice(0, 8),
+    token.slice(8, 12),
+    token.slice(12, 16),
+    token.slice(16, 20),
+    token.slice(20, 32)
+  ]
+    .join("-")
+    .toUpperCase();
+  const escape = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const label = escape(name);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+${declarative ? declarationsPayload(endpoint, identifier, name, label) : dnsSettingsPayload(endpoint, identifier, uuid, label)}
   </array>
   <key>PayloadDescription</key>
   <string>Sends every DNS query from this device to ${host}, encrypted, on Wi-Fi and on mobile data.</string>
@@ -644,7 +691,7 @@ function mobileconfig(host, token, name) {
   <key>PayloadType</key>
   <string>Configuration</string>
   <key>PayloadUUID</key>
-  <string>${uuid}</string>
+  <string>${declarative ? crypto.randomUUID().toUpperCase() : uuid}</string>
   <key>PayloadVersion</key>
   <integer>1</integer>
 </dict>
@@ -656,7 +703,7 @@ async function handleProfile(env, url) {
   const token = url.searchParams.get("token") || "";
   const device = await env.DB.prepare("SELECT name FROM devices WHERE token = ?1").bind(token).first();
   if (!device) return json({ error: "unknown_device" }, 404);
-  return new Response(mobileconfig(url.host, token, device.name), {
+  return new Response(mobileconfig(url.host, token, device.name, url.searchParams.get("format") === "declarations"), {
     headers: {
       "content-type": "application/x-apple-aspen-config",
       "content-disposition": `attachment; filename="${device.name.replace(/[^\w.-]+/g, "-")}.mobileconfig"`,

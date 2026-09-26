@@ -81,6 +81,7 @@ const STRINGS = {
   hideAddress: ["Hide", "Απόκρυψη"],
   copyUrl: ["Copy", "Αντιγραφή"],
   appleProfile: ["Apple profile", "Προφίλ Apple"],
+  appleProfileDeclarative: ["Apple profile (27+)", "Προφίλ Apple (27+)"],
   copied: ["Copied", "Αντιγράφηκε"],
   removeDevice: ["Remove device", "Αφαίρεση συσκευής"],
   removeDeviceBody: [

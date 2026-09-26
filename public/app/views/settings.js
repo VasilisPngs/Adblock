@@ -58,6 +58,7 @@ function deviceCard(state) {
             }
           }),
           el("a", { class: "btn small ghost accent", href: `/profile.mobileconfig?token=${device.token}`, text: t("appleProfile") }),
+          el("a", { class: "btn small ghost accent", href: `/profile.mobileconfig?token=${device.token}&format=declarations`, text: t("appleProfileDeclarative") }),
           el("button", {
             class: "btn small ghost danger",
             type: "button",
