@@ -89,6 +89,52 @@ function fetchUpstream(key, resolver, message) {
 }
 
 const LOG_MEMORY = 20000;
+const USAGE_FLUSH_MS = 300000;
+const USAGE_TOP = 10;
+const USAGE_NAMES_MAX = 2000;
+const USAGE_RETENTION_HOURS = 7 * 24;
+
+let usage = new Map();
+let usageFlushedAt = Date.now();
+
+function flushUsage(env) {
+  const entries = [...usage.values()];
+  usage = new Map();
+  const statements = [];
+  for (const entry of entries) {
+    statements.push(
+      env.DB.prepare(
+        "INSERT INTO usage (hour, token, requests, upstream, cached, blocked) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(hour, token) DO UPDATE SET requests = requests + excluded.requests, upstream = upstream + excluded.upstream, cached = cached + excluded.cached, blocked = blocked + excluded.blocked"
+      ).bind(entry.hour, entry.token, entry.requests, entry.upstream, entry.cached, entry.blocked)
+    );
+    const top = [...entry.names].sort((a, b) => b[1] - a[1]).slice(0, USAGE_TOP);
+    for (const [key, count] of top) {
+      const split = key.indexOf("\n");
+      statements.push(
+        env.DB.prepare(
+          "INSERT INTO usage_names (hour, token, name, type, count) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(hour, token, name, type) DO UPDATE SET count = count + excluded.count"
+        ).bind(entry.hour, entry.token, key.slice(split + 1), key.slice(0, split), count)
+      );
+    }
+  }
+  return statements.length ? env.DB.batch(statements).catch(() => {}) : Promise.resolve();
+}
+
+function countUsage(env, ctx, now, hour, token, name, outcome) {
+  const key = `${hour}|${token}`;
+  let entry = usage.get(key);
+  if (!entry) {
+    entry = { hour, token, requests: 0, upstream: 0, cached: 0, blocked: 0, names: new Map() };
+    usage.set(key, entry);
+  }
+  entry.requests += 1;
+  entry[outcome] += 1;
+  if (name && (entry.names.has(name) || entry.names.size < USAGE_NAMES_MAX)) entry.names.set(name, (entry.names.get(name) || 0) + 1);
+  if (now - usageFlushedAt >= USAGE_FLUSH_MS) {
+    usageFlushedAt = now;
+    ctx.waitUntil(flushUsage(env));
+  }
+}
 
 const seen = new Map();
 const logged = new Map();
@@ -238,6 +284,7 @@ async function handleDns(request, env, ctx, url, token) {
   let failure = null;
   let extended = 0;
   let options = [];
+  let waited = false;
 
   if (verdict.action === "block") {
     body = blockedResponse(message, question, BLOCK_TTL);
@@ -268,6 +315,7 @@ async function handleDns(request, env, ctx, url, token) {
       );
     } else {
       const fresh = await fetchUpstream(key, settings.resolver, forward);
+      waited = true;
       failure = fresh.failure;
       if (!fresh.body) {
         body = servfail(message, question);
@@ -301,6 +349,7 @@ async function handleDns(request, env, ctx, url, token) {
 
   const action = verdict.action;
   const hour = Math.floor(started / HOUR_MS);
+  countUsage(env, ctx, started, hour, token, settings.logEnabled ? `${type}\n${question.name}` : null, action === "block" ? "blocked" : waited ? "upstream" : "cached");
 
   if (settings.logEnabled && !failure && firstThisHour(`${token}|${question.name}|${type}|${action}`, hour)) {
     ctx.waitUntil(
@@ -624,7 +673,9 @@ async function runScheduled(env, ctx, now) {
     env.DB.prepare(`DELETE FROM queries WHERE id IN (SELECT id FROM queries WHERE at < ?1 ORDER BY id LIMIT ${PRUNE_LIMIT})`).bind(
       now - LOG_RETENTION_MS
     ),
-    env.DB.prepare("DELETE FROM errors WHERE at < ?1").bind(now - ERROR_RETENTION_MS)
+    env.DB.prepare("DELETE FROM errors WHERE at < ?1").bind(now - ERROR_RETENTION_MS),
+    env.DB.prepare("DELETE FROM usage WHERE hour < ?1").bind(Math.floor(now / HOUR_MS) - USAGE_RETENTION_HOURS),
+    env.DB.prepare("DELETE FROM usage_names WHERE hour < ?1").bind(Math.floor(now / HOUR_MS) - USAGE_RETENTION_HOURS)
   ]);
 }
 

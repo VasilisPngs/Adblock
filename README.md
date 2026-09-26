@@ -118,6 +118,19 @@ answers again, because refusing every token would leave your own devices without
 An upstream that is not an `https://` URL is refused: plain DNS on port 53 is
 unencrypted, which is the one thing this resolver exists to avoid.
 
+## Usage counts
+
+Every DNS request is counted per device and hour: total, answered after waiting for the
+upstream, answered from the cache, and blocked. With the activity log on, the Worker also
+counts names, and every five minutes writes the ten most asked names per device and hour
+together with the totals, adding to what other isolates wrote. Counting happens in memory
+and D1 sees one write batch per isolate every five minutes, instead of a write per query,
+which a burst of thousands of queries a minute would turn into the D1 free write quota.
+An isolate that is shut down loses its last few minutes of counts, so the numbers are a
+close floor, not an exact total. Rows are kept for 7 days and pruned by the cron. The
+counts show which names a device asks for over and over, not which program on the device
+asks: every program on a device shares its token.
+
 ## Toolchain
 
 Zero runtime dependencies. Build tooling stays on the latest stable release: wrangler
