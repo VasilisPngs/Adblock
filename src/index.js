@@ -6,11 +6,14 @@ import {
   minimumTtl,
   cnameTargets,
   normalizeQuery,
-  stripOptions,
-  pad,
+  withoutOpt,
+  extendedRcode,
+  edeOptions,
+  respond,
+  badVersion,
+  EXTENDED_BADVERS,
   boostTtl,
   decrementTtl,
-  queryVariant,
   setTtl,
   QUERY_TYPES
 } from "./dns.js";
@@ -42,10 +45,10 @@ const inflight = new Map();
 
 const ttlOf = (body) => Math.min(Math.max(minimumTtl(body) || 0, TTL_FLOOR), TTL_CEILING);
 const rcodeOf = (body) => body[3] & 0x0f;
-const cacheable = (body) => rcodeOf(body) === 0 || rcodeOf(body) === 3;
+const cacheable = (body) => (rcodeOf(body) === 0 || rcodeOf(body) === 3) && extendedRcode(body) === 0;
 
-function cacheKey(message, question) {
-  return `${question.name}|${question.type}|${question.class}|${queryVariant(message, question)}`;
+function cacheKey(question, client) {
+  return `${question.name}|${question.type}|${question.class}|${client.dnssecOk ? 1 : 0}${client.checkingDisabled ? 1 : 0}`;
 }
 
 function remember(key, body, ttl) {
@@ -227,21 +230,24 @@ async function handleDns(request, env, ctx, url, token) {
 
   const verdict = settings.enabled ? decide(question.name, rules) : { action: "allow", rule: null, source: "off" };
   const allowed = verdict.source === "allow";
-  const { forward, padding } = normalizeQuery(message, question);
+  const { forward, client } = normalizeQuery(message, question);
+  if (client.edns && client.version !== 0) return dnsResponse(respond(badVersion(message, question), client, EXTENDED_BADVERS), 0);
 
   let body;
   let ttl = BLOCK_TTL;
   let failure = null;
+  let extended = 0;
+  let options = [];
 
   if (verdict.action === "block") {
     body = blockedResponse(message, question, BLOCK_TTL);
   } else {
-    const key = cacheKey(message, question);
+    const key = cacheKey(question, client);
     const entry = answers.get(key);
     const usable = entry && entry.body.length >= question.end;
 
     const accept = (fresh) => {
-      const answer = boostTtl(stripOptions(new Uint8Array(fresh)), TTL_FLOOR);
+      const answer = boostTtl(withoutOpt(new Uint8Array(fresh)), TTL_FLOOR);
       const life = ttlOf(answer);
       remember(key, answer, life);
       return { answer, life };
@@ -264,11 +270,13 @@ async function handleDns(request, env, ctx, url, token) {
       const fresh = await fetchUpstream(key, settings.resolver, forward);
       failure = fresh.failure;
       if (!fresh.body) {
-        body = servfail(forward);
+        body = servfail(message, question);
         ttl = 0;
         console.error(JSON.stringify({ servfail: { name: question.name, type, failure, ms: Date.now() - started } }));
       } else if (!cacheable(fresh.body)) {
-        const stripped = stripOptions(fresh.body);
+        extended = extendedRcode(fresh.body);
+        options = edeOptions(fresh.body);
+        const stripped = withoutOpt(fresh.body);
         body = stripped.length >= question.end ? adopt(stripped, message, question) : stripped;
         ttl = 0;
         console.error(JSON.stringify({ servfail: { name: question.name, type, failure: `upstream_rcode_${rcodeOf(fresh.body)}`, ms: Date.now() - started } }));
@@ -286,6 +294,8 @@ async function handleDns(request, env, ctx, url, token) {
       verdict.source = "cname";
       body = blockedResponse(message, question, BLOCK_TTL);
       ttl = BLOCK_TTL;
+      extended = 0;
+      options = [];
     }
   }
 
@@ -313,7 +323,7 @@ async function handleDns(request, env, ctx, url, token) {
     );
   }
 
-  return dnsResponse(padding ? pad(body) : body, ttl);
+  return dnsResponse(respond(body, client, extended, options), ttl);
 }
 
 const REPORT_WINDOW_MS = 60000;

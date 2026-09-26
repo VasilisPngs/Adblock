@@ -99,11 +99,15 @@ after it answers a test query for `example.com`, so a typo cannot cut every devi
 including the phone you would fix it from. A name you allow yourself is never blocked
 by the CNAME check either: your rule wins over the list, wherever the answer points.
 
-Queries reach the upstream without EDNS options: the client subnet, NSID, cookies,
-padding and anything else a client adds are options the Worker does not implement, and
-RFC 6891 lets a responder ignore those. Answers are cached per question, EDNS presence,
-DO and CD bit, keep only Extended DNS Errors from the upstream's options, and are padded
-to 468-byte blocks (RFC 8467) for clients that ask for padding. One cached answer can
+Every query reaches the upstream in one shape: EDNS version 0, the client's DO and CD
+bits, and no options. The client subnet, NSID, cookies, padding and anything else a
+client adds are options the Worker does not implement, and RFC 6891 lets a responder
+ignore those; a query for any EDNS version other than 0 gets BADVERS without leaving
+the Worker. The cache holds DNS data only, keyed by question, DO and CD, never the OPT
+record (RFC 6891 forbids caching it). Each response gets its own OPT, built from the
+query that asked: none for a client without EDNS, the DO bit echoed, Extended DNS Errors
+only on answers fresh from the upstream, and padding to 468-byte blocks (RFC 8467), up
+to the 65,535-byte message limit, for clients that ask for it. One cached answer can
 therefore serve every client correctly, whatever it sends.
 
 If D1 cannot be read and the Worker has no settings in memory yet, DNS keeps resolving
