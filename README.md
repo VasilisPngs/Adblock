@@ -73,12 +73,17 @@ behind Access.
 
 ## Devices
 
-| Device | How |
+Every device gets its own DoH URL, and anything that can use DNS over HTTPS with a custom
+URL can use it; nothing in the resolver depends on the kind of client. The rows below are
+setup notes for common clients, not a list of what is allowed.
+
+| Client | How |
 | --- | --- |
-| iPhone / iPad / Mac | Install the generated `.mobileconfig`. System-wide, works on mobile data. It excludes `captive.apple.com` and `3gppnetwork.org` from encrypted DNS so hotel and airport sign-in pages still appear and Wi-Fi calling keeps working, and its identifiers are derived from the device token, so downloading it again replaces the profile instead of adding a second one. |
+| Any DoH client | Paste the device URL: browsers with a custom DoH setting (Chrome, Edge, Firefox), DoH apps, and routers or forwarders that send their upstream queries over DoH, which also covers everything behind them. |
+| iPhone / iPad / Mac | Optionally install the generated `.mobileconfig`. System-wide, works on mobile data. It excludes `captive.apple.com` and `3gppnetwork.org` from encrypted DNS so hotel and airport sign-in pages still appear and Wi-Fi calling keeps working, and its identifiers are derived from the device token, so downloading it again replaces the profile instead of adding a second one. |
 | Windows 11 | `netsh dns add encryption server=<ip> dohtemplate=<url> autoupgrade=yes udpfallback=no`, then set the adapter's DNS to that IP. |
-| Android | Private DNS only speaks DoT for custom hostnames, so it cannot use this endpoint. Use any DoH client app and paste the URL. |
-| Android TV, consoles, routers | Not supported: they need plain DNS on port 53, which Workers cannot serve. |
+| Android | Private DNS only speaks DoT for custom hostnames, so it cannot use this endpoint. Use a DoH client app, or a router that forwards over DoH. |
+| Clients that only speak plain DNS or DoT | They cannot reach the Worker directly, because Workers only serve HTTPS. Point them at a router or forwarder that sends its queries over DoH. |
 
 The device address is the credential, so the app shows it masked and reveals it on
 request. Copy puts the full address on the clipboard without ever putting it on screen.

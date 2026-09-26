@@ -76,8 +76,6 @@ const STRINGS = {
     "Κάθε συσκευή παίρνει δική της διεύθυνση, ώστε η Δραστηριότητα να τις ξεχωρίζει."
   ],
   deviceName: ["Device name", "Όνομα συσκευής"],
-  platformApple: ["Apple", "Apple"],
-  platformOther: ["Other", "Άλλη"],
   addDevice: ["Add device", "Προσθήκη συσκευής"],
   revealAddress: ["Show", "Εμφάνιση"],
   hideAddress: ["Hide", "Απόκρυψη"],

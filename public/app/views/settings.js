@@ -57,9 +57,7 @@ function deviceCard(state) {
               }
             }
           }),
-          device.platform === "other"
-            ? null
-            : el("a", { class: "btn small ghost accent", href: `/profile.mobileconfig?token=${device.token}`, text: t("appleProfile") }),
+          el("a", { class: "btn small ghost accent", href: `/profile.mobileconfig?token=${device.token}`, text: t("appleProfile") }),
           el("button", {
             class: "btn small ghost danger",
             type: "button",
@@ -81,7 +79,6 @@ function deviceCard(state) {
   card.append(list);
 
   let name = "";
-  let platform = "apple";
   const input = el("input", {
     type: "text",
     autocomplete: "off",
@@ -90,23 +87,9 @@ function deviceCard(state) {
       name = event.target.value;
     }
   });
-  const platformInput = el(
-    "select",
-    {
-      style: "width:auto",
-      onchange: (event) => {
-        platform = event.target.value;
-      }
-    },
-    [
-      el("option", { value: "apple", text: t("platformApple") }),
-      el("option", { value: "other", text: t("platformOther") })
-    ]
-  );
   card.append(
     el("div", { class: "resolver-row" }, [
       input,
-      platformInput,
       el("button", {
         class: "btn primary",
         type: "button",
@@ -114,7 +97,7 @@ function deviceCard(state) {
         onclick: async () => {
           if (!name.trim()) return;
           try {
-            await addDevice(name.trim(), platform);
+            await addDevice(name.trim());
             name = "";
             input.value = "";
           } catch {

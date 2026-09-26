@@ -350,7 +350,7 @@ async function handleReport(request, env) {
 async function handleState(request, env) {
   const { settings } = await loadState(env);
   const [devices, sources] = await Promise.all([
-    env.DB.prepare("SELECT token, name, platform, created_at, last_seen_at FROM devices ORDER BY created_at").all(),
+    env.DB.prepare("SELECT token, name, created_at, last_seen_at FROM devices ORDER BY created_at").all(),
     listSources(env)
   ]);
   return json({
@@ -494,10 +494,9 @@ async function handleDevices(request, env) {
   }
   const name = String(payload.name || "").trim();
   if (!name) return json({ error: "invalid_name" }, 400);
-  const platform = payload.platform === "other" ? "other" : "apple";
   const token = crypto.randomUUID().replace(/-/g, "");
-  await env.DB.prepare("INSERT INTO devices (token, name, platform, created_at) VALUES (?1, ?2, ?3, ?4)")
-    .bind(token, name, platform, Date.now())
+  await env.DB.prepare("INSERT INTO devices (token, name, created_at) VALUES (?1, ?2, ?3)")
+    .bind(token, name, Date.now())
     .run();
   invalidate();
   return json({ ok: true, token });

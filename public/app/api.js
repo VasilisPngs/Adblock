@@ -84,8 +84,8 @@ export async function setRule(host, action) {
   await refresh();
 }
 
-export async function addDevice(name, platform) {
-  const result = await call("/api/devices", { method: "POST", body: JSON.stringify({ name, platform }) });
+export async function addDevice(name) {
+  const result = await call("/api/devices", { method: "POST", body: JSON.stringify({ name }) });
   await refresh();
   return result.token;
 }
