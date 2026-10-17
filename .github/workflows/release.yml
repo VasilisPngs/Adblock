@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '27'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Prepare release keystore
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in release.keystore.enc \
+            -out release.keystore \
+            -k "$ANDROID_KEYSTORE_PASSWORD"
+          test -s release.keystore
+
+      - name: Lint, test and build release APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: ./gradlew :app:lintRelease :app:testDebugUnitTest :app:assembleRelease --no-daemon
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG_NAME: Adblock
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk Adblock.apk
+          if gh release view "$TAG_NAME" --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" Adblock.apk --repo "$REPO" --clobber
+            gh api --method PATCH "repos/$REPO/git/refs/tags/$TAG_NAME" \
+              -f sha="$GITHUB_SHA" -F force=true --silent
+            gh release edit "$TAG_NAME" --repo "$REPO" --notes " " >/dev/null
+            gh release edit "$TAG_NAME" --repo "$REPO" --draft >/dev/null
+            for attempt in 1 2 3; do
+              gh release edit "$TAG_NAME" --repo "$REPO" --draft=false >/dev/null && break || sleep 5
+            done
+            test "$(gh release view "$TAG_NAME" --repo "$REPO" --json isDraft --jq .isDraft)" = false
+          else
+            gh release create "$TAG_NAME" Adblock.apk \
+              --repo "$REPO" \
+              --title "Adblock" \
+              --notes " "
+          fi

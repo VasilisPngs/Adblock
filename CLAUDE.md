@@ -1,0 +1,328 @@
+# Android Project Instructions
+
+## Git & repository workflow
+- Push changes directly to `main`; do not open pull requests.
+- Publish every completed change set as exactly one commit.
+- This file is shared by VasilisPngs/AppUpdater and VasilisPngs/Adblock: every change to it is made identically in both repositories at the same time.
+
+## General rules
+- Follow only Google's official guidance and rules: Material Design, the Android developer documentation and Google's own libraries and samples. When the user asks for something beyond them, first say plainly that it departs from Google and which guideline it breaks, and go ahead only once they confirm. A confirmed departure changes the code only, never this file, which stays on Google's guidance by default; a departure already in the code is the user's settled decision, so ask before reverting it.
+- Do the work end to end.
+- Do not undo settled decisions or weaken requirements without a real technical reason.
+- Prefer root-cause fixes and the simplest architecture that fully satisfies the requirements.
+- Remove dead code, unused dependencies, resources, permissions and configuration.
+- Keep code clean, direct, idiomatic and maintainable.
+- All code is written in English.
+- Do not add explanatory or redundant comments inside code.
+- Use the latest appropriate official technologies, APIs, libraries and tools, tracking the newest published build in any release channel, including preview, alpha, beta, release candidate and canary.
+- A newer toolchain is only acceptable while the signed release APK still installs on a release device; never compile against a preview Android platform, which stamps the package as preview-built and makes it unparseable on release builds.
+- Verify current versions from official sources rather than relying on outdated examples.
+- Every change that introduces a library, API, component, platform feature or tool also adds its official documentation to Official references in the same commit: Google's own pages (developer.android.com, source.android.com, m3.material.io, fonts.google.com) or, for a library outside Google, its maintainers' documentation, each checked to load the right page.
+- Do not add a numeric product version to the visible product identity, release name, APK filename, release tag, or API User-Agent unless explicitly requested.
+
+## Android
+- The product design is strictly Google's latest Material 3 Expressive, never Material 2 or earlier Material 3: the official Compose Material 3 components inside `MaterialExpressiveTheme` with `MotionScheme.expressive()`, always the Expressive overload or variant where one exists, keeping the components' defaults, Google's rounded shapes included. The framework has no Material 3 Expressive window theme, so the platform theme is `Theme.DeviceDefault.DayNight`, never the Material Design 1 `Theme.Material`.
+- Every color comes from the device's dynamic color scheme, `dynamicLightColorScheme` or `dynamicDarkColorScheme`. The minimum SDK is at least 31 (Android 12), so dynamic color is always available and there is no fallback palette and no hand-picked color in code.
+- Each screen has a single-row `TopAppBar` with the plain screen name as its title, and every list entry is its own fully rounded Material 3 Expressive `SegmentedListItem` in the surface container color of Google's samples, spaced apart rather than joined into a group.
+- Frontend, UI and UX keep uniform, symmetric and consistent geometry with correct alignment, as Material 3's layout guidance defines it: each breakpoint's window margins, the top app bar's title and actions on the same edges as the content, and one alignment line for text and controls.
+- Icons come from Material Symbols Rounded, except a third party's own logo where the interface names that third party.
+- Text uses Google Sans from Google Fonts through Compose downloadable fonts.
+- Use Google's blur and transparency effects wherever Google's guidance uses them, such as the window blur behind dialogs.
+- Add an R8 keep rule only for code that a missing rule demonstrably breaks.
+- Prefer current Android APIs and remove obsolete compatibility layers and workarounds.
+
+## Verification
+- Debug from the root cause: reproduce the failure, read the whole error, trace it to its source and fix that source with one minimal change; never stack guesses or patch symptoms.
+- New or changed logic starts with a test that fails for the right reason, then the smallest code that makes it pass, then refactoring with every test green.
+- Never call work done, fixed or passing without fresh evidence from the change itself: build, lint, unit and UI tests, and screenshots for visual changes, with any failure reported as it is.
+- While the Java target is newer than the ASM bundled with lint, the build adds `androidLintTool(platform(...))` with the newest `org.ow2.asm:asm-bom` from the version catalog; without it lint still passes but skips every class with "Unsupported class file major version".
+
+## Official references
+
+### Design and UI
+- Material Design 3 in Compose: https://developer.android.com/develop/ui/compose/designsystems/material3
+- Compose Material 3 API reference: https://developer.android.com/reference/kotlin/androidx/compose/material3/package-summary
+- Get started with Jetpack Compose: https://developer.android.com/develop/ui/compose/documentation
+- Material components in Compose: https://developer.android.com/develop/ui/compose/components
+- Scaffold: https://developer.android.com/develop/ui/compose/components/scaffold
+- Buttons in Compose: https://developer.android.com/develop/ui/compose/components/button
+- Icon buttons in Compose: https://developer.android.com/develop/ui/compose/components/icon-button
+- Switch in Compose: https://developer.android.com/develop/ui/compose/components/switch
+- Radio button in Compose: https://developer.android.com/develop/ui/compose/components/radio-button
+- Dialogs in Compose: https://developer.android.com/develop/ui/compose/components/dialog
+- Snackbar in Compose: https://developer.android.com/develop/ui/compose/components/snackbar
+- Progress indicators in Compose: https://developer.android.com/develop/ui/compose/components/progress
+- Pull to refresh in Compose: https://developer.android.com/develop/ui/compose/components/pull-to-refresh
+- App bars: https://developer.android.com/develop/ui/compose/components/app-bars
+- Navigation bar in Compose: https://developer.android.com/develop/ui/compose/components/navigation-bar
+- Navigation rail in Compose: https://developer.android.com/develop/ui/compose/components/navigation-rail
+- Badges in Compose: https://developer.android.com/develop/ui/compose/components/badges
+- Tooltips in Compose: https://developer.android.com/develop/ui/compose/components/tooltip
+- Floating action button in Compose: https://developer.android.com/develop/ui/compose/components/fab
+- State and Jetpack Compose: https://developer.android.com/develop/ui/compose/state
+- Side effects in Compose: https://developer.android.com/develop/ui/compose/side-effects
+- Lazy lists and grids: https://developer.android.com/develop/ui/compose/lists
+- Flow layouts in Compose: https://developer.android.com/develop/ui/compose/layouts/flow
+- Compose Material 3 list samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/ListSamples.kt
+- Compose Material 3 app bar samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/AppBarSamples.kt
+- Animations in Compose: https://developer.android.com/develop/ui/compose/animation/quick-guide
+- Animation composables and AnimatedContent: https://developer.android.com/develop/ui/compose/animation/composables-modifiers#animatedcontent
+- MotionScheme API reference: https://developer.android.com/reference/kotlin/androidx/compose/material3/MotionScheme
+- Text in Compose: https://developer.android.com/develop/ui/compose/text
+- Fonts and downloadable fonts in Compose: https://developer.android.com/develop/ui/compose/text/fonts
+- Text fields in Compose: https://developer.android.com/develop/ui/compose/text/user-input
+- Resources in Compose: https://developer.android.com/develop/ui/compose/resources
+- LocalResources: https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/package-summary#LocalResources()
+- Icons in Compose: https://developer.android.com/develop/ui/compose/graphics/images/material
+- Focus in Compose: https://developer.android.com/develop/ui/compose/touch-input/focus
+- Accessibility in Compose: https://developer.android.com/develop/ui/compose/accessibility
+- Semantics in Compose: https://developer.android.com/develop/ui/compose/accessibility/semantics
+- Copy and paste in Compose: https://developer.android.com/develop/ui/compose/touch-input/copy-and-paste
+- Settings pattern: https://developer.android.com/design/ui/mobile/guides/patterns/settings
+- Adaptive apps: https://developer.android.com/develop/ui/compose/layouts/adaptive/get-started-with-adaptive-apps
+- Support different display sizes: https://developer.android.com/develop/ui/compose/layouts/adaptive/support-different-display-sizes
+- Window size classes: https://developer.android.com/develop/ui/compose/layouts/adaptive/use-window-size-classes
+- Canonical layouts: https://developer.android.com/develop/ui/compose/layouts/adaptive/canonical-layouts
+- Adaptive navigation: https://developer.android.com/develop/ui/compose/layouts/adaptive/build-adaptive-navigation
+- Navigation suite API reference: https://developer.android.com/reference/kotlin/androidx/compose/material3/adaptive/navigationsuite/package-summary
+- Activity Compose API reference: https://developer.android.com/reference/kotlin/androidx/activity/compose/package-summary
+- BringIntoViewSpec: https://developer.android.com/reference/kotlin/androidx/compose/foundation/gestures/BringIntoViewSpec
+
+### Material 3 Expressive
+- Building with M3 Expressive: https://m3.material.io/blog/building-with-m3-expressive
+- M3 Expressive motion: https://m3.material.io/blog/m3-expressive-motion-theming
+- Material components: https://m3.material.io/components
+- Top app bar: https://m3.material.io/components/app-bars/overview
+- Navigation bar: https://m3.material.io/components/navigation-bar/overview
+- Navigation rail: https://m3.material.io/components/navigation-rail/overview
+- Badges: https://m3.material.io/components/badges/overview
+- Tooltips: https://m3.material.io/components/tooltips/overview
+- Buttons: https://m3.material.io/components/buttons/overview
+- Icon buttons: https://m3.material.io/components/icon-buttons/overview
+- Lists: https://m3.material.io/components/lists/overview
+- Loading indicator: https://m3.material.io/components/loading-indicator/overview
+- Progress indicators: https://m3.material.io/components/progress-indicators/overview
+- Dialogs: https://m3.material.io/components/dialogs/overview
+- Text fields: https://m3.material.io/components/text-fields/overview
+- Switch: https://m3.material.io/components/switch/overview
+- Radio button: https://m3.material.io/components/radio-button/overview
+- Snackbar: https://m3.material.io/components/snackbar/overview
+- Toolbars: https://m3.material.io/components/toolbars/overview
+- Toolbars guidelines: https://m3.material.io/components/toolbars/guidelines
+- Toolbars specs: https://m3.material.io/components/toolbars/specs
+- Floating action button: https://m3.material.io/components/floating-action-button/overview
+- Color roles: https://m3.material.io/styles/color/roles
+- Dynamic color: https://m3.material.io/styles/color/dynamic/choosing-a-source
+- Typography: https://m3.material.io/styles/typography/overview
+- Typography fonts: https://m3.material.io/styles/typography/fonts
+- Google Sans: https://fonts.google.com/specimen/Google+Sans
+- Shape: https://m3.material.io/styles/shape/overview-principles
+- Shape morph: https://m3.material.io/styles/shape/shape-morph
+- Motion: https://m3.material.io/styles/motion/overview/how-it-works
+- Motion transition patterns: https://m3.material.io/styles/motion/transitions/transition-patterns
+- Spacing: https://m3.material.io/styles/spacing/overview
+- Layout: https://m3.material.io/foundations/layout/layout-overview/overview
+- Applying layout: https://m3.material.io/foundations/layout/applying-layout
+- Breakpoints: https://m3.material.io/foundations/layout/breakpoints/compact
+- Icons: https://m3.material.io/styles/icons/overview
+- Accessibility: https://m3.material.io/foundations/overview
+- Material Symbols guide: https://developers.google.com/fonts/docs/material_symbols
+- Material Symbols catalogue: https://fonts.google.com/icons
+- Material Symbols Android drawables: https://github.com/google/material-design-icons/tree/master/symbols/android
+
+### Graphics and system surfaces
+- Graphics in Compose: https://developer.android.com/develop/ui/compose/graphics/draw/overview
+- Graphics modifiers: https://developer.android.com/develop/ui/compose/graphics/draw/modifiers
+- Window blurs: https://source.android.com/docs/core/display/window-blurs
+- Blur behind a window: https://developer.android.com/reference/android/view/WindowManager.LayoutParams#setBlurBehindRadius(int)
+- Window background blur: https://developer.android.com/reference/android/view/Window#setBackgroundBlurRadius(int)
+- RenderEffect: https://developer.android.com/reference/android/graphics/RenderEffect
+- Blur in Compose: https://developer.android.com/develop/ui/compose/graphics/images/customize#blur-image
+- Dialog window in Compose: https://developer.android.com/reference/kotlin/androidx/compose/ui/window/DialogWindowProvider
+- Shapes in Compose: https://developer.android.com/develop/ui/compose/graphics/draw/shapes
+- Window insets: https://developer.android.com/develop/ui/compose/system/insets
+- System bars: https://developer.android.com/develop/ui/compose/system/system-bars
+- Edge to edge in Compose: https://developer.android.com/develop/ui/compose/system/setup-e2e
+- Edge-to-edge design: https://developer.android.com/design/ui/mobile/guides/layout-and-content/edge-to-edge
+- System bars design: https://developer.android.com/design/ui/mobile/guides/foundations/system-bars
+- Predictive back in Compose: https://developer.android.com/develop/ui/compose/system/predictive-back
+- Adaptive icons: https://developer.android.com/develop/ui/compose/system/icon_design_adaptive
+- System color resources: https://developer.android.com/reference/android/R.color
+- Splash screens: https://developer.android.com/develop/ui/views/launch/splash-screen
+- Styles and themes: https://developer.android.com/develop/ui/views/theming/themes
+- Notifications: https://developer.android.com/develop/ui/compose/notifications
+- Notification runtime permission: https://developer.android.com/develop/ui/compose/notifications/notification-permission
+- Notification channels: https://developer.android.com/develop/ui/views/notifications/channels
+- Widgets with Jetpack Glance: https://developer.android.com/develop/ui/compose/glance
+- OpenGL ES: https://developer.android.com/develop/ui/views/graphics/opengl/about-opengl
+- Theme.DeviceDefault.DayNight: https://developer.android.com/reference/android/R.style#Theme_DeviceDefault_DayNight
+
+### Platform behavior
+- Permissions: https://developer.android.com/guide/topics/permissions/overview
+- Package visibility: https://developer.android.com/training/package-visibility
+- Intents and intent filters: https://developer.android.com/guide/components/intents-filters
+- Get a result from an activity: https://developer.android.com/training/basics/intents/result
+- Broadcasts: https://developer.android.com/develop/background-work/background-tasks/broadcasts
+- Background tasks: https://developer.android.com/develop/background-work/background-tasks
+- Task scheduling with WorkManager: https://developer.android.com/develop/background-work/background-tasks/persistent
+- Foreground services: https://developer.android.com/develop/background-work/services/fgs
+- Foreground service types: https://developer.android.com/develop/background-work/services/fgs/service-types
+- Doze and App Standby: https://developer.android.com/training/monitoring-device-state/doze-standby
+- PowerManager: https://developer.android.com/reference/android/os/PowerManager
+- Configuration changes: https://developer.android.com/guide/topics/resources/runtime-changes
+- UiModeManager: https://developer.android.com/reference/android/app/UiModeManager
+- PackageInstaller: https://developer.android.com/reference/android/content/pm/PackageInstaller
+- Per-app language preferences: https://developer.android.com/guide/topics/resources/app-languages
+- String resources: https://developer.android.com/guide/topics/resources/string-resource
+- Kotlin coroutines on Android: https://developer.android.com/kotlin/coroutines
+- Kotlin flows on Android: https://developer.android.com/kotlin/flow
+- Kotlin serialization: https://kotlinlang.org/docs/serialization.html
+- Data and file storage: https://developer.android.com/training/data-storage
+- SharedPreferences: https://developer.android.com/training/data-storage/shared-preferences
+- Documents and files from shared storage: https://developer.android.com/training/data-storage/shared/documents-files
+- DataStore: https://developer.android.com/topic/libraries/architecture/datastore
+- Room: https://developer.android.com/training/data-storage/room
+- Photo picker: https://developer.android.com/training/data-storage/shared/photo-picker
+- Connect to the network: https://developer.android.com/develop/connectivity/network-ops/connecting
+- VPN: https://developer.android.com/develop/connectivity/vpn
+- VpnService: https://developer.android.com/reference/android/net/VpnService
+- VpnService.Builder: https://developer.android.com/reference/android/net/VpnService.Builder
+- HttpEngine: https://developer.android.com/reference/android/net/http/HttpEngine
+- UrlRequest: https://developer.android.com/reference/android/net/http/UrlRequest
+- ConnectivityManager: https://developer.android.com/reference/android/net/ConnectivityManager
+- LinkProperties: https://developer.android.com/reference/android/net/LinkProperties
+- ParcelFileDescriptor: https://developer.android.com/reference/android/os/ParcelFileDescriptor
+- OsConstants: https://developer.android.com/reference/android/system/OsConstants
+- Intent: https://developer.android.com/reference/android/content/Intent
+- Settings: https://developer.android.com/reference/android/provider/Settings
+- Security checklist: https://developer.android.com/privacy-and-security/security-tips
+- Android 17 behavior changes for all apps: https://developer.android.com/about/versions/17/behavior-changes-all
+- Android 17 behavior changes for apps targeting it: https://developer.android.com/about/versions/17/behavior-changes-17
+- PackageManager: https://developer.android.com/reference/android/content/pm/PackageManager
+- PackageInfo: https://developer.android.com/reference/android/content/pm/PackageInfo
+- SigningInfo: https://developer.android.com/reference/android/content/pm/SigningInfo
+- PackageInstaller.SessionParams: https://developer.android.com/reference/android/content/pm/PackageInstaller.SessionParams
+- PendingIntent: https://developer.android.com/reference/android/app/PendingIntent
+- Manifest permissions: https://developer.android.com/reference/android/Manifest.permission
+- App Bundle format: https://developer.android.com/guide/app-bundle/app-bundle-format
+- bundletool: https://developer.android.com/tools/bundletool
+- APK Signature Scheme v3: https://source.android.com/docs/security/features/apksigning/v3
+- Background activity launches: https://developer.android.com/guide/components/activities/secure-bal
+- Auto Backup: https://developer.android.com/identity/data/autobackup
+- Android ABIs: https://developer.android.com/ndk/guides/abis
+- Pixel densities: https://developer.android.com/training/multiscreen/screendensities
+- Kotlin coroutines guide: https://kotlinlang.org/docs/coroutines-guide.html
+- Coroutines best practices: https://developer.android.com/kotlin/coroutines/coroutines-best-practices
+- StateFlow and SharedFlow: https://developer.android.com/kotlin/flow/stateflow-and-sharedflow
+
+### Libraries and services
+- OkHttp: https://lysine.dev/okhttp/
+- GPlayApi: https://gitlab.com/AuroraOSS/gplayapi
+- Aurora Dispenser: https://gitlab.com/AuroraOSS/aurora-dispenser
+- Protocol Buffers Java Lite: https://github.com/protocolbuffers/protobuf/blob/main/java/lite.md
+
+### Networking protocols
+- DNS Queries over HTTPS (RFC 8484): https://www.rfc-editor.org/rfc/rfc8484
+- Domain names (RFC 1035): https://www.rfc-editor.org/rfc/rfc1035
+- Internet Protocol (RFC 791): https://www.rfc-editor.org/rfc/rfc791
+- User Datagram Protocol (RFC 768): https://www.rfc-editor.org/rfc/rfc768
+
+### Architecture, quality and testing
+- Guide to app architecture: https://developer.android.com/topic/architecture
+- Architecture recommendations: https://developer.android.com/topic/architecture/recommendations
+- ViewModel: https://developer.android.com/topic/libraries/architecture/viewmodel
+- ViewModel factories: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories
+- Lifecycle in Compose: https://developer.android.com/topic/libraries/architecture/lifecycle
+- Navigation 3: https://developer.android.com/guide/navigation/navigation-3
+- Core app quality guidelines: https://developer.android.com/docs/quality-guidelines/core-app-quality
+- Build accessible apps: https://developer.android.com/guide/topics/ui/accessibility
+- Adaptive app quality guidelines: https://developer.android.com/docs/quality-guidelines/adaptive-app-quality
+- App performance guide: https://developer.android.com/topic/performance/overview
+- Compose performance: https://developer.android.com/develop/ui/compose/performance
+- Baseline Profiles: https://developer.android.com/topic/performance/baselineprofiles/overview
+- Test apps on Android: https://developer.android.com/training/testing
+- Local unit tests: https://developer.android.com/training/testing/local-tests
+- Test Compose layouts: https://developer.android.com/develop/ui/compose/testing
+- Compose testing APIs: https://developer.android.com/develop/ui/compose/testing/apis
+- Robolectric strategies: https://developer.android.com/training/testing/local-tests/robolectric
+- Robolectric: https://robolectric.org/
+- JUnit user guide: https://docs.junit.org/current/user-guide/
+- JUnit 4: https://junit.org/junit4/
+- Lint: https://developer.android.com/studio/write/lint
+- Lifecycle-aware coroutines: https://developer.android.com/topic/libraries/architecture/coroutines
+- Compose v2 testing APIs: https://developer.android.com/develop/ui/compose/testing/migrate-v2
+- Gradle JVM testing: https://docs.gradle.org/current/userguide/java_testing.html
+- Robolectric compatibility: https://robolectric.org/compatibility_table/
+- Robolectric shadows: https://robolectric.org/extending/
+- Robolectric device configuration: https://robolectric.org/device-configuration/
+- Robolectric GraphicsMode: https://robolectric.org/javadoc/latest/org/robolectric/annotation/GraphicsMode.html
+
+### Television
+- Android TV: https://developer.android.com/training/tv
+- Compose on Android TV: https://developer.android.com/training/tv/playback/compose
+- Adaptive apps for TV: https://developer.android.com/develop/adaptive-apps/guides/tv/build-adaptive-apps-for-tv
+- TV layouts and overscan: https://developer.android.com/design/ui/tv/guides/styles/layouts
+- TV app icons and banners: https://developer.android.com/design/ui/tv/guides/system/tv-app-icon-guidelines
+- TV app quality: https://developer.android.com/docs/quality-guidelines/tv-app-quality
+
+### Build and release
+- Configure your build: https://developer.android.com/build
+- Version catalogs: https://developer.android.com/build/migrate-to-catalogs
+- Built-in Kotlin: https://developer.android.com/build/migrate-to-built-in-kotlin
+- Java versions in Android builds: https://developer.android.com/build/jdks
+- App optimization with R8: https://developer.android.com/topic/performance/app-optimization/enable-app-optimization
+- Keep rules: https://developer.android.com/topic/performance/app-optimization/keep-rules-overview
+- Sign your app: https://developer.android.com/studio/publish/app-signing
+- Platform and API versions: https://developer.android.com/tools/releases/platforms
+- Latest Android developer updates: https://developer.android.com/latest-updates
+- AndroidX releases: https://developer.android.com/jetpack/androidx/versions
+- Compose releases: https://developer.android.com/jetpack/androidx/releases/compose
+- Compose UI release notes: https://developer.android.com/jetpack/androidx/releases/compose-ui
+- Compose Material 3 release notes: https://developer.android.com/jetpack/androidx/releases/compose-material3
+- Compose Material 3 Adaptive release notes: https://developer.android.com/jetpack/androidx/releases/compose-material3-adaptive
+- Navigation 3 release notes: https://developer.android.com/jetpack/androidx/releases/navigation3
+- Android Gradle Plugin release notes: https://developer.android.com/build/releases/gradle-plugin
+- Kotlin releases: https://kotlinlang.org/docs/releases.html
+- Kotlin Early Access Preview: https://kotlinlang.org/docs/eap.html
+- Gradle distributions: https://services.gradle.org/distributions/
+- OpenJDK builds: https://jdk.java.net/
+- Android 17 QPR2: https://developer.android.com/about/versions/17/qpr2
+- Version your app: https://developer.android.com/studio/publish/versioning
+- Android Gradle plugin preview release notes: https://developer.android.com/build/releases/agp-preview
+- Android Gradle plugin API reference: https://developer.android.com/reference/tools/gradle-api
+- Compose Compiler Gradle plugin: https://developer.android.com/develop/ui/compose/setup-compose-dependencies-and-compiler
+- Compose BOM: https://developer.android.com/develop/ui/compose/bom
+- Choose libraries wisely: https://developer.android.com/topic/performance/app-optimization/choose-libraries-wisely
+- Fix optimization problems: https://developer.android.com/topic/performance/app-optimization/troubleshoot-the-optimization
+- Google Maven repository: https://maven.google.com/web/index.html
+- Activity release notes: https://developer.android.com/jetpack/androidx/releases/activity
+- Lifecycle release notes: https://developer.android.com/jetpack/androidx/releases/lifecycle
+- Compose Foundation release notes: https://developer.android.com/jetpack/androidx/releases/compose-foundation
+- Gradle release notes: https://docs.gradle.org/current/release-notes.html
+- Gradle Wrapper: https://docs.gradle.org/current/userguide/gradle_wrapper.html
+- Gradle build environment: https://docs.gradle.org/current/userguide/build_environment.html
+- Gradle configuration cache: https://docs.gradle.org/current/userguide/configuration_cache.html
+- Gradle compatibility matrix: https://docs.gradle.org/current/userguide/compatibility.html
+- Kotlin compiler execution strategy: https://kotlinlang.org/docs/compiler-execution-strategy.html
+- Kotlin Gradle plugin compatibility: https://kotlinlang.org/docs/gradle-configure-project.html#apply-the-plugin
+- kotlinx.coroutines releases: https://github.com/Kotlin/kotlinx.coroutines/releases
+- kotlinx.serialization releases: https://github.com/Kotlin/kotlinx.serialization/releases
+- OkHttp changelog: https://lysine.dev/okhttp/changelogs/changelog/
+- GPlayApi changelog: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/CHANGELOG
+- ASM versions: https://asm.ow2.io/versions.html
+- JUnit release notes: https://docs.junit.org/current/release-notes.html
+- Robolectric releases: https://github.com/robolectric/robolectric/releases
+- GitHub Actions workflow syntax: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+- GitHub Actions runner images: https://github.com/actions/runner-images
+- actions/checkout: https://github.com/actions/checkout
+- actions/setup-java: https://github.com/actions/setup-java
+- setup-gradle: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md
+- GitHub CLI releases: https://cli.github.com/manual/gh_release
+- Git references REST API: https://docs.github.com/en/rest/git/refs#update-a-reference
+- OpenSSL enc: https://docs.openssl.org/master/man1/openssl-enc/
+
+### AI agents
+- Android tools for agents: https://developer.android.com/tools/agents
+- Android CLI: https://developer.android.com/tools/agents/android-cli
+- Android skills: https://developer.android.com/tools/agents/android-skills
+- Android skills repository: https://github.com/android/skills

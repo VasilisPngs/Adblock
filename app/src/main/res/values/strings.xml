@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Adblock</string>
+    <string name="dns_over_https">DNS-over-HTTPS</string>
+    <string name="dns_over_https_on">DNS-over-HTTPS is on</string>
+    <string name="tunnel_on">On</string>
+    <string name="tunnel_off">Off</string>
+    <string name="tunnel_connecting">Connecting…</string>
+    <string name="server_url">Server URL</string>
+    <string name="server_url_not_set">Not set</string>
+    <string name="server_url_label">URL</string>
+    <string name="server_url_placeholder" translatable="false">https://dns.example/dns-query</string>
+    <string name="server_url_invalid">Enter an https:// URL</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="server_unreachable">Couldn\'t get an answer from the server</string>
+    <string name="server_rejected">The server answered with HTTP %1$d</string>
+    <string name="private_dns_on">Private DNS is set to %1$s</string>
+    <string name="private_dns_on_description">Android sends DNS there instead of this server. Set Private DNS to Off or Automatic.</string>
+</resources>
