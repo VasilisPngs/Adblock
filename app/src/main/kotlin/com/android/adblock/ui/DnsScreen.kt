@@ -240,7 +240,7 @@ internal fun DnsScreen(
                 }
             }
 
-            if (uiState.vpnSettings && uiState.tunnel != TunnelState.AlwaysOn) {
+            if (uiState.vpnSettings && uiState.tunnel == TunnelState.On) {
                 item(key = "always-on") {
                     SegmentedListItem(
                         onClick = onVpnSettings,

@@ -171,6 +171,18 @@ class DnsScreenTest {
     }
 
     @Test
+    fun `offers Always-on VPN only once the tunnel runs and Android lists Adblock`() {
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.Off, vpnSettings = true))
+        compose.onAllNodesWithText(string(R.string.always_on_vpn)).assertCountEquals(0)
+
+        state = DnsUiState(url = SERVER, tunnel = TunnelState.Connecting, vpnSettings = true)
+        compose.onAllNodesWithText(string(R.string.always_on_vpn)).assertCountEquals(0)
+
+        state = DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true)
+        compose.onNodeWithText(string(R.string.always_on_vpn)).assertIsDisplayed()
+    }
+
+    @Test
     fun `leaves out Always-on VPN where Android has no VPN settings`() {
         show(DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = false))
 
