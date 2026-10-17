@@ -16,6 +16,12 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <queries>
+        <intent>
+            <action android:name="android.settings.VPN_SETTINGS" />
+        </intent>
+    </queries>
+
     <application
         android:banner="@drawable/banner"
         android:icon="@mipmap/ic_launcher"

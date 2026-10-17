@@ -157,6 +157,27 @@ class DnsScreenTest {
     }
 
     @Test
+    fun `points to Always-on VPN below the server until it is on`() {
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true))
+
+        val url = compose.onNodeWithText(string(R.string.server_url)).getBoundsInRoot()
+        val alwaysOn = compose.onNodeWithText(string(R.string.always_on_vpn)).getBoundsInRoot()
+        assertTrue(alwaysOn.top > url.bottom)
+        compose.onNodeWithText(string(R.string.always_on_vpn)).performClick()
+        assertEquals(1, vpnSettingsOpened)
+
+        state = DnsUiState(url = SERVER, tunnel = TunnelState.AlwaysOn, vpnSettings = true)
+        compose.onAllNodesWithText(string(R.string.always_on_vpn)).assertCountEquals(0)
+    }
+
+    @Test
+    fun `leaves out Always-on VPN where Android has no VPN settings`() {
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = false))
+
+        compose.onAllNodesWithText(string(R.string.always_on_vpn)).assertCountEquals(0)
+    }
+
+    @Test
     fun `warns when Private DNS sends queries elsewhere`() {
         show(DnsUiState(url = SERVER, privateDnsServer = "dns.google"))
 

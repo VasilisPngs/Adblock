@@ -240,6 +240,19 @@ internal fun DnsScreen(
                 }
             }
 
+            if (uiState.vpnSettings && uiState.tunnel != TunnelState.AlwaysOn) {
+                item(key = "always-on") {
+                    SegmentedListItem(
+                        onClick = onVpnSettings,
+                        shapes = ListItemDefaults.segmentedShapes(0, 1),
+                        colors = listItemColors(),
+                        supportingContent = { Text(text = stringResource(R.string.always_on_vpn_description)) }
+                    ) {
+                        Text(text = stringResource(R.string.always_on_vpn))
+                    }
+                }
+            }
+
             uiState.privateDnsServer?.let { server ->
                 item(key = "private-dns") {
                     SegmentedListItem(

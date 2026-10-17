@@ -1,5 +1,9 @@
 package com.android.adblock.ui
 
+import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.pm.ResolveInfo
+import android.provider.Settings
 import com.android.adblock.data.DnsPreferences
 import com.android.adblock.vpn.DnsVpnService
 import com.android.adblock.vpn.DohResult
@@ -12,6 +16,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -101,6 +106,18 @@ class DnsViewModelTest {
         viewModel.refresh()
 
         assertEquals(DnsVpnService::class.java.name, shadowOf(context).nextStartedService.component?.className)
+    }
+
+    @Test
+    fun `knows whether Android has VPN settings to open`() {
+        assertFalse(viewModel(DohResult.Failed).uiState.value.vpnSettings)
+
+        shadowOf(context.packageManager).addResolveInfoForIntent(
+            Intent(Settings.ACTION_VPN_SETTINGS),
+            ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "com.android.settings"; name = "VpnSettings" } }
+        )
+
+        assertTrue(viewModel(DohResult.Failed).uiState.value.vpnSettings)
     }
 
     private fun viewModel(result: DohResult, url: String = ""): DnsViewModel {

@@ -1,7 +1,9 @@
 package com.android.adblock.ui
 
 import android.app.Application
+import android.content.Intent
 import android.net.ConnectivityManager
+import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.adblock.data.DnsPreferences
@@ -28,7 +30,8 @@ private val Running = setOf(TunnelState.On, TunnelState.AlwaysOn)
 data class DnsUiState(
     val url: String = "",
     val tunnel: TunnelState = TunnelState.Off,
-    val privateDnsServer: String? = null
+    val privateDnsServer: String? = null,
+    val vpnSettings: Boolean = false
 )
 
 sealed interface DnsEvent {
@@ -44,15 +47,18 @@ class DnsViewModel(
     private val connectivity = application.getSystemService(ConnectivityManager::class.java)
     private val url = MutableStateFlow(preferences.url)
     private val privateDnsServer = MutableStateFlow<String?>(null)
+    private val vpnSettings = Intent(Settings.ACTION_VPN_SETTINGS).resolveActivity(application.packageManager) != null
     private val _events = Channel<DnsEvent>(Channel.BUFFERED)
     private var probe: Job? = null
     val events: Flow<DnsEvent> = _events.receiveAsFlow()
 
-    val uiState: StateFlow<DnsUiState> = combine(url, DnsVpnService.tunnelState, privateDnsServer, ::DnsUiState)
-        .stateIn(
+    val uiState: StateFlow<DnsUiState> =
+        combine(url, DnsVpnService.tunnelState, privateDnsServer) { url, tunnel, privateDns ->
+            DnsUiState(url, tunnel, privateDns, vpnSettings)
+        }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-            DnsUiState(url.value, DnsVpnService.tunnelState.value)
+            DnsUiState(url.value, DnsVpnService.tunnelState.value, vpnSettings = vpnSettings)
         )
 
     fun setUrl(value: String) {

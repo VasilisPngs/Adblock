@@ -13,6 +13,8 @@
     <string name="server_url_invalid">Enter an https:// URL</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
+    <string name="always_on_vpn">Always-on VPN</string>
+    <string name="always_on_vpn_description">Turn it on for Adblock in Android\'s VPN settings so Android itself keeps DNS-over-HTTPS running</string>
     <string name="server_unreachable">Couldn\'t get an answer from the server</string>
     <string name="server_rejected">The server answered with HTTP %1$d</string>
     <string name="private_dns_on">Private DNS is set to %1$s</string>
