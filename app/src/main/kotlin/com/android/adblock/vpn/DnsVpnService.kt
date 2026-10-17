@@ -110,7 +110,7 @@ class DnsVpnService : VpnService() {
         val channel = NotificationChannel(CHANNEL_ID, getString(R.string.dns_over_https), NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         return Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_ad_off)
+            .setSmallIcon(R.drawable.ic_shield)
             .setContentTitle(getString(R.string.dns_over_https_on))
             .setContentText(url?.toUri()?.host)
             .setContentIntent(openApp())
