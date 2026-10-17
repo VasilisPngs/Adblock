@@ -5,6 +5,7 @@
     <string name="tunnel_on">On</string>
     <string name="tunnel_off">Off</string>
     <string name="tunnel_connecting">Connecting…</string>
+    <string name="tunnel_always_on">Kept on by Always-on VPN</string>
     <string name="server_url">Server URL</string>
     <string name="server_url_not_set">Not set</string>
     <string name="server_url_label">URL</string>

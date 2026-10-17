@@ -18,6 +18,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 
 @RunWith(RobolectricTestRunner::class)
 class DnsViewModelTest {
@@ -88,6 +89,18 @@ class DnsViewModelTest {
 
         assertEquals(TunnelState.Off, DnsVpnService.tunnelState.value)
         assertNull(runBlocking { withTimeoutOrNull(EVENT_WAIT_MILLIS) { viewModel.events.first() } })
+    }
+
+    @Test
+    fun `asks a running tunnel again whether Always-on VPN holds it`() {
+        val viewModel = viewModel(DohResult.Failed, url = SERVER)
+        viewModel.refresh()
+        assertNull(shadowOf(context).nextStartedService)
+
+        DnsVpnService.state.value = TunnelState.AlwaysOn
+        viewModel.refresh()
+
+        assertEquals(DnsVpnService::class.java.name, shadowOf(context).nextStartedService.component?.className)
     }
 
     private fun viewModel(result: DohResult, url: String = ""): DnsViewModel {

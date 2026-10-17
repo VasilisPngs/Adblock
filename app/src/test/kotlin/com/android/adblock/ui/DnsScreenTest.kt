@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasSetTextAction
@@ -53,6 +54,7 @@ class DnsScreenTest {
     private val switches = mutableListOf<Boolean>()
     private val urls = mutableListOf<String>()
     private var privateDnsOpened = 0
+    private var vpnSettingsOpened = 0
 
     @Test
     fun `shows the server and that DNS-over-HTTPS is off`() {
@@ -132,6 +134,29 @@ class DnsScreenTest {
     }
 
     @Test
+    fun `leaves Always-on VPN to the system settings`() {
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.AlwaysOn))
+
+        compose.onNodeWithText(string(R.string.tunnel_always_on)).assertIsDisplayed()
+        compose.onNodeWithText(string(R.string.server_url)).assertIsNotEnabled()
+        compose.onNodeWithText(string(R.string.dns_over_https)).assertIsSelected().performClick()
+
+        assertEquals(1, vpnSettingsOpened)
+        assertTrue(switches.isEmpty())
+    }
+
+    @Test
+    fun `looks the same on whether the app or Always-on VPN keeps it on`() {
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.On))
+        val app = compose.onNodeWithText(string(R.string.dns_over_https)).captureToImage().asAndroidBitmap()
+
+        state = DnsUiState(url = SERVER, tunnel = TunnelState.AlwaysOn)
+        val system = compose.onNodeWithText(string(R.string.dns_over_https)).captureToImage().asAndroidBitmap()
+
+        assertEquals(app.getPixel(app.width / 2, 2), system.getPixel(system.width / 2, 2))
+    }
+
+    @Test
     fun `warns when Private DNS sends queries elsewhere`() {
         show(DnsUiState(url = SERVER, privateDnsServer = "dns.google"))
 
@@ -208,7 +233,8 @@ class DnsScreenTest {
                     snackbarHostState = remember { SnackbarHostState() },
                     onEnabledChange = { switches += it },
                     onUrlChange = { urls += it },
-                    onPrivateDns = { privateDnsOpened++ }
+                    onPrivateDns = { privateDnsOpened++ },
+                    onVpnSettings = { vpnSettingsOpened++ }
                 )
             }
         }

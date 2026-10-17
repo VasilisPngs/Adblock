@@ -114,7 +114,7 @@ fun DnsScreen(
     }
 
     LifecycleResumeEffect(Unit) {
-        viewModel.refreshPrivateDns()
+        viewModel.refresh()
         onPauseOrDispose {}
     }
 
@@ -132,7 +132,8 @@ fun DnsScreen(
         snackbarHostState = snackbarHostState,
         onEnabledChange = { enabled -> if (enabled) viewModel.turnOn() else viewModel.turnOff() },
         onUrlChange = viewModel::setUrl,
-        onPrivateDns = { openNetworkSettings(context) },
+        onPrivateDns = { openSettings(context, Settings.ACTION_WIRELESS_SETTINGS) },
+        onVpnSettings = { openSettings(context, Settings.ACTION_VPN_SETTINGS) },
         modifier = modifier
     )
 }
@@ -144,6 +145,7 @@ internal fun DnsScreen(
     onEnabledChange: (Boolean) -> Unit,
     onUrlChange: (String) -> Unit,
     onPrivateDns: () -> Unit,
+    onVpnSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var editing by rememberSaveable { mutableStateOf(false) }
@@ -201,15 +203,28 @@ internal fun DnsScreen(
             verticalArrangement = Arrangement.spacedBy(SmallSpacing)
         ) {
             item(key = "dns") {
-                SegmentedListItem(
-                    checked = on,
-                    onCheckedChange = { enabled -> if (enabled && uiState.url.isEmpty()) editing = true else onEnabledChange(enabled) },
-                    shapes = ListItemDefaults.segmentedShapes(0, 1),
-                    colors = listItemColors(),
-                    supportingContent = { Text(text = stringResource(uiState.tunnel.labelRes)) },
-                    trailingContent = { Switch(checked = on, onCheckedChange = null) }
-                ) {
-                    Text(text = stringResource(R.string.dns_over_https))
+                val supporting = @Composable { Text(text = stringResource(uiState.tunnel.labelRes)) }
+                val title = @Composable { Text(text = stringResource(R.string.dns_over_https)) }
+                if (uiState.tunnel == TunnelState.AlwaysOn) {
+                    SegmentedListItem(
+                        selected = true,
+                        onClick = onVpnSettings,
+                        shapes = ListItemDefaults.segmentedShapes(0, 1),
+                        colors = listItemColors(),
+                        supportingContent = supporting,
+                        trailingContent = { Switch(checked = true, onCheckedChange = null, enabled = false) },
+                        content = title
+                    )
+                } else {
+                    SegmentedListItem(
+                        checked = on,
+                        onCheckedChange = { enabled -> if (enabled && uiState.url.isEmpty()) editing = true else onEnabledChange(enabled) },
+                        shapes = ListItemDefaults.segmentedShapes(0, 1),
+                        colors = listItemColors(),
+                        supportingContent = supporting,
+                        trailingContent = { Switch(checked = on, onCheckedChange = null) },
+                        content = title
+                    )
                 }
             }
 
@@ -337,6 +352,7 @@ private val TunnelState.labelRes: Int
         TunnelState.Off -> R.string.tunnel_off
         TunnelState.Connecting -> R.string.tunnel_connecting
         TunnelState.On -> R.string.tunnel_on
+        TunnelState.AlwaysOn -> R.string.tunnel_always_on
     }
 
 internal fun DohResult.text(resources: Resources): String =
@@ -356,9 +372,9 @@ private fun requestUnrestrictedBattery(context: Context) {
     }
 }
 
-private fun openNetworkSettings(context: Context) {
+private fun openSettings(context: Context, action: String) {
     try {
-        context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+        context.startActivity(Intent(action))
     } catch (_: ActivityNotFoundException) {
     }
 }

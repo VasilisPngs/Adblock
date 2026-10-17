@@ -22,7 +22,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import kotlin.concurrent.thread
 
-enum class TunnelState { Off, Connecting, On }
+enum class TunnelState { Off, Connecting, On, AlwaysOn }
 
 class DnsVpnService : VpnService() {
     private var tunnel: ParcelFileDescriptor? = null
@@ -42,8 +42,8 @@ class DnsVpnService : VpnService() {
             }
             tunnel = established
             DnsPreferences(this).enabled = true
-            state.value = TunnelState.On
         }
+        state.value = if (isAlwaysOn) TunnelState.AlwaysOn else TunnelState.On
         return START_STICKY
     }
 

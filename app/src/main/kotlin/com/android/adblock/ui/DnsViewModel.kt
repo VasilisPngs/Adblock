@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import java.net.URI
 
 private const val STOP_TIMEOUT_MILLIS = 5_000L
+private val Running = setOf(TunnelState.On, TunnelState.AlwaysOn)
 
 data class DnsUiState(
     val url: String = "",
@@ -85,8 +86,9 @@ class DnsViewModel(
         DnsVpnService.stop(getApplication())
     }
 
-    fun refreshPrivateDns() {
+    fun refresh() {
         privateDnsServer.value = connectivity.getLinkProperties(connectivity.activeNetwork)?.privateDnsServerName
+        if (DnsVpnService.tunnelState.value in Running) DnsVpnService.start(getApplication())
     }
 
     override fun onCleared() {
