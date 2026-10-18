@@ -9,7 +9,7 @@
 - Follow only Google's official guidance and rules: Material Design, the Android developer documentation and Google's own libraries and samples. When the user asks for something beyond them, first say plainly that it departs from Google and which guideline it breaks, and go ahead only once they confirm. A confirmed departure changes the code only, never this file, which stays on Google's guidance by default; a departure already in the code is the user's settled decision, so ask before reverting it.
 - Do the work end to end.
 - Do not undo settled decisions or weaken requirements without a real technical reason.
-- Prefer the simplest architecture that fully satisfies the requirements.
+- Prefer root-cause fixes and the simplest architecture that fully satisfies the requirements.
 - Remove dead code, obsolete compatibility layers and workarounds, unused dependencies, resources, permissions and configuration.
 - Keep code clean, direct, idiomatic and maintainable.
 - All code is written in English.
@@ -30,7 +30,6 @@
 - Add an R8 keep rule only for code that a missing rule demonstrably breaks.
 
 ## Verification
-- Debug from the root cause: reproduce the failure, read the whole error, trace it to its source and fix that source with one minimal change; never stack guesses or patch symptoms.
 - While the Java target is newer than the ASM bundled with lint, the build adds `androidLintTool(platform(...))` with the newest `org.ow2.asm:asm-bom` from the version catalog; without it lint still passes but skips every class with "Unsupported class file major version".
 
 ## Official references
