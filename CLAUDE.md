@@ -201,6 +201,8 @@
 - Adaptive icons: https://developer.android.com/develop/ui/compose/system/icon_design_adaptive
 - System color resources: https://developer.android.com/reference/android/R.color
 - Splash screens: https://developer.android.com/develop/ui/views/launch/splash-screen
+- SplashScreen: https://developer.android.com/reference/android/window/SplashScreen
+- ViewTreeObserver.OnPreDrawListener: https://developer.android.com/reference/android/view/ViewTreeObserver.OnPreDrawListener
 - Styles and themes: https://developer.android.com/develop/ui/views/theming/themes
 - Notifications: https://developer.android.com/develop/ui/compose/notifications
 - Notification runtime permission: https://developer.android.com/develop/ui/compose/notifications/notification-permission

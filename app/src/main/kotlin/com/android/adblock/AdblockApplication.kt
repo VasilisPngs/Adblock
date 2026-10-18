@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import androidx.compose.material3.ComposeMaterial3Flags
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.android.adblock.data.AppPreferences
 import com.android.adblock.data.DnsPreferences
 import com.android.adblock.data.NetworkMonitor
 import com.android.adblock.vpn.DnsTunnel
@@ -22,6 +23,7 @@ class AdblockApplication : Application() {
 
 class AppContainer(context: Context) {
     val preferences = DnsPreferences(context)
+    val appPreferences = AppPreferences(context)
     val doh = DohClient(context)
     val tunnel = DnsTunnel(context)
     val network = NetworkMonitor(context.getSystemService(ConnectivityManager::class.java))

@@ -30,10 +30,13 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.android.adblock.R
+import com.android.adblock.data.Appearance
+import com.android.adblock.data.ThemeMode
 import com.android.adblock.ui.theme.AdblockTheme
 import com.android.adblock.vpn.DohResult
 import com.android.adblock.vpn.TunnelState
@@ -60,6 +63,8 @@ class DnsScreenTest {
     private val urls = mutableListOf<String>()
     private var privateDnsOpened = 0
     private var vpnSettingsOpened = 0
+    private val themes = mutableListOf<ThemeMode>()
+    private val dynamicColors = mutableListOf<Boolean>()
 
     @Test
     fun `shows the server and that DNS-over-HTTPS is off`() {
@@ -258,6 +263,26 @@ class DnsScreenTest {
         assertContentEdge(24.dp + 48.dp)
     }
 
+    @Test
+    fun `changes the theme from the list`() {
+        show(DnsUiState(url = SERVER))
+
+        compose.onNodeWithText(string(R.string.theme_system)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(string(R.string.theme)).performClick()
+        compose.onNodeWithText(string(R.string.theme_dark)).performClick()
+
+        assertEquals(listOf(ThemeMode.Dark), themes)
+    }
+
+    @Test
+    fun `turns dynamic color on from the list`() {
+        show(DnsUiState(url = SERVER))
+
+        compose.onNodeWithText(string(R.string.dynamic_color)).performScrollTo().assertIsOff().assert(SwitchRole).performClick()
+
+        assertEquals(listOf(true), dynamicColors)
+    }
+
     private fun assertContentEdge(margin: Dp) {
         show(DnsUiState(url = SERVER))
 
@@ -283,7 +308,10 @@ class DnsScreenTest {
                     onEnabledChange = { switches += it },
                     onUrlChange = { urls += it },
                     onPrivateDns = { privateDnsOpened++ },
-                    onVpnSettings = { vpnSettingsOpened++ }
+                    onVpnSettings = { vpnSettingsOpened++ },
+                    appearance = Appearance(ThemeMode.System, dynamicColor = false),
+                    onThemeChange = { themes += it },
+                    onDynamicColorChange = { dynamicColors += it }
                 )
             }
         }

@@ -13,8 +13,11 @@ import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
@@ -23,7 +26,10 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -34,6 +40,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SegmentedListItem
@@ -46,6 +53,7 @@ import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +62,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -68,6 +77,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -80,12 +90,15 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
 import com.android.adblock.R
+import com.android.adblock.data.Appearance
+import com.android.adblock.data.ThemeMode
 import com.android.adblock.vpn.DohResult
 import com.android.adblock.vpn.TunnelState
 import com.android.adblock.vpn.dohUrl
 import java.util.function.Consumer
 
 private val CompactMargin = 16.dp
+private val ContentMargin = 16.dp
 private val WideMargin = 24.dp
 private val SmallSpacing = 8.dp
 private val TvOverscanHorizontal = 48.dp
@@ -97,6 +110,7 @@ private const val DIM_WITHOUT_BLUR = 0.4f
 @Composable
 fun DnsScreen(
     viewModel: DnsViewModel,
+    appearance: Appearance,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -135,6 +149,9 @@ fun DnsScreen(
             onUrlChange = viewModel::setUrl,
             onPrivateDns = { openSettings(context, Settings.ACTION_WIRELESS_SETTINGS) },
             onVpnSettings = { openSettings(context, Settings.ACTION_VPN_SETTINGS) },
+            appearance = appearance,
+            onThemeChange = viewModel::setThemeMode,
+            onDynamicColorChange = viewModel::setDynamicColor,
             modifier = modifier
         )
     }
@@ -148,9 +165,13 @@ internal fun DnsScreen(
     onUrlChange: (String) -> Unit,
     onPrivateDns: () -> Unit,
     onVpnSettings: () -> Unit,
+    appearance: Appearance,
+    onThemeChange: (ThemeMode) -> Unit,
+    onDynamicColorChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var editing by rememberSaveable { mutableStateOf(false) }
+    var themeDialog by rememberSaveable { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
 
@@ -275,7 +296,47 @@ internal fun DnsScreen(
                     }
                 }
             }
+
+            item(key = "appearance") {
+                SectionHeader(text = stringResource(R.string.appearance), modifier = Modifier.padding(top = ContentMargin))
+            }
+
+            item(key = "theme") {
+                SegmentedListItem(
+                    onClick = { themeDialog = true },
+                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    colors = listItemColors(),
+                    supportingContent = { Text(text = stringResource(appearance.themeMode.labelRes)) }
+                ) {
+                    Text(text = stringResource(R.string.theme))
+                }
+            }
+
+            item(key = "dynamic-color") {
+                SegmentedListItem(
+                    checked = appearance.dynamicColor,
+                    onCheckedChange = onDynamicColorChange,
+                    modifier = Modifier.semantics { role = Role.Switch },
+                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    colors = listItemColors(),
+                    supportingContent = { Text(text = stringResource(R.string.dynamic_color_description)) },
+                    trailingContent = { Switch(checked = appearance.dynamicColor, onCheckedChange = null) }
+                ) {
+                    Text(text = stringResource(R.string.dynamic_color))
+                }
+            }
         }
+    }
+
+    if (themeDialog) {
+        ThemeDialog(
+            current = appearance.themeMode,
+            onDismiss = { themeDialog = false },
+            onSelect = { mode ->
+                themeDialog = false
+                onThemeChange(mode)
+            }
+        )
     }
 
     if (editing) {
@@ -347,6 +408,62 @@ private fun UrlDialog(
 }
 
 @Composable
+private fun ThemeDialog(
+    current: ThemeMode,
+    onDismiss: () -> Unit,
+    onSelect: (ThemeMode) -> Unit
+) {
+    val inputModeManager = LocalInputModeManager.current
+    val focus = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        if (inputModeManager.inputMode == InputMode.Keyboard) focus.requestFocus()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
+                Text(text = stringResource(R.string.cancel))
+            }
+        },
+        title = { Text(text = stringResource(R.string.theme)) },
+        text = {
+            DialogBlurBehind()
+            Column(modifier = Modifier.selectableGroup()) {
+                ThemeMode.entries.forEach { mode ->
+                    val selected = mode == current
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (selected) Modifier.focusRequester(focus) else Modifier)
+                            .selectable(selected = selected, onClick = { onSelect(mode) }, role = Role.RadioButton)
+                            .minimumInteractiveComponentSize(),
+                        horizontalArrangement = Arrangement.spacedBy(ContentMargin),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = selected, onClick = null)
+                        Text(text = stringResource(mode.labelRes), style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier
+            .padding(start = ContentMargin, end = ContentMargin, bottom = SmallSpacing)
+            .semantics { heading() }
+    )
+}
+
+@Composable
 private fun DialogBlurBehind() {
     val window = (LocalView.current.parent as? DialogWindowProvider)?.window ?: return
     DisposableEffect(window) {
@@ -365,6 +482,14 @@ private fun DialogBlurBehind() {
 private fun listItemColors() = MaterialTheme.colorScheme.surfaceContainer.let { container ->
     ListItemDefaults.segmentedColors(containerColor = container, disabledContainerColor = container)
 }
+
+@get:StringRes
+private val ThemeMode.labelRes: Int
+    get() = when (this) {
+        ThemeMode.System -> R.string.theme_system
+        ThemeMode.Light -> R.string.theme_light
+        ThemeMode.Dark -> R.string.theme_dark
+    }
 
 private val TunnelState.labelRes: Int
     get() = when (this) {
