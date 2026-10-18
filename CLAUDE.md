@@ -25,7 +25,7 @@
 - Each screen has a single-row `TopAppBar` with the plain screen name as its title, and every list entry is its own fully rounded Material 3 Expressive `SegmentedListItem` in the surface container color of Google's samples, spaced apart rather than joined into a group.
 - Frontend, UI and UX keep uniform, symmetric and consistent geometry with correct alignment, as Material 3's layout guidance defines it: each breakpoint's window margins, the top app bar's title and actions on the same edges as the content, and one alignment line for text and controls.
 - Icons come from Material Symbols Rounded, except a third party's own logo where the interface names that third party.
-- Text uses Google Sans from Google Fonts through Compose downloadable fonts.
+- Text uses Google Sans Flex from Google Fonts through Compose downloadable fonts.
 - Use Google's blur and transparency effects wherever Google's guidance uses them, such as the window blur behind dialogs.
 - Add an R8 keep rule only for code that a missing rule demonstrably breaks.
 
@@ -111,7 +111,7 @@
 - Dynamic color: https://m3.material.io/styles/color/dynamic/choosing-a-source
 - Typography: https://m3.material.io/styles/typography/overview
 - Typography fonts: https://m3.material.io/styles/typography/fonts
-- Google Sans: https://fonts.google.com/specimen/Google+Sans
+- Google Sans Flex: https://fonts.google.com/specimen/Google+Sans+Flex
 - Shape: https://m3.material.io/styles/shape/overview-principles
 - Shape morph: https://m3.material.io/styles/shape/shape-morph
 - Motion: https://m3.material.io/styles/motion/overview/how-it-works
@@ -174,7 +174,6 @@
 - Kotlin flows on Android: https://developer.android.com/kotlin/flow
 - Kotlin serialization: https://kotlinlang.org/docs/serialization.html
 - Data and file storage: https://developer.android.com/training/data-storage
-- SharedPreferences: https://developer.android.com/training/data-storage/shared-preferences
 - Documents and files from shared storage: https://developer.android.com/training/data-storage/shared/documents-files
 - DataStore: https://developer.android.com/topic/libraries/architecture/datastore
 - Room: https://developer.android.com/training/data-storage/room
@@ -238,6 +237,7 @@
 - Baseline Profiles: https://developer.android.com/topic/performance/baselineprofiles/overview
 - Test apps on Android: https://developer.android.com/training/testing
 - Local unit tests: https://developer.android.com/training/testing/local-tests
+- Testing Kotlin coroutines on Android: https://developer.android.com/kotlin/coroutines/test
 - Test Compose layouts: https://developer.android.com/develop/ui/compose/testing
 - Compose testing APIs: https://developer.android.com/develop/ui/compose/testing/apis
 - Robolectric strategies: https://developer.android.com/training/testing/local-tests/robolectric
@@ -293,6 +293,7 @@
 - Google Maven repository: https://maven.google.com/web/index.html
 - Activity release notes: https://developer.android.com/jetpack/androidx/releases/activity
 - Lifecycle release notes: https://developer.android.com/jetpack/androidx/releases/lifecycle
+- DataStore release notes: https://developer.android.com/jetpack/androidx/releases/datastore
 - Compose Foundation release notes: https://developer.android.com/jetpack/androidx/releases/compose-foundation
 - Gradle release notes: https://docs.gradle.org/current/release-notes.html
 - Gradle Wrapper: https://docs.gradle.org/current/userguide/gradle_wrapper.html

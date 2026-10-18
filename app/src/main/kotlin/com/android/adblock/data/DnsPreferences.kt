@@ -1,21 +1,39 @@
 package com.android.adblock.data
 
 import android.content.Context
-import androidx.core.content.edit
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.SharedPreferencesMigration
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.first
 
-class DnsPreferences(context: Context) {
-    private val preferences = context.getSharedPreferences("dns_preferences", Context.MODE_PRIVATE)
+private const val NAME = "dns_preferences"
 
-    var url: String
-        get() = preferences.getString(KEY_URL, null).orEmpty()
-        set(value) = preferences.edit { putString(KEY_URL, value) }
+private val Context.dnsPreferences: DataStore<Preferences> by preferencesDataStore(
+    name = NAME,
+    produceMigrations = { context -> listOf(SharedPreferencesMigration(context, NAME)) }
+)
 
-    var enabled: Boolean
-        get() = preferences.getBoolean(KEY_ENABLED, false)
-        set(value) = preferences.edit { putBoolean(KEY_ENABLED, value) }
+class DnsPreferences(private val store: DataStore<Preferences>) {
+    constructor(context: Context) : this(context.dnsPreferences)
+
+    suspend fun url(): String = store.data.first()[URL].orEmpty()
+
+    suspend fun setUrl(value: String) {
+        store.edit { it[URL] = value }
+    }
+
+    suspend fun enabled(): Boolean = store.data.first()[ENABLED] ?: false
+
+    suspend fun setEnabled(value: Boolean) {
+        store.edit { it[ENABLED] = value }
+    }
 
     private companion object {
-        const val KEY_URL = "url"
-        const val KEY_ENABLED = "enabled"
+        val URL = stringPreferencesKey("url")
+        val ENABLED = booleanPreferencesKey("enabled")
     }
 }

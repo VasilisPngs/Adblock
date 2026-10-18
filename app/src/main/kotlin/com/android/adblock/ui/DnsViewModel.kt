@@ -31,7 +31,8 @@ data class DnsUiState(
     val url: String = "",
     val tunnel: TunnelState = TunnelState.Off,
     val privateDnsServer: String? = null,
-    val vpnSettings: Boolean = false
+    val vpnSettings: Boolean = false,
+    val loaded: Boolean = false
 )
 
 sealed interface DnsEvent {
@@ -41,11 +42,11 @@ sealed interface DnsEvent {
 
 class DnsViewModel(
     application: Application,
-    private val resolve: suspend (String, ByteArray) -> DohResult
+    private val resolve: suspend (String, ByteArray) -> DohResult,
+    private val preferences: DnsPreferences = DnsPreferences(application)
 ) : AndroidViewModel(application) {
-    private val preferences = DnsPreferences(application)
     private val connectivity = application.getSystemService(ConnectivityManager::class.java)
-    private val url = MutableStateFlow(preferences.url)
+    private val url = MutableStateFlow<String?>(null)
     private val privateDnsServer = MutableStateFlow<String?>(null)
     private val vpnSettings = Intent(Settings.ACTION_VPN_SETTINGS).resolveActivity(application.packageManager) != null
     private val _events = Channel<DnsEvent>(Channel.BUFFERED)
@@ -55,17 +56,21 @@ class DnsViewModel(
 
     val uiState: StateFlow<DnsUiState> =
         combine(url, DnsVpnService.tunnelState, privateDnsServer) { url, tunnel, privateDns ->
-            DnsUiState(url, tunnel, privateDns, vpnSettings)
+            DnsUiState(url.orEmpty(), tunnel, privateDns, vpnSettings, url != null)
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-            DnsUiState(url.value, DnsVpnService.tunnelState.value, vpnSettings = vpnSettings)
+            DnsUiState(tunnel = DnsVpnService.tunnelState.value, vpnSettings = vpnSettings)
         )
+
+    init {
+        viewModelScope.launch { url.value = preferences.url() }
+    }
 
     fun setUrl(value: String) {
         urlCheck?.cancel()
-        if (DnsVpnService.tunnelState.value !in Running) return save(value)
         urlCheck = viewModelScope.launch {
+            if (DnsVpnService.tunnelState.value !in Running) return@launch save(value)
             val result = ask(value)
             if (result is DohResult.Answer) {
                 save(value)
@@ -77,7 +82,7 @@ class DnsViewModel(
     }
 
     fun turnOn() {
-        val server = dohUrl(url.value) ?: return
+        val server = dohUrl(url.value.orEmpty()) ?: return
         DnsVpnService.state.value = TunnelState.Connecting
         probe = viewModelScope.launch {
             val result = ask(server)
@@ -113,8 +118,8 @@ class DnsViewModel(
 
     private suspend fun ask(server: String): DohResult = resolve(server, addressQuery(URI(server).host))
 
-    private fun save(value: String) {
-        preferences.url = value
+    private suspend fun save(value: String) {
+        preferences.setUrl(value)
         url.value = value
     }
 

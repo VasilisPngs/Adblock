@@ -14,12 +14,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 
-private val GoogleSans = GoogleFont("Google Sans")
+private val GoogleSansFlex = GoogleFont("Google Sans Flex")
 
 private val AppTypography = Typography(
     fontFamily = FontFamily(
         listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.Bold).map { weight ->
-            Font(googleFont = GoogleSans, weight = weight)
+            Font(googleFont = GoogleSansFlex, weight = weight)
         }
     )
 )

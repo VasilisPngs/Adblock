@@ -14,9 +14,17 @@ import androidx.core.net.toUri
 import com.android.adblock.MainActivity
 import com.android.adblock.R
 import com.android.adblock.data.DnsPreferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
@@ -25,7 +33,10 @@ import kotlin.concurrent.thread
 enum class TunnelState { Off, Connecting, On, AlwaysOn }
 
 class DnsVpnService : VpnService() {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val preferences by lazy { DnsPreferences(this) }
     private var tunnel: ParcelFileDescriptor? = null
+    private var connecting: Job? = null
 
     @Volatile
     private var server = ""
@@ -35,31 +46,31 @@ class DnsVpnService : VpnService() {
             stop()
             return START_NOT_STICKY
         }
-        val url = dohUrl(DnsPreferences(this).url)
-        startForeground(NOTIFICATION_ID, notification(url), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
-        if (url == null) {
-            stop()
-            return START_NOT_STICKY
-        }
-        server = url
-        if (tunnel == null) {
-            val established = establish()
-            if (established == null) {
-                stop()
-                return START_NOT_STICKY
-            }
-            tunnel = established
-            DnsPreferences(this).enabled = true
-        }
-        state.value = if (isAlwaysOn) TunnelState.AlwaysOn else TunnelState.On
+        startForeground(NOTIFICATION_ID, notification(server.ifEmpty { null }), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
+        connecting?.cancel()
+        connecting = scope.launch { connect(dohUrl(preferences.url())) }
         return START_STICKY
     }
 
     override fun onRevoke() = mainExecutor.execute(::stop)
 
     override fun onDestroy() {
+        scope.cancel()
         close()
         super.onDestroy()
+    }
+
+    private suspend fun connect(url: String?) {
+        if (url == null) return stop()
+        if (url != server) {
+            server = url
+            startForeground(NOTIFICATION_ID, notification(url), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
+        }
+        if (tunnel == null) {
+            tunnel = establish() ?: return stop()
+            preferences.setEnabled(true)
+        }
+        state.value = if (isAlwaysOn) TunnelState.AlwaysOn else TunnelState.On
     }
 
     private fun establish(): ParcelFileDescriptor? {
@@ -102,7 +113,8 @@ class DnsVpnService : VpnService() {
     }
 
     private fun stop() {
-        DnsPreferences(this).enabled = false
+        connecting?.cancel()
+        scope.launch { withContext(NonCancellable) { preferences.setEnabled(false) } }
         close()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

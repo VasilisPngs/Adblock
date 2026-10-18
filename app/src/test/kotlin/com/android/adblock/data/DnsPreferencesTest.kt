@@ -1,34 +1,43 @@
 package com.android.adblock.data
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 
-@RunWith(RobolectricTestRunner::class)
 class DnsPreferencesTest {
-    private val context = RuntimeEnvironment.getApplication()
+    @TempDir
+    lateinit var folder: File
 
     @Test
-    fun `starts with no server and turned off`() {
-        val preferences = DnsPreferences(context)
+    fun `starts with no server and turned off`() = runTest {
+        val preferences = preferences(backgroundScope)
 
-        assertEquals("", preferences.url)
-        assertFalse(preferences.enabled)
+        assertEquals("", preferences.url())
+        assertFalse(preferences.enabled())
     }
 
     @Test
-    fun `keeps the server and whether it is on`() {
-        DnsPreferences(context).apply {
-            url = "https://dns.nextdns.io/abc123"
-            enabled = true
+    fun `keeps the server and whether it is on`() = runTest {
+        val writer = Job()
+        preferences(CoroutineScope(coroutineContext + writer)).apply {
+            setUrl("https://dns.nextdns.io/abc123")
+            setEnabled(true)
         }
+        writer.cancelAndJoin()
 
-        val preferences = DnsPreferences(context)
-        assertEquals("https://dns.nextdns.io/abc123", preferences.url)
-        assertTrue(preferences.enabled)
+        val preferences = preferences(backgroundScope)
+        assertEquals("https://dns.nextdns.io/abc123", preferences.url())
+        assertTrue(preferences.enabled())
     }
+
+    private fun preferences(scope: CoroutineScope) =
+        DnsPreferences(PreferenceDataStoreFactory.create(scope = scope) { File(folder, "dns.preferences_pb") })
 }

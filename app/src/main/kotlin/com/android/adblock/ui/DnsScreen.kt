@@ -127,15 +127,17 @@ fun DnsScreen(
         }
     }
 
-    DnsScreen(
-        uiState = uiState,
-        snackbarHostState = snackbarHostState,
-        onEnabledChange = { enabled -> if (enabled) viewModel.turnOn() else viewModel.turnOff() },
-        onUrlChange = viewModel::setUrl,
-        onPrivateDns = { openSettings(context, Settings.ACTION_WIRELESS_SETTINGS) },
-        onVpnSettings = { openSettings(context, Settings.ACTION_VPN_SETTINGS) },
-        modifier = modifier
-    )
+    if (uiState.loaded) {
+        DnsScreen(
+            uiState = uiState,
+            snackbarHostState = snackbarHostState,
+            onEnabledChange = { enabled -> if (enabled) viewModel.turnOn() else viewModel.turnOff() },
+            onUrlChange = viewModel::setUrl,
+            onPrivateDns = { openSettings(context, Settings.ACTION_WIRELESS_SETTINGS) },
+            onVpnSettings = { openSettings(context, Settings.ACTION_VPN_SETTINGS) },
+            modifier = modifier
+        )
+    }
 }
 
 @Composable
