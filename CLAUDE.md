@@ -44,6 +44,11 @@
 - Lists are edited in place, never through an edit mode: a leading drag handle reorders, a trailing icon button removes, and a destructive removal asks first in a dialog.
 - The main action of a screen is a medium filled button (56dp), its alternative a medium tonal button; a two-state action inside a row is a filled icon button that turns from surface container highest into primary and morphs from round to 12dp corners when selected.
 - Secondary information of the screen, such as elapsed time, goes in the top app bar's subtitle, and a running timer floats in the vibrant floating toolbar (primary container, 64dp, fully rounded) above the navigation bar.
+- A screen's main on/off setting is the main switch bar of Android 16 Settings: at least 72dp tall, 42dp corners, always primary container with on primary container text, 32dp start and 20dp end padding, and a label that states the current state.
+- Search is the Material search bar: 56dp tall, fully rounded, surface container high, a leading search icon and a trailing clear button shown only while it holds text.
+- Filters are one row of filter chips that scrolls sideways; a filter with many values is a dropdown chip in the same row that shows the filter's name until a value is picked, then the value in the selected style, and picks through a radio dialog.
+- A form that stays on the screen sits in a surface container panel: outlined text fields, then the actions aligned to the end, the main one filled and its alternative tonal.
+- On touch phones the navigation bar hides while a text field has focus; the navigation rail never hides.
 
 ## Cloudflare
 - Every recurring D1 query reads through an index, a partial index when it only looks for rows waiting for work. D1 counts every row read, rows of temporary sort tables included, against the free daily limit of 5,000,000 that all databases of the account share.
@@ -128,6 +133,7 @@
 - Bottom sheets: https://m3.material.io/components/bottom-sheets/overview
 - Toolbars: https://m3.material.io/components/toolbars/overview
 - Chips: https://m3.material.io/components/chips/overview
+- Search: https://m3.material.io/components/search/overview
 - Color roles: https://m3.material.io/styles/color/roles
 - Dynamic color: https://m3.material.io/styles/color/dynamic/choosing-a-source
 - Typography: https://m3.material.io/styles/typography/overview
@@ -162,6 +168,8 @@
 - CSS linear() easing: https://developer.chrome.com/docs/css-ui/css-linear-easing-function
 - CSS light-dark(): https://web.dev/articles/light-dark
 - overscroll-behavior: https://developer.chrome.com/blog/overscroll-behavior
+- Compose Material 3 search bar tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SearchBarTokens.kt
+- Android Settings main switch bar: https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/packages/SettingsLib/MainSwitchPreference/
 
 ### Cloudflare
 - Workers Builds: https://developers.cloudflare.com/workers/ci-cd/builds/
