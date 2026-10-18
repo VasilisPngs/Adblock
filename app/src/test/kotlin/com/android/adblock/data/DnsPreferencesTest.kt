@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -20,8 +21,8 @@ class DnsPreferencesTest {
     fun `starts with no server and turned off`() = runTest {
         val preferences = preferences(backgroundScope)
 
-        assertEquals("", preferences.url())
-        assertFalse(preferences.enabled())
+        assertEquals("", preferences.url.first())
+        assertFalse(preferences.enabled.first())
     }
 
     @Test
@@ -34,8 +35,8 @@ class DnsPreferencesTest {
         writer.cancelAndJoin()
 
         val preferences = preferences(backgroundScope)
-        assertEquals("https://dns.nextdns.io/abc123", preferences.url())
-        assertTrue(preferences.enabled())
+        assertEquals("https://dns.nextdns.io/abc123", preferences.url.first())
+        assertTrue(preferences.enabled.first())
     }
 
     private fun preferences(scope: CoroutineScope) =

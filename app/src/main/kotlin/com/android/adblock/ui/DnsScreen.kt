@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-
 package com.android.adblock.ui
 
 import android.annotation.SuppressLint
@@ -7,7 +5,7 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
+import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.net.VpnService
 import android.os.PowerManager
@@ -31,12 +29,11 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SegmentedListItem
@@ -45,6 +42,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
@@ -54,7 +52,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -63,7 +60,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -71,19 +67,22 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.net.toUri
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
 import com.android.adblock.R
 import com.android.adblock.vpn.DohResult
 import com.android.adblock.vpn.TunnelState
 import com.android.adblock.vpn.dohUrl
-import kotlinx.coroutines.launch
 import java.util.function.Consumer
 
 private val CompactMargin = 16.dp
@@ -104,7 +103,6 @@ fun DnsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val resources = LocalResources.current
-    val coroutineScope = rememberCoroutineScope()
     val connect = {
         viewModel.connect()
         requestUnrestrictedBattery(context)
@@ -113,17 +111,19 @@ fun DnsScreen(
         if (result.resultCode == Activity.RESULT_OK) connect() else viewModel.cancel()
     }
 
-    LifecycleResumeEffect(Unit) {
-        viewModel.refresh()
-        onPauseOrDispose {}
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
+
+    if (uiState.readyToConnect) {
+        LaunchedEffect(Unit) {
+            viewModel.connectRequestHandled()
+            VpnService.prepare(context)?.let(consent::launch) ?: connect()
+        }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
-            when (event) {
-                DnsEvent.Connect -> VpnService.prepare(context)?.let(consent::launch) ?: connect()
-                is DnsEvent.Failed -> coroutineScope.launch { snackbarHostState.showSnackbar(event.result.text(resources)) }
-            }
+    uiState.failure?.let { failure ->
+        LaunchedEffect(failure) {
+            snackbarHostState.showSnackbar(failure.text(resources))
+            viewModel.failureShown()
         }
     }
 
@@ -165,8 +165,8 @@ internal fun DnsScreen(
         CompactMargin
     }
     val barMargin = margin - CompactMargin
-    val television = LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
-        Configuration.UI_MODE_TYPE_TELEVISION
+    val context = LocalContext.current
+    val television = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
     val overscan = if (television) {
         WindowInsets(TvOverscanHorizontal, TvOverscanVertical, TvOverscanHorizontal, TvOverscanVertical)
     } else {
@@ -179,9 +179,8 @@ internal fun DnsScreen(
         topBar = {
             TopAppBar(
                 title = { Text(text = stringResource(R.string.app_name)) },
-                windowInsets = TopAppBarDefaults.windowInsets
-                    .add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                    .add(WindowInsets(left = barMargin, right = barMargin)),
+                windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+                contentPadding = PaddingValues(horizontal = barMargin),
                 scrollBehavior = scrollBehavior
             )
         },
@@ -209,8 +208,9 @@ internal fun DnsScreen(
                 val title = @Composable { Text(text = stringResource(R.string.dns_over_https)) }
                 if (uiState.tunnel == TunnelState.AlwaysOn) {
                     SegmentedListItem(
-                        selected = true,
-                        onClick = onVpnSettings,
+                        checked = true,
+                        onCheckedChange = { onVpnSettings() },
+                        modifier = Modifier.semantics { role = Role.Switch },
                         shapes = ListItemDefaults.segmentedShapes(0, 1),
                         colors = listItemColors(),
                         supportingContent = supporting,
@@ -221,6 +221,7 @@ internal fun DnsScreen(
                     SegmentedListItem(
                         checked = on,
                         onCheckedChange = { enabled -> if (enabled && uiState.url.isEmpty()) editing = true else onEnabledChange(enabled) },
+                        modifier = Modifier.semantics { role = Role.Switch },
                         shapes = ListItemDefaults.segmentedShapes(0, 1),
                         colors = listItemColors(),
                         supportingContent = supporting,
@@ -322,6 +323,9 @@ private fun UrlDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focus),
+                shape = OutlinedTextFieldDefaults.roundedShape,
+                colors = OutlinedTextFieldDefaults.tonalColors(),
+                labelPosition = TextFieldLabelPosition.Inside(),
                 label = { Text(text = stringResource(R.string.server_url_label)) },
                 placeholder = { Text(text = stringResource(R.string.server_url_placeholder)) },
                 supportingText = if (invalid) {

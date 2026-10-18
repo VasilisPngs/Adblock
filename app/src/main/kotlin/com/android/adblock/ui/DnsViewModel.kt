@@ -1,26 +1,26 @@
 package com.android.adblock.ui
 
-import android.app.Application
-import android.content.Intent
-import android.net.ConnectivityManager
-import android.provider.Settings
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.android.adblock.AdblockApplication
 import com.android.adblock.data.DnsPreferences
-import com.android.adblock.vpn.DnsVpnService
+import com.android.adblock.vpn.DnsTunnel
 import com.android.adblock.vpn.DohResult
 import com.android.adblock.vpn.TunnelState
 import com.android.adblock.vpn.addressQuery
 import com.android.adblock.vpn.dohUrl
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.net.URI
 
@@ -32,98 +32,106 @@ data class DnsUiState(
     val tunnel: TunnelState = TunnelState.Off,
     val privateDnsServer: String? = null,
     val vpnSettings: Boolean = false,
-    val loaded: Boolean = false
+    val loaded: Boolean = false,
+    val readyToConnect: Boolean = false,
+    val failure: DohResult? = null
 )
 
-sealed interface DnsEvent {
-    data object Connect : DnsEvent
-    data class Failed(val result: DohResult) : DnsEvent
-}
+private data class Request(
+    val starting: Boolean = false,
+    val readyToConnect: Boolean = false,
+    val failure: DohResult? = null
+)
 
 class DnsViewModel(
-    application: Application,
-    private val resolve: suspend (String, ByteArray) -> DohResult,
-    private val preferences: DnsPreferences = DnsPreferences(application)
-) : AndroidViewModel(application) {
-    private val connectivity = application.getSystemService(ConnectivityManager::class.java)
-    private val url = MutableStateFlow<String?>(null)
-    private val privateDnsServer = MutableStateFlow<String?>(null)
-    private val vpnSettings = Intent(Settings.ACTION_VPN_SETTINGS).resolveActivity(application.packageManager) != null
-    private val _events = Channel<DnsEvent>(Channel.BUFFERED)
+    private val preferences: DnsPreferences,
+    private val tunnel: DnsTunnel,
+    privateDnsServer: Flow<String?>,
+    private val resolve: suspend (String, ByteArray) -> DohResult
+) : ViewModel() {
+    private val request = MutableStateFlow(Request())
     private var probe: Job? = null
     private var urlCheck: Job? = null
-    val events: Flow<DnsEvent> = _events.receiveAsFlow()
 
     val uiState: StateFlow<DnsUiState> =
-        combine(url, DnsVpnService.tunnelState, privateDnsServer) { url, tunnel, privateDns ->
-            DnsUiState(url.orEmpty(), tunnel, privateDns, vpnSettings, url != null)
+        combine(preferences.url, tunnel.state, privateDnsServer, request) { url, state, privateDns, request ->
+            DnsUiState(
+                url = url,
+                tunnel = if (request.starting && state == TunnelState.Off) TunnelState.Connecting else state,
+                privateDnsServer = privateDns,
+                vpnSettings = tunnel.vpnSettings,
+                loaded = true,
+                readyToConnect = request.readyToConnect,
+                failure = request.failure
+            )
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-            DnsUiState(tunnel = DnsVpnService.tunnelState.value, vpnSettings = vpnSettings)
+            DnsUiState(tunnel = tunnel.state.value, vpnSettings = tunnel.vpnSettings)
         )
-
-    init {
-        viewModelScope.launch { url.value = preferences.url() }
-    }
 
     fun setUrl(value: String) {
         urlCheck?.cancel()
         urlCheck = viewModelScope.launch {
-            if (DnsVpnService.tunnelState.value !in Running) return@launch save(value)
+            if (tunnel.state.value !in Running) return@launch preferences.setUrl(value)
             val result = ask(value)
             if (result is DohResult.Answer) {
-                save(value)
-                updateTunnel()
+                preferences.setUrl(value)
             } else {
-                _events.send(DnsEvent.Failed(result))
+                request.update { it.copy(failure = result) }
             }
         }
     }
 
     fun turnOn() {
-        val server = dohUrl(url.value.orEmpty()) ?: return
-        DnsVpnService.state.value = TunnelState.Connecting
+        val server = dohUrl(uiState.value.url) ?: return
+        request.update { it.copy(starting = true) }
         probe = viewModelScope.launch {
             val result = ask(server)
-            if (result is DohResult.Answer) {
-                _events.send(DnsEvent.Connect)
-            } else {
-                DnsVpnService.state.value = TunnelState.Off
-                _events.send(DnsEvent.Failed(result))
+            request.update {
+                if (result is DohResult.Answer) it.copy(readyToConnect = true) else it.copy(starting = false, failure = result)
             }
         }
     }
 
-    fun connect() = DnsVpnService.start(getApplication())
+    fun connectRequestHandled() {
+        request.update { it.copy(readyToConnect = false) }
+    }
+
+    fun connect() {
+        tunnel.start()
+        viewModelScope.launch {
+            tunnel.state.first { it != TunnelState.Off }
+            request.update { it.copy(starting = false) }
+        }
+    }
 
     fun cancel() {
-        DnsVpnService.state.value = TunnelState.Off
+        request.update { it.copy(starting = false) }
     }
 
     fun turnOff() {
         probe?.cancel()
-        DnsVpnService.state.compareAndSet(TunnelState.Connecting, TunnelState.Off)
-        DnsVpnService.stop(getApplication())
+        request.update { it.copy(starting = false, readyToConnect = false) }
+        tunnel.stop()
     }
 
     fun refresh() {
-        privateDnsServer.value = connectivity.getLinkProperties(connectivity.activeNetwork)?.privateDnsServerName
-        updateTunnel()
+        if (tunnel.state.value in Running) tunnel.start()
     }
 
-    override fun onCleared() {
-        DnsVpnService.state.compareAndSet(TunnelState.Connecting, TunnelState.Off)
+    fun failureShown() {
+        request.update { it.copy(failure = null) }
     }
 
     private suspend fun ask(server: String): DohResult = resolve(server, addressQuery(URI(server).host))
 
-    private suspend fun save(value: String) {
-        preferences.setUrl(value)
-        url.value = value
-    }
-
-    private fun updateTunnel() {
-        if (DnsVpnService.tunnelState.value in Running) DnsVpnService.start(getApplication())
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                val container = (this[APPLICATION_KEY] as AdblockApplication).container
+                DnsViewModel(container.preferences, container.tunnel, container.network.privateDnsServer, container.doh::resolve)
+            }
+        }
     }
 }

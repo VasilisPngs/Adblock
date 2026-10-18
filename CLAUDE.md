@@ -15,6 +15,7 @@
 - All code is written in English.
 - Source contains no comments of any kind: no inline, header, licence, KDoc or TODO comments and no commented-out code.
 - Use the latest appropriate official technologies, APIs, libraries and tools, tracking the newest published build in any release channel, including preview, alpha, beta, release candidate and canary.
+- Latest applies to APIs, not only to version numbers: check every API, library, pattern and tool against what Google's official documentation recommends today and migrate whatever is deprecated, superseded or advised against, such as SharedPreferences to DataStore or AndroidViewModel to ViewModel. Do this for all code a change touches, and across the whole codebase whenever dependencies are updated, reading their release notes for deprecations and replacements.
 - A newer toolchain is only acceptable while the signed release APK still installs on a release device; never compile against a preview Android platform, which stamps the package as preview-built and makes it unparseable on release builds.
 - Every change that introduces a library, API, component, platform feature or tool also adds its official documentation to Official references in the same commit: Google's own pages (developer.android.com, source.android.com, m3.material.io, fonts.google.com) or, for a library outside Google, its maintainers' documentation, each checked to load the right page.
 - Do not add a numeric product version to the visible product identity, release name, APK filename, release tag, or API User-Agent unless explicitly requested.
@@ -25,7 +26,7 @@
 - Each screen has a single-row `TopAppBar` with the plain screen name as its title, and every list entry is its own fully rounded Material 3 Expressive `SegmentedListItem` in the surface container color of Google's samples, spaced apart rather than joined into a group.
 - Frontend, UI and UX keep uniform, symmetric and consistent geometry with correct alignment, as Material 3's layout guidance defines it: each breakpoint's window margins, the top app bar's title and actions on the same edges as the content, and one alignment line for text and controls.
 - Icons come from Material Symbols Rounded, except a third party's own logo where the interface names that third party.
-- Text uses Google Sans Flex from Google Fonts through Compose downloadable fonts.
+- Text uses Google Sans from Google Fonts through Compose downloadable fonts.
 - Use Google's blur and transparency effects wherever Google's guidance uses them, such as the window blur behind dialogs.
 - Add an R8 keep rule only for code that a missing rule demonstrably breaks.
 
@@ -66,6 +67,9 @@
 - Text in Compose: https://developer.android.com/develop/ui/compose/text
 - Fonts and downloadable fonts in Compose: https://developer.android.com/develop/ui/compose/text/fonts
 - Text fields in Compose: https://developer.android.com/develop/ui/compose/text/user-input
+- OutlinedTextFieldDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/OutlinedTextFieldDefaults
+- ButtonDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/ButtonDefaults
+- ComposeMaterial3Flags: https://developer.android.com/reference/kotlin/androidx/compose/material3/ComposeMaterial3Flags
 - Resources in Compose: https://developer.android.com/develop/ui/compose/resources
 - LocalResources: https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/package-summary#LocalResources()
 - Icons in Compose: https://developer.android.com/develop/ui/compose/graphics/images/material
@@ -110,7 +114,7 @@
 - Dynamic color: https://m3.material.io/styles/color/dynamic/choosing-a-source
 - Typography: https://m3.material.io/styles/typography/overview
 - Typography fonts: https://m3.material.io/styles/typography/fonts
-- Google Sans Flex: https://fonts.google.com/specimen/Google+Sans+Flex
+- Google Sans: https://fonts.google.com/specimen/Google+Sans
 - Shape: https://m3.material.io/styles/shape/overview-principles
 - Shape morph: https://m3.material.io/styles/shape/shape-morph
 - Motion: https://m3.material.io/styles/motion/overview/how-it-works
@@ -184,6 +188,8 @@
 - HttpEngine: https://developer.android.com/reference/android/net/http/HttpEngine
 - UrlRequest: https://developer.android.com/reference/android/net/http/UrlRequest
 - ConnectivityManager: https://developer.android.com/reference/android/net/ConnectivityManager
+- ConnectivityManager.NetworkCallback: https://developer.android.com/reference/android/net/ConnectivityManager.NetworkCallback
+- Read network state: https://developer.android.com/develop/connectivity/network-ops/reading-network-state
 - LinkProperties: https://developer.android.com/reference/android/net/LinkProperties
 - ParcelFileDescriptor: https://developer.android.com/reference/android/os/ParcelFileDescriptor
 - OsConstants: https://developer.android.com/reference/android/system/OsConstants
@@ -224,6 +230,10 @@
 ### Architecture, quality and testing
 - Guide to app architecture: https://developer.android.com/topic/architecture
 - Architecture recommendations: https://developer.android.com/topic/architecture/recommendations
+- UI events: https://developer.android.com/topic/architecture/ui-layer/events
+- UI state production: https://developer.android.com/topic/architecture/ui-layer/state-production
+- Data layer: https://developer.android.com/topic/architecture/data-layer
+- Manual dependency injection: https://developer.android.com/training/dependency-injection/manual
 - ViewModel: https://developer.android.com/topic/libraries/architecture/viewmodel
 - ViewModel factories: https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-factories
 - Lifecycle in Compose: https://developer.android.com/topic/libraries/architecture/lifecycle
@@ -233,6 +243,7 @@
 - Adaptive app quality guidelines: https://developer.android.com/docs/quality-guidelines/adaptive-app-quality
 - App performance guide: https://developer.android.com/topic/performance/overview
 - Compose performance: https://developer.android.com/develop/ui/compose/performance
+- Compose performance best practices: https://developer.android.com/develop/ui/compose/performance/bestpractices
 - Baseline Profiles: https://developer.android.com/topic/performance/baselineprofiles/overview
 - Test apps on Android: https://developer.android.com/training/testing
 - Local unit tests: https://developer.android.com/training/testing/local-tests
@@ -254,6 +265,7 @@
 
 ### Television
 - Android TV: https://developer.android.com/training/tv
+- TV hardware: https://developer.android.com/training/tv/get-started/hardware
 - Compose on Android TV: https://developer.android.com/training/tv/playback/compose
 - Adaptive apps for TV: https://developer.android.com/develop/adaptive-apps/guides/tv/build-adaptive-apps-for-tv
 - TV layouts and overscan: https://developer.android.com/design/ui/tv/guides/styles/layouts

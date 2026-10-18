@@ -6,19 +6,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.android.adblock.ui.DnsScreen
 import com.android.adblock.ui.DnsViewModel
 import com.android.adblock.ui.theme.AdblockTheme
-import com.android.adblock.vpn.DohClient
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: DnsViewModel by viewModels {
-        viewModelFactory {
-            initializer { DnsViewModel(application, DohClient.shared(application)::resolve) }
-        }
-    }
+    private val viewModel: DnsViewModel by viewModels { DnsViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

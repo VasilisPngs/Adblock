@@ -29,20 +29,24 @@ internal fun dnsAnswer(query: ByteArray, response: ByteArray): DohResult =
         DohResult.Failed
     }
 
-class DohClient private constructor(context: Context) {
+class DohClient(context: Context) {
     private val engine = HttpEngine.Builder(context).build()
     private val executor = Executors.newSingleThreadExecutor()
 
     fun resolve(url: String, query: ByteArray, onResult: (DohResult) -> Unit) {
-        engine.newUrlRequestBuilder(dohRequest(url, query), executor, Exchange(query, onResult))
-            .addHeader("Accept", DNS_MESSAGE)
-            .build()
-            .start()
+        request(url, query, onResult).start()
     }
 
     suspend fun resolve(url: String, query: ByteArray): DohResult = suspendCancellableCoroutine { continuation ->
-        resolve(url, query) { continuation.resume(it) }
+        val request = request(url, query) { continuation.resume(it) }
+        continuation.invokeOnCancellation { request.cancel() }
+        request.start()
     }
+
+    private fun request(url: String, query: ByteArray, onResult: (DohResult) -> Unit): UrlRequest =
+        engine.newUrlRequestBuilder(dohRequest(url, query), executor, Exchange(query, onResult))
+            .addHeader("Accept", DNS_MESSAGE)
+            .build()
 
     private class Exchange(private val query: ByteArray, private val onResult: (DohResult) -> Unit) : UrlRequest.Callback {
         private val body = ByteArrayOutputStream()
@@ -73,13 +77,5 @@ class DohClient private constructor(context: Context) {
         override fun onFailed(request: UrlRequest, info: UrlResponseInfo?, error: HttpException) = onResult(DohResult.Failed)
 
         override fun onCanceled(request: UrlRequest, info: UrlResponseInfo?) = onResult(result)
-    }
-
-    companion object {
-        @Volatile
-        private var shared: DohClient? = null
-
-        fun shared(context: Context): DohClient =
-            shared ?: synchronized(this) { shared ?: DohClient(context.applicationContext).also { shared = it } }
     }
 }

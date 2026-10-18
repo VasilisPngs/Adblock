@@ -1,5 +1,6 @@
 package com.android.adblock.ui
 
+import android.content.pm.PackageManager
 import androidx.annotation.StringRes
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
@@ -8,16 +9,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasSetTextAction
@@ -40,6 +44,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -71,7 +76,7 @@ class DnsScreenTest {
         compose.onNodeWithText(string(R.string.dns_over_https)).performClick()
 
         state = DnsUiState(url = SERVER, tunnel = TunnelState.On)
-        compose.onNodeWithText(string(R.string.dns_over_https)).assertIsOn()
+        compose.onNodeWithText(string(R.string.dns_over_https)).assertIsOn().assert(SwitchRole)
         compose.onNodeWithText(string(R.string.dns_over_https)).performClick()
 
         assertEquals(listOf(true, false), switches)
@@ -149,7 +154,7 @@ class DnsScreenTest {
         show(DnsUiState(url = SERVER, tunnel = TunnelState.AlwaysOn))
 
         compose.onNodeWithText(string(R.string.tunnel_always_on)).assertIsDisplayed()
-        compose.onNodeWithText(string(R.string.dns_over_https)).assertIsSelected().performClick()
+        compose.onNodeWithText(string(R.string.dns_over_https)).assertIsOn().assert(SwitchRole).performClick()
 
         assertEquals(1, vpnSettingsOpened)
         assertTrue(switches.isEmpty())
@@ -249,6 +254,7 @@ class DnsScreenTest {
     @Test
     @Config(qualifiers = "w960dp-h540dp-television")
     fun `keeps the content inside the television overscan`() {
+        shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
         assertContentEdge(24.dp + 48.dp)
     }
 
@@ -288,5 +294,6 @@ class DnsScreenTest {
     private companion object {
         const val SERVER = "https://adblock.example.workers.dev/dns-query/0123abcd"
         const val OTHER = "https://dns.adguard-dns.com/dns-query"
+        val SwitchRole = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)
     }
 }

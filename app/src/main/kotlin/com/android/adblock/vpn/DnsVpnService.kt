@@ -4,7 +4,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.VpnService
@@ -13,16 +12,14 @@ import android.system.OsConstants
 import androidx.core.net.toUri
 import com.android.adblock.MainActivity
 import com.android.adblock.R
-import com.android.adblock.data.DnsPreferences
+import com.android.adblock.appContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
@@ -30,11 +27,9 @@ import java.io.FileOutputStream
 import java.io.IOException
 import kotlin.concurrent.thread
 
-enum class TunnelState { Off, Connecting, On, AlwaysOn }
-
 class DnsVpnService : VpnService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val preferences by lazy { DnsPreferences(this) }
+    private val container by lazy { appContainer }
     private var tunnel: ParcelFileDescriptor? = null
     private var connecting: Job? = null
 
@@ -47,8 +42,12 @@ class DnsVpnService : VpnService() {
             return START_NOT_STICKY
         }
         startForeground(NOTIFICATION_ID, notification(server.ifEmpty { null }), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
-        connecting?.cancel()
-        connecting = scope.launch { connect(dohUrl(preferences.url())) }
+        if (connecting?.isActive == true) {
+            if (tunnel != null) publish()
+        } else {
+            container.tunnel.update(TunnelState.Connecting)
+            connecting = scope.launch { container.preferences.url.map(::dohUrl).collect { connect(it) } }
+        }
         return START_STICKY
     }
 
@@ -68,9 +67,13 @@ class DnsVpnService : VpnService() {
         }
         if (tunnel == null) {
             tunnel = establish() ?: return stop()
-            preferences.setEnabled(true)
+            container.preferences.setEnabled(true)
         }
-        state.value = if (isAlwaysOn) TunnelState.AlwaysOn else TunnelState.On
+        publish()
+    }
+
+    private fun publish() {
+        container.tunnel.update(if (isAlwaysOn) TunnelState.AlwaysOn else TunnelState.On)
     }
 
     private fun establish(): ParcelFileDescriptor? {
@@ -85,7 +88,7 @@ class DnsVpnService : VpnService() {
             .setBlocking(true)
             .setConfigureIntent(openApp())
             .establish() ?: return null
-        val doh = DohClient.shared(this)
+        val doh = container.doh
         thread(name = "dns-tunnel") { forward(tunnel, doh) }
         return tunnel
     }
@@ -114,7 +117,8 @@ class DnsVpnService : VpnService() {
 
     private fun stop() {
         connecting?.cancel()
-        scope.launch { withContext(NonCancellable) { preferences.setEnabled(false) } }
+        connecting = null
+        scope.launch { withContext(NonCancellable) { container.preferences.setEnabled(false) } }
         close()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -123,7 +127,7 @@ class DnsVpnService : VpnService() {
     private fun close() {
         tunnel?.close()
         tunnel = null
-        state.value = TunnelState.Off
+        container.tunnel.update(TunnelState.Off)
     }
 
     private fun notification(url: String?): Notification {
@@ -142,22 +146,11 @@ class DnsVpnService : VpnService() {
         PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
 
     companion object {
-        private const val ACTION_STOP = "com.android.adblock.STOP"
+        internal const val ACTION_STOP = "com.android.adblock.STOP"
         private const val CHANNEL_ID = "dns"
         private const val NOTIFICATION_ID = 1
         private const val TUNNEL_ADDRESS = "198.18.0.1"
         private const val DNS_ADDRESS = "198.18.0.53"
         private const val MAX_PACKET = 0xFFFF
-
-        internal val state = MutableStateFlow(TunnelState.Off)
-        val tunnelState: StateFlow<TunnelState> = state.asStateFlow()
-
-        fun start(context: Context) {
-            context.startForegroundService(Intent(context, DnsVpnService::class.java))
-        }
-
-        fun stop(context: Context) {
-            context.startService(Intent(context, DnsVpnService::class.java).setAction(ACTION_STOP))
-        }
     }
 }

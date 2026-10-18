@@ -8,7 +8,9 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 private const val NAME = "dns_preferences"
 
@@ -20,13 +22,13 @@ private val Context.dnsPreferences: DataStore<Preferences> by preferencesDataSto
 class DnsPreferences(private val store: DataStore<Preferences>) {
     constructor(context: Context) : this(context.dnsPreferences)
 
-    suspend fun url(): String = store.data.first()[URL].orEmpty()
+    val url: Flow<String> = store.data.map { it[URL].orEmpty() }.distinctUntilChanged()
+
+    val enabled: Flow<Boolean> = store.data.map { it[ENABLED] ?: false }.distinctUntilChanged()
 
     suspend fun setUrl(value: String) {
         store.edit { it[URL] = value }
     }
-
-    suspend fun enabled(): Boolean = store.data.first()[ENABLED] ?: false
 
     suspend fun setEnabled(value: Boolean) {
         store.edit { it[ENABLED] = value }
