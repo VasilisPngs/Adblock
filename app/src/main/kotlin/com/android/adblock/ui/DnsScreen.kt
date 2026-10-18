@@ -11,9 +11,17 @@ import android.net.VpnService
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.WindowManager
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,9 +34,13 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
@@ -53,23 +65,34 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
@@ -95,6 +118,8 @@ import com.android.adblock.data.ThemeMode
 import com.android.adblock.vpn.DohResult
 import com.android.adblock.vpn.TunnelState
 import com.android.adblock.vpn.dohUrl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.util.function.Consumer
 
 private val CompactMargin = 16.dp
@@ -104,9 +129,19 @@ private val SmallSpacing = 8.dp
 private val OptionHeight = 56.dp
 private val TvOverscanHorizontal = 48.dp
 private val TvOverscanVertical = 27.dp
+private const val FADE_THROUGH_SCALE = 0.92f
 private const val BLUR_BEHIND_RADIUS = 20
 private const val DIM_WITH_BLUR = 0.1f
 private const val DIM_WITHOUT_BLUR = 0.4f
+
+private enum class AppTab(
+    @StringRes val labelRes: Int,
+    @DrawableRes val iconRes: Int,
+    @DrawableRes val selectedIconRes: Int
+) {
+    Home(R.string.home, R.drawable.ic_home, R.drawable.ic_home_filled),
+    Settings(R.string.settings, R.drawable.ic_settings, R.drawable.ic_settings_filled)
+}
 
 @Composable
 fun DnsScreen(
@@ -171,22 +206,47 @@ internal fun DnsScreen(
     onDynamicColorChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedTab by rememberSaveable { mutableStateOf(AppTab.Home) }
     var editing by rememberSaveable { mutableStateOf(false) }
     var themeDialog by rememberSaveable { mutableStateOf(false) }
-    val focus = remember { FocusRequester() }
+    val homeListState = rememberLazyListState()
+    val settingsListState = rememberLazyListState()
+    val homeBarState = rememberTopAppBarState()
+    val settingsBarState = rememberTopAppBarState()
+    val homeFocus = remember { FocusRequester() }
+    val settingsFocus = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
+    val coroutineScope = rememberCoroutineScope()
+    BackHandler(enabled = selectedTab != AppTab.Home) { selectedTab = AppTab.Home }
 
     LaunchedEffect(Unit) {
-        if (inputModeManager.inputMode == InputMode.Keyboard) focus.requestFocus()
+        if (inputModeManager.inputMode == InputMode.Keyboard) homeFocus.requestFocus()
     }
 
+    val activeListState = if (selectedTab == AppTab.Home) homeListState else settingsListState
+    val activeBarState = if (selectedTab == AppTab.Home) homeBarState else settingsBarState
+    val activeFocus = if (selectedTab == AppTab.Home) homeFocus else settingsFocus
+    val selectTab: (AppTab) -> Unit = { tab ->
+        if (tab != selectedTab) {
+            selectedTab = tab
+        } else {
+            coroutineScope.reveal(activeListState, activeBarState)
+        }
+    }
     val windowInfo = currentWindowAdaptiveInfoV2()
+    val navigationSuiteType = NavigationSuiteScaffoldDefaults.navigationSuiteType(windowInfo)
     val margin = if (windowInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)) {
         WideMargin
     } else {
         CompactMargin
     }
     val barMargin = margin - CompactMargin
+    val navigationBar = navigationSuiteType == NavigationSuiteType.ShortNavigationBarCompact ||
+        navigationSuiteType == NavigationSuiteType.ShortNavigationBarMedium
+    val window = LocalActivity.current?.window
+    val navigationBarScrim = !navigationBar && WindowInsets.navigationBars.getBottom(LocalDensity.current) > 0
+    SideEffect { window?.isNavigationBarContrastEnforced = navigationBarScrim }
+
     val context = LocalContext.current
     val television = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
     val overscan = if (television) {
@@ -194,136 +254,91 @@ internal fun DnsScreen(
     } else {
         WindowInsets(0)
     }
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(R.string.app_name)) },
-                windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
-                contentPadding = PaddingValues(horizontal = barMargin),
-                scrollBehavior = scrollBehavior
-            )
+    NavigationSuiteScaffold(
+        navigationItems = {
+            AppTab.entries.forEach { tab ->
+                val selected = tab == selectedTab
+                NavigationSuiteItem(
+                    selected = selected,
+                    onClick = { selectTab(tab) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(if (selected) tab.selectedIconRes else tab.iconRes),
+                            contentDescription = null
+                        )
+                    },
+                    label = { Text(text = stringResource(tab.labelRes)) },
+                    navigationSuiteType = navigationSuiteType,
+                    modifier = Modifier.focusProperties {
+                        val first = tab == AppTab.entries.first()
+                        val last = tab == AppTab.entries.last()
+                        if (navigationBar) {
+                            up = activeFocus
+                            if (first) start = FocusRequester.Cancel
+                            if (last) end = FocusRequester.Cancel
+                        } else {
+                            end = activeFocus
+                            if (first) up = FocusRequester.Cancel
+                            if (last) down = FocusRequester.Cancel
+                        }
+                    }
+                )
+            }
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
-    ) { padding ->
-        val layoutDirection = LocalLayoutDirection.current
-        val on = uiState.tunnel != TunnelState.Off
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .focusRequester(focus)
-                .focusRestorer(),
-            contentPadding = PaddingValues(
+        modifier = modifier.windowInsetsPadding(overscan.only(WindowInsetsSides.Start)),
+        navigationSuiteType = navigationSuiteType
+    ) {
+        val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(activeBarState)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(text = stringResource(selectedTab.labelRes)) },
+                    windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+                    contentPadding = PaddingValues(horizontal = barMargin),
+                    scrollBehavior = scrollBehavior
+                )
+            },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            contentWindowInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
+        ) { padding ->
+            val layoutDirection = LocalLayoutDirection.current
+            val contentPadding = PaddingValues(
                 start = padding.calculateStartPadding(layoutDirection) + margin,
                 top = padding.calculateTopPadding(),
                 end = padding.calculateEndPadding(layoutDirection) + margin,
                 bottom = padding.calculateBottomPadding() + margin
-            ),
-            verticalArrangement = Arrangement.spacedBy(SmallSpacing)
-        ) {
-            item(key = "dns") {
-                val supporting = @Composable { Text(text = stringResource(uiState.tunnel.labelRes)) }
-                val title = @Composable { Text(text = stringResource(R.string.dns_over_https)) }
-                if (uiState.tunnel == TunnelState.AlwaysOn) {
-                    SegmentedListItem(
-                        checked = true,
-                        onCheckedChange = { onVpnSettings() },
-                        modifier = Modifier.semantics { role = Role.Switch },
-                        shapes = ListItemDefaults.segmentedShapes(0, 1),
-                        colors = listItemColors(),
-                        supportingContent = supporting,
-                        trailingContent = { Switch(checked = true, onCheckedChange = null, enabled = false) },
-                        content = title
+            )
+            val motion = MaterialTheme.motionScheme
+
+            AnimatedContent(
+                targetState = selectedTab,
+                transitionSpec = {
+                    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), FADE_THROUGH_SCALE))
+                        .togetherWith(fadeOut(motion.fastEffectsSpec()))
+                }
+            ) { tab ->
+                when (tab) {
+                    AppTab.Home -> HomeView(
+                        listState = homeListState,
+                        nestedScroll = scrollBehavior.nestedScrollConnection,
+                        focus = homeFocus,
+                        contentPadding = contentPadding,
+                        uiState = uiState,
+                        onEnabledChange = { enabled -> if (enabled && uiState.url.isEmpty()) editing = true else onEnabledChange(enabled) },
+                        onUrl = { editing = true },
+                        onPrivateDns = onPrivateDns,
+                        onVpnSettings = onVpnSettings
                     )
-                } else {
-                    SegmentedListItem(
-                        checked = on,
-                        onCheckedChange = { enabled -> if (enabled && uiState.url.isEmpty()) editing = true else onEnabledChange(enabled) },
-                        modifier = Modifier.semantics { role = Role.Switch },
-                        shapes = ListItemDefaults.segmentedShapes(0, 1),
-                        colors = listItemColors(),
-                        supportingContent = supporting,
-                        trailingContent = { Switch(checked = on, onCheckedChange = null) },
-                        content = title
+                    AppTab.Settings -> SettingsView(
+                        listState = settingsListState,
+                        nestedScroll = scrollBehavior.nestedScrollConnection,
+                        focus = settingsFocus,
+                        contentPadding = contentPadding,
+                        appearance = appearance,
+                        onTheme = { themeDialog = true },
+                        onDynamicColorChange = onDynamicColorChange
                     )
-                }
-            }
-
-            item(key = "url") {
-                SegmentedListItem(
-                    onClick = { editing = true },
-                    enabled = uiState.tunnel != TunnelState.Connecting,
-                    shapes = ListItemDefaults.segmentedShapes(0, 1),
-                    colors = listItemColors(),
-                    supportingContent = { Text(text = uiState.url.ifEmpty { stringResource(R.string.server_url_not_set) }) }
-                ) {
-                    Text(text = stringResource(R.string.server_url))
-                }
-            }
-
-            if (uiState.vpnSettings && uiState.tunnel == TunnelState.On) {
-                item(key = "always-on") {
-                    SegmentedListItem(
-                        onClick = onVpnSettings,
-                        shapes = ListItemDefaults.segmentedShapes(0, 1),
-                        colors = listItemColors(),
-                        supportingContent = { Text(text = stringResource(R.string.always_on_vpn_description)) }
-                    ) {
-                        Text(text = stringResource(R.string.always_on_vpn))
-                    }
-                }
-            }
-
-            uiState.privateDnsServer?.let { server ->
-                item(key = "private-dns") {
-                    SegmentedListItem(
-                        onClick = onPrivateDns,
-                        shapes = ListItemDefaults.segmentedShapes(0, 1),
-                        colors = listItemColors(),
-                        leadingContent = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_warning),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        },
-                        supportingContent = { Text(text = stringResource(R.string.private_dns_on_description)) }
-                    ) {
-                        Text(text = stringResource(R.string.private_dns_on, server))
-                    }
-                }
-            }
-
-            item(key = "appearance") {
-                SectionHeader(text = stringResource(R.string.appearance), modifier = Modifier.padding(top = ContentMargin))
-            }
-
-            item(key = "theme") {
-                SegmentedListItem(
-                    onClick = { themeDialog = true },
-                    shapes = ListItemDefaults.segmentedShapes(0, 1),
-                    colors = listItemColors(),
-                    supportingContent = { Text(text = stringResource(appearance.themeMode.labelRes)) }
-                ) {
-                    Text(text = stringResource(R.string.theme))
-                }
-            }
-
-            item(key = "dynamic-color") {
-                SegmentedListItem(
-                    checked = appearance.dynamicColor,
-                    onCheckedChange = onDynamicColorChange,
-                    modifier = Modifier.semantics { role = Role.Switch },
-                    shapes = ListItemDefaults.segmentedShapes(0, 1),
-                    colors = listItemColors(),
-                    supportingContent = { Text(text = stringResource(R.string.dynamic_color_description)) },
-                    trailingContent = { Switch(checked = appearance.dynamicColor, onCheckedChange = null) }
-                ) {
-                    Text(text = stringResource(R.string.dynamic_color))
                 }
             }
         }
@@ -349,6 +364,155 @@ internal fun DnsScreen(
                 onUrlChange(url)
             }
         )
+    }
+}
+
+@Composable
+private fun HomeView(
+    listState: LazyListState,
+    nestedScroll: NestedScrollConnection,
+    focus: FocusRequester,
+    contentPadding: PaddingValues,
+    uiState: DnsUiState,
+    onEnabledChange: (Boolean) -> Unit,
+    onUrl: () -> Unit,
+    onPrivateDns: () -> Unit,
+    onVpnSettings: () -> Unit
+) {
+    val on = uiState.tunnel != TunnelState.Off
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(nestedScroll)
+            .focusRequester(focus)
+            .focusRestorer(),
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(SmallSpacing)
+    ) {
+        item(key = "dns") {
+            val supporting = @Composable { Text(text = stringResource(uiState.tunnel.labelRes)) }
+            val title = @Composable { Text(text = stringResource(R.string.dns_over_https)) }
+            if (uiState.tunnel == TunnelState.AlwaysOn) {
+                SegmentedListItem(
+                    checked = true,
+                    onCheckedChange = { onVpnSettings() },
+                    modifier = Modifier.semantics { role = Role.Switch },
+                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    colors = listItemColors(),
+                    supportingContent = supporting,
+                    trailingContent = { Switch(checked = true, onCheckedChange = null, enabled = false) },
+                    content = title
+                )
+            } else {
+                SegmentedListItem(
+                    checked = on,
+                    onCheckedChange = onEnabledChange,
+                    modifier = Modifier.semantics { role = Role.Switch },
+                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    colors = listItemColors(),
+                    supportingContent = supporting,
+                    trailingContent = { Switch(checked = on, onCheckedChange = null) },
+                    content = title
+                )
+            }
+        }
+
+        item(key = "url") {
+            SegmentedListItem(
+                onClick = onUrl,
+                enabled = uiState.tunnel != TunnelState.Connecting,
+                shapes = ListItemDefaults.segmentedShapes(0, 1),
+                colors = listItemColors(),
+                supportingContent = { Text(text = uiState.url.ifEmpty { stringResource(R.string.server_url_not_set) }) }
+            ) {
+                Text(text = stringResource(R.string.server_url))
+            }
+        }
+
+        if (uiState.vpnSettings && uiState.tunnel == TunnelState.On) {
+            item(key = "always-on") {
+                SegmentedListItem(
+                    onClick = onVpnSettings,
+                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    colors = listItemColors(),
+                    supportingContent = { Text(text = stringResource(R.string.always_on_vpn_description)) }
+                ) {
+                    Text(text = stringResource(R.string.always_on_vpn))
+                }
+            }
+        }
+
+        uiState.privateDnsServer?.let { server ->
+            item(key = "private-dns") {
+                SegmentedListItem(
+                    onClick = onPrivateDns,
+                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    colors = listItemColors(),
+                    leadingContent = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_warning),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    supportingContent = { Text(text = stringResource(R.string.private_dns_on_description)) }
+                ) {
+                    Text(text = stringResource(R.string.private_dns_on, server))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsView(
+    listState: LazyListState,
+    nestedScroll: NestedScrollConnection,
+    focus: FocusRequester,
+    contentPadding: PaddingValues,
+    appearance: Appearance,
+    onTheme: () -> Unit,
+    onDynamicColorChange: (Boolean) -> Unit
+) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(nestedScroll)
+            .focusRequester(focus)
+            .focusRestorer(),
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(SmallSpacing)
+    ) {
+        item(key = "appearance") {
+            SectionHeader(text = stringResource(R.string.appearance))
+        }
+
+        item(key = "theme") {
+            SegmentedListItem(
+                onClick = onTheme,
+                shapes = ListItemDefaults.segmentedShapes(0, 1),
+                colors = listItemColors(),
+                supportingContent = { Text(text = stringResource(appearance.themeMode.labelRes)) }
+            ) {
+                Text(text = stringResource(R.string.theme))
+            }
+        }
+
+        item(key = "dynamic-color") {
+            SegmentedListItem(
+                checked = appearance.dynamicColor,
+                onCheckedChange = onDynamicColorChange,
+                modifier = Modifier.semantics { role = Role.Switch },
+                shapes = ListItemDefaults.segmentedShapes(0, 1),
+                colors = listItemColors(),
+                supportingContent = { Text(text = stringResource(R.string.dynamic_color_description)) },
+                trailingContent = { Switch(checked = appearance.dynamicColor, onCheckedChange = null) }
+            ) {
+                Text(text = stringResource(R.string.dynamic_color))
+            }
+        }
     }
 }
 
@@ -476,6 +640,13 @@ private fun DialogBlurBehind() {
         window.attributes = window.attributes.apply { blurBehindRadius = BLUR_BEHIND_RADIUS }
         windowManager.addCrossWindowBlurEnabledListener(listener)
         onDispose { windowManager.removeCrossWindowBlurEnabledListener(listener) }
+    }
+}
+
+private fun CoroutineScope.reveal(listState: LazyListState, barState: TopAppBarState) {
+    launch {
+        listState.animateScrollToItem(0)
+        barState.contentOffset = 0f
     }
 }
 
