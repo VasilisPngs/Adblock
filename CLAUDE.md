@@ -39,6 +39,11 @@
 - Below 600px the app has the navigation bar and from 600px the navigation rail; every screen has a single-row top app bar with the plain screen name, and list entries are standalone fully rounded surface-container items spaced 8px apart, as on Android.
 - Input, confirmations and choices use Material dialogs, messages use snackbars, and loading uses the LoadingIndicator, contained for pull to refresh.
 - The page turns off overscroll bounce so that pull to refresh behaves as Material defines it.
+- Overflow actions open the Material 3 Expressive menu: groups of items in surface container low, 2px apart, with 16dp outer corners; long lists to pick from open a modal bottom sheet in surface container low with 28dp top corners, a 32×4dp drag handle and at most 640dp wide.
+- Choices such as theme, language or a category open a dialog with radio buttons, never the platform's native select.
+- Lists are edited in place, never through an edit mode: a leading drag handle reorders, a trailing icon button removes, and a destructive removal asks first in a dialog.
+- The main action of a screen is a medium filled button (56dp), its alternative a medium tonal button; a two-state action inside a row is a filled icon button that turns from surface container highest into primary and morphs from round to 12dp corners when selected.
+- Secondary information of the screen, such as elapsed time, goes in the top app bar's subtitle, and a running timer floats in the vibrant floating toolbar (primary container, 64dp, fully rounded) above the navigation bar.
 
 ## Cloudflare
 - Every recurring D1 query reads through an index, a partial index when it only looks for rows waiting for work. D1 counts every row read, rows of temporary sort tables included, against the free daily limit of 5,000,000 that all databases of the account share.
@@ -119,6 +124,10 @@
 - Switch: https://m3.material.io/components/switch/overview
 - Radio button: https://m3.material.io/components/radio-button/overview
 - Snackbar: https://m3.material.io/components/snackbar/overview
+- Menus: https://m3.material.io/components/menus/overview
+- Bottom sheets: https://m3.material.io/components/bottom-sheets/overview
+- Toolbars: https://m3.material.io/components/toolbars/overview
+- Chips: https://m3.material.io/components/chips/overview
 - Color roles: https://m3.material.io/styles/color/roles
 - Dynamic color: https://m3.material.io/styles/color/dynamic/choosing-a-source
 - Typography: https://m3.material.io/styles/typography/overview
