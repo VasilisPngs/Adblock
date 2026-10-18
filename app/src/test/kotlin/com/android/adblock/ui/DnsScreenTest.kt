@@ -105,11 +105,22 @@ class DnsScreenTest {
     }
 
     @Test
-    fun `keeps the server while DNS-over-HTTPS is on or connecting`() {
+    fun `changes the server while DNS-over-HTTPS is on`() {
         show(DnsUiState(url = SERVER, tunnel = TunnelState.On))
-        compose.onNodeWithText(string(R.string.server_url)).assertIsNotEnabled()
+        compose.onNodeWithText(string(R.string.server_url)).assertIsEnabled().performClick()
 
-        state = DnsUiState(url = SERVER, tunnel = TunnelState.Connecting)
+        compose.onNode(hasSetTextAction()).performTextReplacement(OTHER)
+        compose.onNodeWithText(string(R.string.save)).performClick()
+
+        assertEquals(listOf(OTHER), urls)
+        state = DnsUiState(url = SERVER, tunnel = TunnelState.AlwaysOn)
+        compose.onNodeWithText(string(R.string.server_url)).assertIsEnabled()
+    }
+
+    @Test
+    fun `keeps the server while DNS-over-HTTPS connects`() {
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.Connecting))
+
         compose.onNodeWithText(string(R.string.server_url)).assertIsNotEnabled()
         compose.onNodeWithText(string(R.string.tunnel_connecting)).assertIsDisplayed()
     }
@@ -125,7 +136,7 @@ class DnsScreenTest {
 
     @Test
     fun `keeps the list container on items that are disabled`() {
-        show(DnsUiState(url = SERVER, tunnel = TunnelState.On, privateDnsServer = "dns.google"))
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.Connecting, privateDnsServer = "dns.google"))
 
         val enabled = compose.onNodeWithText(string(R.string.private_dns_on, "dns.google")).captureToImage().asAndroidBitmap()
         val disabled = compose.onNodeWithText(string(R.string.server_url)).captureToImage().asAndroidBitmap()
@@ -138,7 +149,6 @@ class DnsScreenTest {
         show(DnsUiState(url = SERVER, tunnel = TunnelState.AlwaysOn))
 
         compose.onNodeWithText(string(R.string.tunnel_always_on)).assertIsDisplayed()
-        compose.onNodeWithText(string(R.string.server_url)).assertIsNotEnabled()
         compose.onNodeWithText(string(R.string.dns_over_https)).assertIsSelected().performClick()
 
         assertEquals(1, vpnSettingsOpened)
@@ -277,5 +287,6 @@ class DnsScreenTest {
 
     private companion object {
         const val SERVER = "https://adblock.example.workers.dev/dns-query/0123abcd"
+        const val OTHER = "https://dns.adguard-dns.com/dns-query"
     }
 }

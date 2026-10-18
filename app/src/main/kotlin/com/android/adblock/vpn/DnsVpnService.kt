@@ -27,6 +27,9 @@ enum class TunnelState { Off, Connecting, On, AlwaysOn }
 class DnsVpnService : VpnService() {
     private var tunnel: ParcelFileDescriptor? = null
 
+    @Volatile
+    private var server = ""
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             stop()
@@ -34,8 +37,13 @@ class DnsVpnService : VpnService() {
         }
         val url = dohUrl(DnsPreferences(this).url)
         startForeground(NOTIFICATION_ID, notification(url), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
+        if (url == null) {
+            stop()
+            return START_NOT_STICKY
+        }
+        server = url
         if (tunnel == null) {
-            val established = url?.let(::establish)
+            val established = establish()
             if (established == null) {
                 stop()
                 return START_NOT_STICKY
@@ -54,7 +62,7 @@ class DnsVpnService : VpnService() {
         super.onDestroy()
     }
 
-    private fun establish(url: String): ParcelFileDescriptor? {
+    private fun establish(): ParcelFileDescriptor? {
         val tunnel = Builder()
             .setSession(getString(R.string.app_name))
             .addAddress(TUNNEL_ADDRESS, 32)
@@ -67,11 +75,11 @@ class DnsVpnService : VpnService() {
             .setConfigureIntent(openApp())
             .establish() ?: return null
         val doh = DohClient.shared(this)
-        thread(name = "dns-tunnel") { forward(tunnel, doh, url) }
+        thread(name = "dns-tunnel") { forward(tunnel, doh) }
         return tunnel
     }
 
-    private fun forward(tunnel: ParcelFileDescriptor, doh: DohClient, url: String) {
+    private fun forward(tunnel: ParcelFileDescriptor, doh: DohClient) {
         val input = FileInputStream(tunnel.fileDescriptor)
         val output = FileOutputStream(tunnel.fileDescriptor)
         val packet = ByteArray(MAX_PACKET)
@@ -83,7 +91,7 @@ class DnsVpnService : VpnService() {
             }
             if (length < 0) return
             val query = parseDnsQuery(packet, length) ?: continue
-            doh.resolve(url, query.message) { result ->
+            doh.resolve(server, query.message) { result ->
                 val message = (result as? DohResult.Answer)?.message ?: serverFailure(query.message)
                 try {
                     output.write(dnsResponsePacket(query, message))

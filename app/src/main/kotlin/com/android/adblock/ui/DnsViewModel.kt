@@ -50,6 +50,7 @@ class DnsViewModel(
     private val vpnSettings = Intent(Settings.ACTION_VPN_SETTINGS).resolveActivity(application.packageManager) != null
     private val _events = Channel<DnsEvent>(Channel.BUFFERED)
     private var probe: Job? = null
+    private var urlCheck: Job? = null
     val events: Flow<DnsEvent> = _events.receiveAsFlow()
 
     val uiState: StateFlow<DnsUiState> =
@@ -62,15 +63,24 @@ class DnsViewModel(
         )
 
     fun setUrl(value: String) {
-        preferences.url = value
-        url.value = value
+        urlCheck?.cancel()
+        if (DnsVpnService.tunnelState.value !in Running) return save(value)
+        urlCheck = viewModelScope.launch {
+            val result = ask(value)
+            if (result is DohResult.Answer) {
+                save(value)
+                updateTunnel()
+            } else {
+                _events.send(DnsEvent.Failed(result))
+            }
+        }
     }
 
     fun turnOn() {
         val server = dohUrl(url.value) ?: return
         DnsVpnService.state.value = TunnelState.Connecting
         probe = viewModelScope.launch {
-            val result = resolve(server, addressQuery(URI(server).host))
+            val result = ask(server)
             if (result is DohResult.Answer) {
                 _events.send(DnsEvent.Connect)
             } else {
@@ -94,10 +104,21 @@ class DnsViewModel(
 
     fun refresh() {
         privateDnsServer.value = connectivity.getLinkProperties(connectivity.activeNetwork)?.privateDnsServerName
-        if (DnsVpnService.tunnelState.value in Running) DnsVpnService.start(getApplication())
+        updateTunnel()
     }
 
     override fun onCleared() {
         DnsVpnService.state.compareAndSet(TunnelState.Connecting, TunnelState.Off)
+    }
+
+    private suspend fun ask(server: String): DohResult = resolve(server, addressQuery(URI(server).host))
+
+    private fun save(value: String) {
+        preferences.url = value
+        url.value = value
+    }
+
+    private fun updateTunnel() {
+        if (DnsVpnService.tunnelState.value in Running) DnsVpnService.start(getApplication())
     }
 }

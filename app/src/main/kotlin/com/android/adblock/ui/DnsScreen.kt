@@ -231,7 +231,7 @@ internal fun DnsScreen(
             item(key = "url") {
                 SegmentedListItem(
                     onClick = { editing = true },
-                    enabled = !on,
+                    enabled = uiState.tunnel != TunnelState.Connecting,
                     shapes = ListItemDefaults.segmentedShapes(0, 1),
                     colors = listItemColors(),
                     supportingContent = { Text(text = uiState.url.ifEmpty { stringResource(R.string.server_url_not_set) }) }

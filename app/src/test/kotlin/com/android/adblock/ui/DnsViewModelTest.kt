@@ -36,10 +36,69 @@ class DnsViewModelTest {
     }
 
     @Test
-    fun `keeps the server it is given`() {
+    fun `keeps the server it is given while off`() {
         viewModel(DohResult.Failed).setUrl(SERVER)
 
         assertEquals(SERVER, DnsPreferences(context).url)
+        assertTrue(asked.isEmpty())
+    }
+
+    @Test
+    fun `checks a new server before the running tunnel switches to it`() {
+        val viewModel = viewModel(DohResult.Answer(ByteArray(12)), url = SERVER)
+        DnsVpnService.state.value = TunnelState.On
+
+        viewModel.setUrl(OTHER)
+
+        assertEquals(OTHER, asked.single().first)
+        assertArrayEquals(addressQuery("dns.adguard-dns.com"), asked.single().second)
+        assertEquals(OTHER, DnsPreferences(context).url)
+        assertEquals(OTHER, runBlocking { withTimeoutOrNull(EVENT_WAIT_MILLIS) { viewModel.uiState.first { it.url == OTHER } } }?.url)
+        assertEquals(DnsVpnService::class.java.name, shadowOf(context).nextStartedService.component?.className)
+        assertEquals(TunnelState.On, DnsVpnService.tunnelState.value)
+    }
+
+    @Test
+    fun `keeps the old server and says why when the new one does not answer`() {
+        val viewModel = viewModel(DohResult.Rejected(404), url = SERVER)
+        DnsVpnService.state.value = TunnelState.AlwaysOn
+
+        viewModel.setUrl(OTHER)
+
+        assertEquals(SERVER, DnsPreferences(context).url)
+        assertEquals(DnsEvent.Failed(DohResult.Rejected(404)), viewModel.nextEvent())
+        assertNull(shadowOf(context).nextStartedService)
+        assertEquals(TunnelState.AlwaysOn, DnsVpnService.tunnelState.value)
+    }
+
+    @Test
+    fun `does not start a tunnel that turned off while the new server was checked`() {
+        val answer = CompletableDeferred<DohResult>()
+        DnsPreferences(context).url = SERVER
+        DnsVpnService.state.value = TunnelState.On
+        val viewModel = DnsViewModel(context) { _, _ -> answer.await() }
+        viewModel.setUrl(OTHER)
+
+        DnsVpnService.state.value = TunnelState.Off
+        answer.complete(DohResult.Answer(ByteArray(12)))
+
+        assertEquals(OTHER, DnsPreferences(context).url)
+        assertNull(shadowOf(context).nextStartedService)
+    }
+
+    @Test
+    fun `switches to the server saved last`() {
+        val answers = mutableListOf<CompletableDeferred<DohResult>>()
+        DnsPreferences(context).url = SERVER
+        DnsVpnService.state.value = TunnelState.On
+        val viewModel = DnsViewModel(context) { _, _ -> CompletableDeferred<DohResult>().also(answers::add).await() }
+        viewModel.setUrl(OTHER)
+        viewModel.setUrl(THIRD)
+
+        answers[1].complete(DohResult.Answer(ByteArray(12)))
+        answers[0].complete(DohResult.Answer(ByteArray(12)))
+
+        assertEquals(THIRD, DnsPreferences(context).url)
     }
 
     @Test
@@ -50,7 +109,7 @@ class DnsViewModelTest {
 
         assertEquals(SERVER, asked.single().first)
         assertArrayEquals(addressQuery("dns.nextdns.io"), asked.single().second)
-        assertEquals(DnsEvent.Connect, runBlocking { viewModel.events.first() })
+        assertEquals(DnsEvent.Connect, viewModel.nextEvent())
         assertEquals(TunnelState.Connecting, DnsVpnService.tunnelState.value)
     }
 
@@ -60,7 +119,7 @@ class DnsViewModelTest {
 
         viewModel.turnOn()
 
-        assertEquals(DnsEvent.Failed(DohResult.Rejected(403)), runBlocking { viewModel.events.first() })
+        assertEquals(DnsEvent.Failed(DohResult.Rejected(403)), viewModel.nextEvent())
         assertEquals(TunnelState.Off, DnsVpnService.tunnelState.value)
     }
 
@@ -93,7 +152,7 @@ class DnsViewModelTest {
         answer.complete(DohResult.Answer(ByteArray(12)))
 
         assertEquals(TunnelState.Off, DnsVpnService.tunnelState.value)
-        assertNull(runBlocking { withTimeoutOrNull(EVENT_WAIT_MILLIS) { viewModel.events.first() } })
+        assertNull(viewModel.nextEvent())
     }
 
     @Test
@@ -120,6 +179,8 @@ class DnsViewModelTest {
         assertTrue(viewModel(DohResult.Failed).uiState.value.vpnSettings)
     }
 
+    private fun DnsViewModel.nextEvent(): DnsEvent? = runBlocking { withTimeoutOrNull(EVENT_WAIT_MILLIS) { events.first() } }
+
     private fun viewModel(result: DohResult, url: String = ""): DnsViewModel {
         DnsPreferences(context).url = url
         return DnsViewModel(context) { server, query ->
@@ -130,6 +191,8 @@ class DnsViewModelTest {
 
     private companion object {
         const val SERVER = "https://dns.nextdns.io/abc123"
+        const val OTHER = "https://dns.adguard-dns.com/dns-query"
+        const val THIRD = "https://cloudflare-dns.com/dns-query"
         const val EVENT_WAIT_MILLIS = 200L
     }
 }
