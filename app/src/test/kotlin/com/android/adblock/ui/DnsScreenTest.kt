@@ -33,6 +33,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
@@ -282,6 +283,35 @@ class DnsScreenTest {
 
         assertEquals(listOf(true), dynamicColors)
     }
+
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun `measures the settings by Google's list and app bar tokens`() {
+        show(DnsUiState(url = SERVER))
+        compose.onNodeWithText(string(R.string.dynamic_color)).performScrollTo()
+        val heading = text(string(R.string.appearance))
+        val themeItem = compose.onNodeWithText(string(R.string.theme)).getBoundsInRoot()
+        val themeTitle = text(string(R.string.theme))
+        val dynamicItem = compose.onNodeWithText(string(R.string.dynamic_color)).getBoundsInRoot()
+        val title = text(string(R.string.app_name))
+
+        assertEquals(16.dp, title.left)
+        assertEquals(themeTitle.left, heading.left)
+        assertEquals(themeItem.left + 16.dp, themeTitle.left)
+        assertEquals(72.dp, themeItem.bottom - themeItem.top)
+        assertEquals(72.dp, dynamicItem.bottom - dynamicItem.top)
+        assertEquals(themeItem.left, dynamicItem.left)
+        assertEquals(themeItem.right, dynamicItem.right)
+        assertEquals(8.dp, dynamicItem.top - themeItem.bottom)
+
+        compose.onNodeWithText(string(R.string.theme)).performClick()
+        val light = compose.onNodeWithText(string(R.string.theme_light)).getBoundsInRoot()
+        val dark = compose.onNodeWithText(string(R.string.theme_dark)).getBoundsInRoot()
+        assertEquals(56.dp, light.bottom - light.top)
+        assertEquals(light.bottom, dark.top)
+    }
+
+    private fun text(value: String): DpRect = compose.onNodeWithText(value, useUnmergedTree = true).getBoundsInRoot()
 
     private fun assertContentEdge(margin: Dp) {
         show(DnsUiState(url = SERVER))

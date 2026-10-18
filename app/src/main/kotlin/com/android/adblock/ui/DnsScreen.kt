@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -53,7 +54,6 @@ import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -101,6 +101,7 @@ private val CompactMargin = 16.dp
 private val ContentMargin = 16.dp
 private val WideMargin = 24.dp
 private val SmallSpacing = 8.dp
+private val OptionHeight = 56.dp
 private val TvOverscanHorizontal = 48.dp
 private val TvOverscanVertical = 27.dp
 private const val BLUR_BEHIND_RADIUS = 20
@@ -437,8 +438,8 @@ private fun ThemeDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (selected) Modifier.focusRequester(focus) else Modifier)
-                            .selectable(selected = selected, onClick = { onSelect(mode) }, role = Role.RadioButton)
-                            .minimumInteractiveComponentSize(),
+                            .height(OptionHeight)
+                            .selectable(selected = selected, onClick = { onSelect(mode) }, role = Role.RadioButton),
                         horizontalArrangement = Arrangement.spacedBy(ContentMargin),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
