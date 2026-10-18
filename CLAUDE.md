@@ -34,7 +34,7 @@
 ## Web
 - Web apps follow the same Google guidance as Android: Material 3 Expressive as m3.material.io defines it. Google ships no Material 3 Expressive library for the web and Material Web is in maintenance mode, so the components are written in plain HTML, CSS and JavaScript from the official Compose Material 3 tokens, never from third-party ports.
 - Colors are the Material 3 color roles that Material Color Utilities generates with `SchemeTonalSpot`, spec version 2025, from the seed `#4285F4`, written as CSS custom properties with `light-dark()`; the web has no dynamic color.
-- Text uses Google Sans woff2 files from Google Fonts, served by the app itself in the latin, latin-ext and greek subsets, with the Material 3 type scale.
+- Text uses Google Sans woff2 files from Google Fonts, served by the app itself in the latin, latin-ext and greek subsets, with the Material 3 type scale; every form control, text areas included, inherits it, so typed text is body large, 16/24.
 - Icons are Material Symbols Rounded inline SVG paths, never the Outlined or Sharp styles: unfilled (FILL 0) when not selected and filled (FILL 1) only in the selected state, as Google's navigation bar samples do; an icon whose unfilled and filled versions are identical is not used for a selectable item.
 - Motion uses the Expressive spring tokens converted to CSS `linear()` easings with their settle durations.
 - Below 600px the app has the navigation bar and from 600px the navigation rail; every screen has a single-row top app bar with the plain screen name, and list entries are standalone fully rounded surface-container items spaced 8px apart, as on Android.
