@@ -1,4 +1,4 @@
-# Android Project Instructions
+# Project Instructions
 
 ## Git & repository workflow
 - Push changes directly to `main`; do not open pull requests.
@@ -17,7 +17,7 @@
 - Use the latest appropriate official technologies, APIs, libraries and tools, tracking the newest published build in any release channel, including preview, alpha, beta, release candidate and canary.
 - Latest applies to APIs, not only to version numbers: check every API, library, pattern and tool against what Google's official documentation recommends today and migrate whatever is deprecated, superseded or advised against, such as SharedPreferences to DataStore or AndroidViewModel to ViewModel. Do this for all code a change touches, and across the whole codebase whenever dependencies are updated, reading their release notes for deprecations and replacements.
 - A newer toolchain is only acceptable while the signed release APK still installs on a release device; never compile against a preview Android platform, which stamps the package as preview-built and makes it unparseable on release builds.
-- Every change that introduces a library, API, component, platform feature or tool also adds its official documentation to Official references in the same commit: Google's own pages (developer.android.com, source.android.com, m3.material.io, fonts.google.com, developers.google.com, firebase.google.com) or, for a library outside Google, its maintainers' documentation, each checked to load the right page.
+- Every change that introduces a library, API, component, platform feature or tool also adds its official documentation to Official references in the same commit: Google's own pages (developer.android.com, source.android.com, android.googlesource.com, m3.material.io, fonts.google.com, developers.google.com, firebase.google.com, web.dev, developer.chrome.com) or, for a library outside Google, its maintainers' documentation, each checked to load the right page.
 - Do not add a numeric product version to the visible product identity, release name, APK filename, release tag, or API User-Agent unless explicitly requested.
 
 ## Android
@@ -29,6 +29,21 @@
 - Text uses Google Sans from Google Fonts through Compose downloadable fonts.
 - Use Google's blur and transparency effects wherever Google's guidance uses them, such as the window blur behind dialogs.
 - Add an R8 keep rule only for code that a missing rule demonstrably breaks.
+
+## Web
+- Web apps follow the same Google guidance as Android: Material 3 Expressive as m3.material.io defines it. Google ships no Material 3 Expressive library for the web and Material Web is in maintenance mode, so the components are written in plain HTML, CSS and JavaScript from the official Compose Material 3 tokens, never from third-party ports.
+- Colors are the Material 3 color roles that Material Color Utilities generates with `SchemeTonalSpot`, spec version 2025, from the seed `#4285F4`, written as CSS custom properties with `light-dark()`; the web has no dynamic color.
+- Text uses Google Sans woff2 files from Google Fonts, served by the app itself in the latin, latin-ext and greek subsets, with the Material 3 type scale.
+- Icons are Material Symbols Rounded inline SVG paths, with the filled variant marking the selected state.
+- Motion uses the Expressive spring tokens converted to CSS `linear()` easings with their settle durations.
+- Below 600px the app has the navigation bar and from 600px the navigation rail; every screen has a single-row top app bar with the plain screen name, and list entries are standalone fully rounded surface-container items spaced 8px apart, as on Android.
+- Input, confirmations and choices use Material dialogs, messages use snackbars, and loading uses the LoadingIndicator, contained for pull to refresh.
+- The page turns off overscroll bounce so that pull to refresh behaves as Material defines it.
+
+## Cloudflare
+- Every recurring D1 query reads through an index, a partial index when it only looks for rows waiting for work. D1 counts every row read, rows of temporary sort tables included, against the free daily limit of 5,000,000 that all databases of the account share.
+- Check every new or changed query with `EXPLAIN QUERY PLAN` and measure the `rows_read` of the D1 query API before it ships, and read the day's D1 analytics after the deploy.
+- Cache values that change slowly, such as a percentile threshold, instead of recomputing them on every run.
 
 ## Verification
 - While the Java target is newer than the ASM bundled with lint, the build adds `androidLintTool(platform(...))` with the newest `org.ow2.asm:asm-bom` from the version catalog; without it lint still passes but skips every class with "Unsupported class file major version".
@@ -122,6 +137,30 @@
 - Material Symbols guide: https://developers.google.com/fonts/docs/material_symbols
 - Material Symbols catalogue: https://fonts.google.com/icons
 - Material Symbols Android drawables: https://github.com/google/material-design-icons/tree/master/symbols/android
+
+### Web
+- Material Design 3 for Web: https://m3.material.io/develop/web
+- Material Web components: https://github.com/material-components/material-web
+- Material Color Utilities: https://github.com/material-foundation/material-color-utilities
+- Compose Material 3 tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/
+- Expressive motion tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExpressiveMotionTokens.kt
+- LoadingIndicator source: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/LoadingIndicator.kt
+- ListItemDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItemDefaults
+- SegmentedListItem: https://developer.android.com/reference/kotlin/androidx/compose/material3/SegmentedListItem.composable
+- Material Symbols web SVGs: https://github.com/google/material-design-icons/tree/master/symbols/web
+- Google Fonts CSS API: https://developers.google.com/fonts/docs/css2
+- CSS linear() easing: https://developer.chrome.com/docs/css-ui/css-linear-easing-function
+- CSS light-dark(): https://web.dev/articles/light-dark
+- overscroll-behavior: https://developer.chrome.com/blog/overscroll-behavior
+
+### Cloudflare
+- Workers Builds: https://developers.cloudflare.com/workers/ci-cd/builds/
+- D1 limits: https://developers.cloudflare.com/d1/platform/limits/
+- D1 pricing: https://developers.cloudflare.com/d1/platform/pricing/
+- D1 metrics and analytics: https://developers.cloudflare.com/d1/observability/metrics-analytics/
+- D1 indexes: https://developers.cloudflare.com/d1/best-practices/use-indexes/
+- SQLite EXPLAIN QUERY PLAN: https://www.sqlite.org/eqp.html
+- SQLite partial indexes: https://www.sqlite.org/partialindex.html
 
 ### Graphics and system surfaces
 - Graphics in Compose: https://developer.android.com/develop/ui/compose/graphics/draw/overview
