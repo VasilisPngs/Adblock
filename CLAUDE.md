@@ -9,14 +9,13 @@
 - Follow only Google's official guidance and rules: Material Design, the Android developer documentation and Google's own libraries and samples. When the user asks for something beyond them, first say plainly that it departs from Google and which guideline it breaks, and go ahead only once they confirm. A confirmed departure changes the code only, never this file, which stays on Google's guidance by default; a departure already in the code is the user's settled decision, so ask before reverting it.
 - Do the work end to end.
 - Do not undo settled decisions or weaken requirements without a real technical reason.
-- Prefer root-cause fixes and the simplest architecture that fully satisfies the requirements.
-- Remove dead code, unused dependencies, resources, permissions and configuration.
+- Prefer the simplest architecture that fully satisfies the requirements.
+- Remove dead code, obsolete compatibility layers and workarounds, unused dependencies, resources, permissions and configuration.
 - Keep code clean, direct, idiomatic and maintainable.
 - All code is written in English.
-- Do not add explanatory or redundant comments inside code.
+- Source contains no comments of any kind: no inline, header, licence, KDoc or TODO comments and no commented-out code.
 - Use the latest appropriate official technologies, APIs, libraries and tools, tracking the newest published build in any release channel, including preview, alpha, beta, release candidate and canary.
 - A newer toolchain is only acceptable while the signed release APK still installs on a release device; never compile against a preview Android platform, which stamps the package as preview-built and makes it unparseable on release builds.
-- Verify current versions from official sources rather than relying on outdated examples.
 - Every change that introduces a library, API, component, platform feature or tool also adds its official documentation to Official references in the same commit: Google's own pages (developer.android.com, source.android.com, m3.material.io, fonts.google.com) or, for a library outside Google, its maintainers' documentation, each checked to load the right page.
 - Do not add a numeric product version to the visible product identity, release name, APK filename, release tag, or API User-Agent unless explicitly requested.
 
@@ -29,7 +28,6 @@
 - Text uses Google Sans from Google Fonts through Compose downloadable fonts.
 - Use Google's blur and transparency effects wherever Google's guidance uses them, such as the window blur behind dialogs.
 - Add an R8 keep rule only for code that a missing rule demonstrably breaks.
-- Prefer current Android APIs and remove obsolete compatibility layers and workarounds.
 
 ## Verification
 - Debug from the root cause: reproduce the failure, read the whole error, trace it to its source and fix that source with one minimal change; never stack guesses or patch symptoms.
