@@ -17,7 +17,7 @@
 - Use the latest appropriate official technologies, APIs, libraries and tools, tracking the newest published build in any release channel, including preview, alpha, beta, release candidate and canary.
 - Latest applies to APIs, not only to version numbers: check every API, library, pattern and tool against what Google's official documentation recommends today and migrate whatever is deprecated, superseded or advised against, such as SharedPreferences to DataStore or AndroidViewModel to ViewModel. Do this for all code a change touches, and across the whole codebase whenever dependencies are updated, reading their release notes for deprecations and replacements.
 - A newer toolchain is only acceptable while the signed release APK still installs on a release device; never compile against a preview Android platform, which stamps the package as preview-built and makes it unparseable on release builds.
-- Every change that introduces a library, API, component, platform feature or tool also adds its official documentation to Official references in the same commit: Google's own pages (developer.android.com, source.android.com, m3.material.io, fonts.google.com) or, for a library outside Google, its maintainers' documentation, each checked to load the right page.
+- Every change that introduces a library, API, component, platform feature or tool also adds its official documentation to Official references in the same commit: Google's own pages (developer.android.com, source.android.com, m3.material.io, fonts.google.com, developers.google.com, firebase.google.com) or, for a library outside Google, its maintainers' documentation, each checked to load the right page.
 - Do not add a numeric product version to the visible product identity, release name, APK filename, release tag, or API User-Agent unless explicitly requested.
 
 ## Android
@@ -145,7 +145,7 @@
 - Styles and themes: https://developer.android.com/develop/ui/views/theming/themes
 - Notifications: https://developer.android.com/develop/ui/compose/notifications
 - Notification runtime permission: https://developer.android.com/develop/ui/compose/notifications/notification-permission
-- Notification channels: https://developer.android.com/develop/ui/views/notifications/channels
+- Notification channels: https://developer.android.com/develop/ui/compose/notifications/channels
 - Widgets with Jetpack Glance: https://developer.android.com/develop/ui/compose/glance
 - OpenGL ES: https://developer.android.com/develop/ui/views/graphics/opengl/about-opengl
 - Theme.DeviceDefault.DayNight: https://developer.android.com/reference/android/R.style#Theme_DeviceDefault_DayNight
@@ -190,6 +190,7 @@
 - Intent: https://developer.android.com/reference/android/content/Intent
 - Settings: https://developer.android.com/reference/android/provider/Settings
 - Security checklist: https://developer.android.com/privacy-and-security/security-tips
+- Android Keystore: https://developer.android.com/privacy-and-security/keystore
 - Android 17 behavior changes for all apps: https://developer.android.com/about/versions/17/behavior-changes-all
 - Android 17 behavior changes for apps targeting it: https://developer.android.com/about/versions/17/behavior-changes-17
 - PackageManager: https://developer.android.com/reference/android/content/pm/PackageManager
@@ -208,6 +209,18 @@
 - Kotlin coroutines guide: https://kotlinlang.org/docs/coroutines-guide.html
 - Coroutines best practices: https://developer.android.com/kotlin/coroutines/coroutines-best-practices
 - StateFlow and SharedFlow: https://developer.android.com/kotlin/flow/stateflow-and-sharedflow
+
+### Media and camera
+- Jetpack Media3: https://developer.android.com/media/media3
+- Media3 ExoPlayer: https://developer.android.com/media/media3/exoplayer
+- Media3 MediaSession: https://developer.android.com/media/media3/session/control-playback
+- Media3 Compose UI: https://developer.android.com/media/media3/ui/compose
+- CameraX: https://developer.android.com/media/camera/camerax
+
+### Identity
+- Credential Manager: https://developer.android.com/identity/credential-manager
+- Passkeys: https://developer.android.com/identity/passkeys
+- Sign in with Google: https://developer.android.com/identity/sign-in/credential-manager-siwg
 
 ### Libraries and services
 - OkHttp: https://lysine.dev/okhttp/
@@ -239,11 +252,15 @@
 - Compose performance: https://developer.android.com/develop/ui/compose/performance
 - Compose performance best practices: https://developer.android.com/develop/ui/compose/performance/bestpractices
 - Baseline Profiles: https://developer.android.com/topic/performance/baselineprofiles/overview
+- Create Baseline Profiles: https://developer.android.com/topic/performance/baselineprofiles/create-baselineprofile
+- Macrobenchmark: https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview
+- App Startup: https://developer.android.com/topic/libraries/app-startup
 - Test apps on Android: https://developer.android.com/training/testing
 - Local unit tests: https://developer.android.com/training/testing/local-tests
 - Testing Kotlin coroutines on Android: https://developer.android.com/kotlin/coroutines/test
 - Test Compose layouts: https://developer.android.com/develop/ui/compose/testing
 - Compose testing APIs: https://developer.android.com/develop/ui/compose/testing/apis
+- Compose Preview Screenshot Testing: https://developer.android.com/studio/preview/compose-screenshot-testing
 - Robolectric strategies: https://developer.android.com/training/testing/local-tests/robolectric
 - Robolectric: https://robolectric.org/
 - JUnit user guide: https://docs.junit.org/current/user-guide/
@@ -299,6 +316,13 @@
 - Activity release notes: https://developer.android.com/jetpack/androidx/releases/activity
 - Lifecycle release notes: https://developer.android.com/jetpack/androidx/releases/lifecycle
 - DataStore release notes: https://developer.android.com/jetpack/androidx/releases/datastore
+- Media3 release notes: https://developer.android.com/jetpack/androidx/releases/media3
+- CameraX release notes: https://developer.android.com/jetpack/androidx/releases/camera
+- Credentials release notes: https://developer.android.com/jetpack/androidx/releases/credentials
+- Benchmark release notes: https://developer.android.com/jetpack/androidx/releases/benchmark
+- App Startup release notes: https://developer.android.com/jetpack/androidx/releases/startup
+- ML Kit release notes: https://developers.google.com/ml-kit/release-notes
+- Firebase Android SDK release notes: https://firebase.google.com/support/release-notes/android
 - Compose Foundation release notes: https://developer.android.com/jetpack/androidx/releases/compose-foundation
 - Gradle release notes: https://docs.gradle.org/current/release-notes.html
 - Gradle Wrapper: https://docs.gradle.org/current/userguide/gradle_wrapper.html
@@ -322,6 +346,14 @@
 - GitHub CLI releases: https://cli.github.com/manual/gh_release
 - Git references REST API: https://docs.github.com/en/rest/git/refs#update-a-reference
 - OpenSSL enc: https://docs.openssl.org/master/man1/openssl-enc/
+
+### Google AI
+- AI on Android: https://developer.android.com/ai
+- Choose an AI solution: https://developer.android.com/ai/overview
+- Gemini Nano: https://developer.android.com/ai/gemini-nano
+- ML Kit GenAI APIs: https://developers.google.com/ml-kit/genai
+- Gemini models on Android: https://developer.android.com/ai/gemini
+- Firebase AI Logic: https://firebase.google.com/docs/ai-logic
 
 ### AI agents
 - Android tools for agents: https://developer.android.com/tools/agents
