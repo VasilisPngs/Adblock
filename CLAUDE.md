@@ -34,7 +34,7 @@
 - Web apps follow the same Google guidance as Android: Material 3 Expressive as m3.material.io defines it. Google ships no Material 3 Expressive library for the web and Material Web is in maintenance mode, so the components are written in plain HTML, CSS and JavaScript from the official Compose Material 3 tokens, never from third-party ports.
 - Colors are the Material 3 color roles that Material Color Utilities generates with `SchemeTonalSpot`, spec version 2025, from the seed `#4285F4`, written as CSS custom properties with `light-dark()`; the web has no dynamic color.
 - Text uses Google Sans woff2 files from Google Fonts, served by the app itself in the latin, latin-ext and greek subsets, with the Material 3 type scale.
-- Icons are Material Symbols Rounded inline SVG paths, with the filled variant marking the selected state.
+- Icons are Material Symbols Rounded inline SVG paths, outlined by default and filled only in the selected state, as Google's navigation bar samples do; an icon whose outlined and filled versions are identical is not used for a selectable item.
 - Motion uses the Expressive spring tokens converted to CSS `linear()` easings with their settle durations.
 - Below 600px the app has the navigation bar and from 600px the navigation rail; every screen has a single-row top app bar with the plain screen name, and list entries are standalone fully rounded surface-container items spaced 8px apart, as on Android.
 - Input, confirmations and choices use Material dialogs, messages use snackbars, and loading uses the LoadingIndicator, contained for pull to refresh.
@@ -147,6 +147,7 @@
 - LoadingIndicator source: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/LoadingIndicator.kt
 - ListItemDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItemDefaults
 - SegmentedListItem: https://developer.android.com/reference/kotlin/androidx/compose/material3/SegmentedListItem.composable
+- Compose Material 3 navigation bar samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/NavigationBarSamples.kt
 - Material Symbols web SVGs: https://github.com/google/material-design-icons/tree/master/symbols/web
 - Google Fonts CSS API: https://developers.google.com/fonts/docs/css2
 - CSS linear() easing: https://developer.chrome.com/docs/css-ui/css-linear-easing-function
