@@ -54,7 +54,6 @@
 - Navigation rail in Compose: https://developer.android.com/develop/ui/compose/components/navigation-rail
 - Badges in Compose: https://developer.android.com/develop/ui/compose/components/badges
 - Tooltips in Compose: https://developer.android.com/develop/ui/compose/components/tooltip
-- Floating action button in Compose: https://developer.android.com/develop/ui/compose/components/fab
 - State and Jetpack Compose: https://developer.android.com/develop/ui/compose/state
 - Side effects in Compose: https://developer.android.com/develop/ui/compose/side-effects
 - Lazy lists and grids: https://developer.android.com/develop/ui/compose/lists
@@ -76,7 +75,6 @@
 - Focus in Compose: https://developer.android.com/develop/ui/compose/touch-input/focus
 - Accessibility in Compose: https://developer.android.com/develop/ui/compose/accessibility
 - Semantics in Compose: https://developer.android.com/develop/ui/compose/accessibility/semantics
-- Copy and paste in Compose: https://developer.android.com/develop/ui/compose/touch-input/copy-and-paste
 - Settings pattern: https://developer.android.com/design/ui/mobile/guides/patterns/settings
 - Adaptive apps: https://developer.android.com/develop/ui/compose/layouts/adaptive/get-started-with-adaptive-apps
 - Support different display sizes: https://developer.android.com/develop/ui/compose/layouts/adaptive/support-different-display-sizes
@@ -106,10 +104,6 @@
 - Switch: https://m3.material.io/components/switch/overview
 - Radio button: https://m3.material.io/components/radio-button/overview
 - Snackbar: https://m3.material.io/components/snackbar/overview
-- Toolbars: https://m3.material.io/components/toolbars/overview
-- Toolbars guidelines: https://m3.material.io/components/toolbars/guidelines
-- Toolbars specs: https://m3.material.io/components/toolbars/specs
-- Floating action button: https://m3.material.io/components/floating-action-button/overview
 - Color roles: https://m3.material.io/styles/color/roles
 - Dynamic color: https://m3.material.io/styles/color/dynamic/choosing-a-source
 - Typography: https://m3.material.io/styles/typography/overview
