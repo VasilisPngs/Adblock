@@ -33,8 +33,6 @@
 
 ## Verification
 - Debug from the root cause: reproduce the failure, read the whole error, trace it to its source and fix that source with one minimal change; never stack guesses or patch symptoms.
-- New or changed logic starts with a test that fails for the right reason, then the smallest code that makes it pass, then refactoring with every test green.
-- Never call work done, fixed or passing without fresh evidence from the change itself: build, lint, unit and UI tests, and screenshots for visual changes, with any failure reported as it is.
 - While the Java target is newer than the ASM bundled with lint, the build adds `androidLintTool(platform(...))` with the newest `org.ow2.asm:asm-bom` from the version catalog; without it lint still passes but skips every class with "Unsupported class file major version".
 
 ## Official references
