@@ -2,7 +2,6 @@ package com.android.adblock.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -12,12 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
-private const val NAME = "dns_preferences"
-
-private val Context.dnsPreferences: DataStore<Preferences> by preferencesDataStore(
-    name = NAME,
-    produceMigrations = { context -> listOf(SharedPreferencesMigration(context, NAME)) }
-)
+private val Context.dnsPreferences: DataStore<Preferences> by preferencesDataStore(name = "dns_preferences")
 
 class DnsPreferences(private val store: DataStore<Preferences>) {
     constructor(context: Context) : this(context.dnsPreferences)
