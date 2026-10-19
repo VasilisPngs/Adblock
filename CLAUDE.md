@@ -58,8 +58,8 @@
 ## Sources
 - Never take Google's guidance, APIs, versions or values from memory, earlier notes or saved links: read the current official source at the time of the work, and find a moved or renamed page again from these entry points.
 - Android, Firebase, Google Developers and Kotlin documentation, the Android design guides included: Google's Android Knowledge Base through Android CLI, `android docs search` and then `android docs fetch`, and Google's official Android skills through `android skills find`. Android CLI comes from developer.android.com/tools/agents; install it when it is missing and run `android update` before use.
-- Material Design, Material 3 Expressive included: m3.material.io, whose current pages its sitemap.xml lists; the site renders with JavaScript, so read its pages with headless Chromium, never a plain fetch.
+- Material Design, Material 3 Expressive included: m3.material.io, starting from its home page and blog page, which list the newest pages that its sitemap.xml and feed miss, and using the sitemap for the rest; the site renders with JavaScript, so read it with headless Chromium, never a plain fetch.
 - Compose Material 3 measurements and behavior: the androidx-main branch of platform/frameworks/support on android.googlesource.com under compose/material3, with the component tokens in its tokens folder and Google's samples in its samples folder; list a folder with `?format=JSON` and read a file with `?format=TEXT`.
-- Colors from Material Color Utilities, icons from Material Symbols, fonts from Google Fonts, versions from Google Maven and the AndroidX release notes, and the web platform from web.dev and developer.chrome.com.
+- Colors from Material Color Utilities, icons from Material Symbols, fonts from Google Fonts, versions from Google Maven and the AndroidX release notes, the web platform from web.dev and developer.chrome.com, and the research and stories behind Google's design from design.google.
 - Libraries and services outside Google: their maintainers' current documentation and release notes.
 - This file names only these entry points, never individual pages.
