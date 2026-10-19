@@ -6,6 +6,7 @@ import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -90,6 +91,18 @@ class DnsScreenTest {
         compose.onNodeWithText(string(R.string.dns_over_https)).performClick()
 
         assertEquals(listOf(true, false), switches)
+    }
+
+    @Test
+    fun `joins the home entries into one segmented group`() {
+        show(DnsUiState(url = SERVER, privateDnsServer = "dns.google"))
+
+        val dns = compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot()
+        val url = compose.onNodeWithText(string(R.string.server_url)).getBoundsInRoot()
+        assertEquals(ListItemDefaults.SegmentedGap, url.top - dns.bottom)
+        assertEquals(true to false, corners(string(R.string.dns_over_https)))
+        assertEquals(false to false, corners(string(R.string.server_url)))
+        assertEquals(false to true, corners(string(R.string.private_dns_on, "dns.google")))
     }
 
     @Test
@@ -346,7 +359,9 @@ class DnsScreenTest {
         assertEquals(72.dp, dynamicItem.bottom - dynamicItem.top)
         assertEquals(themeItem.left, dynamicItem.left)
         assertEquals(themeItem.right, dynamicItem.right)
-        assertEquals(8.dp, dynamicItem.top - themeItem.bottom)
+        assertEquals(ListItemDefaults.SegmentedGap, dynamicItem.top - themeItem.bottom)
+        assertEquals(true to false, corners(string(R.string.theme)))
+        assertEquals(false to true, corners(string(R.string.dynamic_color)))
 
         compose.onNodeWithText(string(R.string.theme)).performClick()
         val light = compose.onNodeWithText(string(R.string.theme_light)).getBoundsInRoot()
@@ -358,6 +373,13 @@ class DnsScreenTest {
     private fun text(value: String): DpRect {
         val nodes = compose.onAllNodesWithText(value, useUnmergedTree = true)
         return List(nodes.fetchSemanticsNodes().size) { nodes[it].getBoundsInRoot() }.minBy { it.top }
+    }
+
+    private fun corners(text: String): Pair<Boolean, Boolean> {
+        val image = compose.onNodeWithText(text).captureToImage().asAndroidBitmap()
+        val container = image.getPixel(CORNER_INSET, image.height / 2)
+        return (image.getPixel(CORNER_INSET, CORNER_INSET) != container) to
+            (image.getPixel(CORNER_INSET, image.height - 1 - CORNER_INSET) != container)
     }
 
     private fun backGesture(progress: Float) {
@@ -410,6 +432,7 @@ class DnsScreenTest {
     private fun string(@StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
 
     private companion object {
+        const val CORNER_INSET = 3
         const val SERVER = "https://adblock.example.workers.dev/dns-query/0123abcd"
         const val OTHER = "https://dns.adguard-dns.com/dns-query"
         val SwitchRole = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)

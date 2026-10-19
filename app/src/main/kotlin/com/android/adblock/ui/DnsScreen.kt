@@ -416,6 +416,8 @@ private fun HomeView(
     onVpnSettings: () -> Unit
 ) {
     val on = uiState.tunnel != TunnelState.Off
+    val alwaysOnShown = uiState.vpnSettings && uiState.tunnel == TunnelState.On
+    val count = 2 + (if (alwaysOnShown) 1 else 0) + (if (uiState.privateDnsServer != null) 1 else 0)
     LazyColumn(
         state = listState,
         modifier = Modifier
@@ -424,7 +426,7 @@ private fun HomeView(
             .focusRequester(focus)
             .focusRestorer(),
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(SmallSpacing)
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
     ) {
         item(key = "dns") {
             val supporting = @Composable { Text(text = stringResource(uiState.tunnel.labelRes)) }
@@ -434,7 +436,7 @@ private fun HomeView(
                     checked = true,
                     onCheckedChange = { onVpnSettings() },
                     modifier = Modifier.semantics { role = Role.Switch },
-                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    shapes = ListItemDefaults.segmentedShapes(0, count),
                     colors = listItemColors(),
                     supportingContent = supporting,
                     trailingContent = { Switch(checked = true, onCheckedChange = null, enabled = false) },
@@ -445,7 +447,7 @@ private fun HomeView(
                     checked = on,
                     onCheckedChange = onEnabledChange,
                     modifier = Modifier.semantics { role = Role.Switch },
-                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    shapes = ListItemDefaults.segmentedShapes(0, count),
                     colors = listItemColors(),
                     supportingContent = supporting,
                     trailingContent = { Switch(checked = on, onCheckedChange = null) },
@@ -458,7 +460,7 @@ private fun HomeView(
             SegmentedListItem(
                 onClick = onUrl,
                 enabled = uiState.tunnel != TunnelState.Connecting,
-                shapes = ListItemDefaults.segmentedShapes(0, 1),
+                shapes = ListItemDefaults.segmentedShapes(1, count),
                 colors = listItemColors(),
                 supportingContent = { Text(text = uiState.url.ifEmpty { stringResource(R.string.server_url_not_set) }) }
             ) {
@@ -466,11 +468,11 @@ private fun HomeView(
             }
         }
 
-        if (uiState.vpnSettings && uiState.tunnel == TunnelState.On) {
+        if (alwaysOnShown) {
             item(key = "always-on") {
                 SegmentedListItem(
                     onClick = onVpnSettings,
-                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    shapes = ListItemDefaults.segmentedShapes(2, count),
                     colors = listItemColors(),
                     supportingContent = { Text(text = stringResource(R.string.always_on_vpn_description)) }
                 ) {
@@ -483,7 +485,7 @@ private fun HomeView(
             item(key = "private-dns") {
                 SegmentedListItem(
                     onClick = onPrivateDns,
-                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    shapes = ListItemDefaults.segmentedShapes(count - 1, count),
                     colors = listItemColors(),
                     leadingContent = {
                         Icon(
@@ -519,7 +521,7 @@ private fun SettingsView(
             .focusRequester(focus)
             .focusRestorer(),
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(SmallSpacing)
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
     ) {
         item(key = "appearance") {
             SectionHeader(text = stringResource(R.string.appearance))
@@ -528,7 +530,7 @@ private fun SettingsView(
         item(key = "theme") {
             SegmentedListItem(
                 onClick = onTheme,
-                shapes = ListItemDefaults.segmentedShapes(0, 1),
+                shapes = ListItemDefaults.segmentedShapes(0, 2),
                 colors = listItemColors(),
                 supportingContent = { Text(text = stringResource(appearance.themeMode.labelRes)) }
             ) {
@@ -541,7 +543,7 @@ private fun SettingsView(
                 checked = appearance.dynamicColor,
                 onCheckedChange = onDynamicColorChange,
                 modifier = Modifier.semantics { role = Role.Switch },
-                shapes = ListItemDefaults.segmentedShapes(0, 1),
+                shapes = ListItemDefaults.segmentedShapes(1, 2),
                 colors = listItemColors(),
                 supportingContent = { Text(text = stringResource(R.string.dynamic_color_description)) },
                 trailingContent = { Switch(checked = appearance.dynamicColor, onCheckedChange = null) }
