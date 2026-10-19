@@ -1,9 +1,11 @@
 package com.android.adblock.ui
 
 import android.content.pm.PackageManager
+import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -283,6 +285,28 @@ class DnsScreenTest {
     }
 
     @Test
+    fun `follows the back gesture from Settings with Google's full screen motion`() {
+        show(DnsUiState(url = SERVER))
+        val home = compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot()
+        compose.onNodeWithText(string(R.string.settings)).performClick()
+        val settings = compose.onNodeWithText(string(R.string.theme)).getBoundsInRoot()
+
+        backGesture(0.1f)
+        val exit = PredictiveBack.transform(0.1f)
+        assertScaled(settings, 1f - 0.1f * exit, compose.onNodeWithText(string(R.string.theme)).getBoundsInRoot())
+        assertScaled(home, 1.1f - 0.1f * exit, compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot())
+
+        compose.runOnIdle { backDispatcher.dispatchOnBackCancelled() }
+        compose.onAllNodesWithText(string(R.string.dns_over_https)).assertCountEquals(0)
+        assertScaled(settings, 1f, compose.onNodeWithText(string(R.string.theme)).getBoundsInRoot())
+
+        backGesture(0.6f)
+        compose.runOnIdle { backDispatcher.onBackPressed() }
+        assertScaled(home, 1f, compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot())
+        compose.onAllNodesWithText(string(R.string.theme)).assertCountEquals(0)
+    }
+
+    @Test
     fun `changes the theme from settings`() {
         show(DnsUiState(url = SERVER))
 
@@ -336,6 +360,19 @@ class DnsScreenTest {
         return List(nodes.fetchSemanticsNodes().size) { nodes[it].getBoundsInRoot() }.minBy { it.top }
     }
 
+    private fun backGesture(progress: Float) {
+        compose.runOnIdle {
+            backDispatcher.dispatchOnBackStarted(BackEventCompat(0f, 0f, 0f, BackEventCompat.EDGE_LEFT))
+            backDispatcher.dispatchOnBackProgressed(BackEventCompat(0f, 0f, progress, BackEventCompat.EDGE_LEFT))
+        }
+        compose.waitForIdle()
+    }
+
+    private fun assertScaled(rest: DpRect, scale: Float, actual: DpRect) {
+        assertEquals((rest.right - rest.left).value * scale, (actual.right - actual.left).value, 0.5f)
+        assertEquals(((rest.left + rest.right) / 2).value, ((actual.left + actual.right) / 2).value, 0.5f)
+    }
+
     private fun assertContentEdge(margin: Dp) {
         show(DnsUiState(url = SERVER))
 
@@ -376,5 +413,6 @@ class DnsScreenTest {
         const val SERVER = "https://adblock.example.workers.dev/dns-query/0123abcd"
         const val OTHER = "https://dns.adguard-dns.com/dns-query"
         val SwitchRole = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)
+        val PredictiveBack = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
     }
 }
