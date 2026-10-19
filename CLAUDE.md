@@ -7,6 +7,7 @@
 
 ## General rules
 - Follow only Google's official guidance and rules: Material Design, the Android developer documentation and Google's own libraries and samples. When the user asks for something beyond them, first say plainly that it departs from Google and which guideline it breaks, and go ahead only once they confirm. A confirmed departure changes the code only, never this file, which stays on Google's guidance by default; a departure already in the code is the user's settled decision, so ask before reverting it.
+- Use what Google and the platform already provide before writing anything: Google's components with their defaults, libraries and samples, and on the web the browser's built-in elements and APIs. Write custom code only where nothing official exists or the official one does not behave as Google's guidance requires.
 - Frontend, UI and UX are uniform, symmetrical and consistent across screens and apps, with correct alignment and geometry, always by Google's measurements.
 - This file never fixes spacings or dimensions: every size, spacing, corner, breakpoint and threshold comes from Google's current tokens, guidelines and sources, so the apps follow Google when its values change.
 - Do the work end to end.
