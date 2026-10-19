@@ -11,7 +11,6 @@ import android.net.VpnService
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.WindowManager
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -111,6 +110,9 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.window.core.layout.WindowSizeClass
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
@@ -217,7 +219,11 @@ internal fun DnsScreen(
     val settingsFocus = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
     val coroutineScope = rememberCoroutineScope()
-    BackHandler(enabled = selectedTab != AppTab.Home) { selectedTab = AppTab.Home }
+    NavigationBackHandler(
+        state = rememberNavigationEventState(NavigationEventInfo.None),
+        isBackEnabled = selectedTab != AppTab.Home,
+        onBackCompleted = { selectedTab = AppTab.Home }
+    )
 
     LaunchedEffect(Unit) {
         if (inputModeManager.inputMode == InputMode.Keyboard) homeFocus.requestFocus()
