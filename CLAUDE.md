@@ -60,6 +60,7 @@
 
 ### Design and UI
 - Material Design 3 in Compose: https://developer.android.com/develop/ui/compose/designsystems/material3
+- Compose dynamic color schemes: https://developer.android.com/develop/ui/compose/designsystems/material3#dynamic_color_schemes
 - Compose Material 3 API reference: https://developer.android.com/reference/kotlin/androidx/compose/material3/package-summary
 - Get started with Jetpack Compose: https://developer.android.com/develop/ui/compose/documentation
 - Material components in Compose: https://developer.android.com/develop/ui/compose/components
@@ -77,12 +78,30 @@
 - Navigation rail in Compose: https://developer.android.com/develop/ui/compose/components/navigation-rail
 - Badges in Compose: https://developer.android.com/develop/ui/compose/components/badges
 - Tooltips in Compose: https://developer.android.com/develop/ui/compose/components/tooltip
+- Dynamic top app bar in Compose: https://developer.android.com/develop/ui/compose/components/app-bars-dynamic
+- Navigate from the top app bar: https://developer.android.com/develop/ui/compose/components/app-bars-navigate
+- Floating action button in Compose: https://developer.android.com/develop/ui/compose/components/fab
+- Menus in Compose: https://developer.android.com/develop/ui/compose/components/menu
+- Bottom sheets in Compose: https://developer.android.com/develop/ui/compose/components/bottom-sheets
+- Partial bottom sheet in Compose: https://developer.android.com/develop/ui/compose/components/bottom-sheets-partial
+- Search bar in Compose: https://developer.android.com/develop/ui/compose/components/search-bar
+- Chips in Compose: https://developer.android.com/develop/ui/compose/components/chip
+- Segmented button in Compose: https://developer.android.com/develop/ui/compose/components/segmented-button
+- Checkbox in Compose: https://developer.android.com/develop/ui/compose/components/checkbox
+- Slider in Compose: https://developer.android.com/develop/ui/compose/components/slider
+- Cards in Compose: https://developer.android.com/develop/ui/compose/components/card
+- Carousel in Compose: https://developer.android.com/develop/ui/compose/components/carousel
+- Divider in Compose: https://developer.android.com/develop/ui/compose/components/divider
+- Tabs in Compose: https://developer.android.com/develop/ui/compose/components/tabs
+- Navigation drawer in Compose: https://developer.android.com/develop/ui/compose/components/drawer
+- Date pickers in Compose: https://developer.android.com/develop/ui/compose/components/datepickers
+- Time pickers in Compose: https://developer.android.com/develop/ui/compose/components/time-pickers
+- Time picker dialogs in Compose: https://developer.android.com/develop/ui/compose/components/time-pickers-dialogs
+- Swipe to dismiss: https://developer.android.com/develop/ui/compose/touch-input/user-interactions/swipe-to-dismiss
 - State and Jetpack Compose: https://developer.android.com/develop/ui/compose/state
 - Side effects in Compose: https://developer.android.com/develop/ui/compose/side-effects
 - Lazy lists and grids: https://developer.android.com/develop/ui/compose/lists
 - Flow layouts in Compose: https://developer.android.com/develop/ui/compose/layouts/flow
-- Compose Material 3 list samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/ListSamples.kt
-- Compose Material 3 app bar samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/AppBarSamples.kt
 - Animations in Compose: https://developer.android.com/develop/ui/compose/animation/quick-guide
 - Animation composables and AnimatedContent: https://developer.android.com/develop/ui/compose/animation/composables-modifiers#animatedcontent
 - MotionScheme API reference: https://developer.android.com/reference/kotlin/androidx/compose/material3/MotionScheme
@@ -98,7 +117,6 @@
 - Focus in Compose: https://developer.android.com/develop/ui/compose/touch-input/focus
 - Accessibility in Compose: https://developer.android.com/develop/ui/compose/accessibility
 - Semantics in Compose: https://developer.android.com/develop/ui/compose/accessibility/semantics
-- Settings pattern: https://developer.android.com/design/ui/mobile/guides/patterns/settings
 - Adaptive apps: https://developer.android.com/develop/ui/compose/layouts/adaptive/get-started-with-adaptive-apps
 - Support different display sizes: https://developer.android.com/develop/ui/compose/layouts/adaptive/support-different-display-sizes
 - Window size classes: https://developer.android.com/develop/ui/compose/layouts/adaptive/use-window-size-classes
@@ -108,72 +126,323 @@
 - Activity Compose API reference: https://developer.android.com/reference/kotlin/androidx/activity/compose/package-summary
 - BringIntoViewSpec: https://developer.android.com/reference/kotlin/androidx/compose/foundation/gestures/BringIntoViewSpec
 
-### Material 3 Expressive
-- Building with M3 Expressive: https://m3.material.io/blog/building-with-m3-expressive
+### Android design guides
+
+- Android design: https://developer.android.com/design/ui
+- Mobile design: https://developer.android.com/design/ui/mobile
+- Material components on Android: https://developer.android.com/design/ui/mobile/guides/components/material-overview
+- App anatomy: https://developer.android.com/design/ui/mobile/guides/layout-and-content/app-anatomy
+- Layout basics: https://developer.android.com/design/ui/mobile/guides/layout-and-content/layout-basics
+- Grids and units: https://developer.android.com/design/ui/mobile/guides/layout-and-content/grids-and-units
+- Content structure: https://developer.android.com/design/ui/mobile/guides/layout-and-content/content-structure
+- Common layouts: https://developer.android.com/design/ui/mobile/guides/layout-and-content/common-layouts
+- Layouts and navigation patterns: https://developer.android.com/design/ui/mobile/guides/layout-and-content/layout-and-nav-patterns
+- Adapt layouts: https://developer.android.com/design/ui/mobile/guides/layout-and-content/adapt-layout
+- Foldable postures and orientation: https://developer.android.com/design/ui/mobile/guides/layout-and-content/postures-and-orientation
+- Edge-to-edge design: https://developer.android.com/design/ui/mobile/guides/layout-and-content/edge-to-edge
+- Immersive content: https://developer.android.com/design/ui/mobile/guides/layout-and-content/immersive-content
+- Images and graphics: https://developer.android.com/design/ui/mobile/guides/layout-and-content/images-graphics
+- System bars design: https://developer.android.com/design/ui/mobile/guides/foundations/system-bars
+- Android color for mobile: https://developer.android.com/design/ui/mobile/guides/styles/color
+- Themes design: https://developer.android.com/design/ui/mobile/guides/styles/themes
+- Settings pattern: https://developer.android.com/design/ui/mobile/guides/patterns/settings
+- Predictive back design: https://developer.android.com/design/ui/mobile/guides/patterns/predictive-back
+- Authentication and onboarding: https://developer.android.com/design/ui/mobile/guides/patterns/onboarding
+- Passkeys design: https://developer.android.com/design/ui/mobile/guides/patterns/passkeys
+- Help and feedback screens: https://developer.android.com/design/ui/mobile/guides/patterns/help-content
+- Notifications design: https://developer.android.com/design/ui/mobile/guides/home-screen/notifications
+- Live update notifications: https://developer.android.com/design/ui/mobile/guides/home-screen/live-updates
+- Picture-in-picture design: https://developer.android.com/design/ui/mobile/guides/home-screen/picture-in-picture
+- Widgets on the home screen: https://developer.android.com/design/ui/mobile/guides/home-screen/widgets
+- Widget design: https://developer.android.com/design/ui/mobile/guides/widgets
+- Canonical widget layouts: https://developer.android.com/design/ui/mobile/guides/widgets/layouts
+- Widget sizing: https://developer.android.com/design/ui/mobile/guides/widgets/sizing
+- Widget style: https://developer.android.com/design/ui/mobile/guides/widgets/style
+- Widget configuration: https://developer.android.com/design/ui/mobile/guides/widgets/configuration
+- Widget discovery and promotion: https://developer.android.com/design/ui/mobile/guides/widgets/discovery-promotion
+- Translate iOS designs to Android: https://developer.android.com/design/ui/mobile/guides/foundations/translate-designs
+- Accessibility design: https://developer.android.com/design/ui/mobile/guides/foundations/accessibility
+- Android design glossary: https://developer.android.com/design/ui/mobile/guides/foundations/glossary
+- Mobile design samples: https://developer.android.com/design/ui/mobile/samples
+- Desktop experiences: https://developer.android.com/design/ui/desktop
+- Desktop design principles: https://developer.android.com/design/ui/desktop/guides/foundations/design-principles
+
+### Material Design 3
+
+- Start building with M3 Expressive: https://m3.material.io/blog/building-with-m3-expressive
 - M3 Expressive motion: https://m3.material.io/blog/m3-expressive-motion-theming
+- What's new at Google I/O 2026: https://m3.material.io/blog/whats-new-at-io26
+- Material Android is Compose-first: https://m3.material.io/blog/material-is-compose-first
+- M3 Expressive research: https://design.google/library/expressive-material-design-google-research
+- Material Design 3 in Jetpack Compose: https://m3.material.io/develop/android/jetpack-compose
+- Material Theme Builder: https://material-foundation.github.io/material-theme-builder/
 - Material components: https://m3.material.io/components
+- Every component page also has specs, guidelines and accessibility tabs at the same path, such as https://m3.material.io/components/buttons/specs
+- All buttons: https://m3.material.io/components/all-buttons
 - Top app bar: https://m3.material.io/components/app-bars/overview
-- Navigation bar: https://m3.material.io/components/navigation-bar/overview
-- Navigation rail: https://m3.material.io/components/navigation-rail/overview
 - Badges: https://m3.material.io/components/badges/overview
-- Tooltips: https://m3.material.io/components/tooltips/overview
+- Bottom sheets: https://m3.material.io/components/bottom-sheets/overview
+- Button groups: https://m3.material.io/components/button-groups/overview
 - Buttons: https://m3.material.io/components/buttons/overview
+- Cards: https://m3.material.io/components/cards/overview
+- Carousel: https://m3.material.io/components/carousel/overview
+- Checkbox: https://m3.material.io/components/checkbox/overview
+- Chips: https://m3.material.io/components/chips/overview
+- Date pickers: https://m3.material.io/components/date-pickers/overview
+- Dialogs: https://m3.material.io/components/dialogs/overview
+- Divider: https://m3.material.io/components/divider/overview
+- Extended FAB: https://m3.material.io/components/extended-fab/overview
+- FAB menu: https://m3.material.io/components/fab-menu/overview
+- Floating action button: https://m3.material.io/components/floating-action-button/overview
 - Icon buttons: https://m3.material.io/components/icon-buttons/overview
 - Lists: https://m3.material.io/components/lists/overview
 - Loading indicator: https://m3.material.io/components/loading-indicator/overview
-- Progress indicators: https://m3.material.io/components/progress-indicators/overview
-- Dialogs: https://m3.material.io/components/dialogs/overview
-- Text fields: https://m3.material.io/components/text-fields/overview
-- Switch: https://m3.material.io/components/switch/overview
-- Radio button: https://m3.material.io/components/radio-button/overview
-- Snackbar: https://m3.material.io/components/snackbar/overview
 - Menus: https://m3.material.io/components/menus/overview
-- Bottom sheets: https://m3.material.io/components/bottom-sheets/overview
-- Toolbars: https://m3.material.io/components/toolbars/overview
-- Chips: https://m3.material.io/components/chips/overview
+- Navigation bar: https://m3.material.io/components/navigation-bar/overview
+- Navigation drawer: https://m3.material.io/components/navigation-drawer/overview
+- Navigation rail: https://m3.material.io/components/navigation-rail/overview
+- Progress indicators: https://m3.material.io/components/progress-indicators/overview
+- Radio button: https://m3.material.io/components/radio-button/overview
 - Search: https://m3.material.io/components/search/overview
-- Compose Material 3 list tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ListTokens.kt
-- Compose Material 3 small top app bar tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/AppBarSmallTokens.kt
+- Segmented buttons: https://m3.material.io/components/segmented-buttons/overview
+- Side sheets: https://m3.material.io/components/side-sheets/overview
+- Sliders: https://m3.material.io/components/sliders/overview
+- Snackbar: https://m3.material.io/components/snackbar/overview
+- Split button: https://m3.material.io/components/split-button/overview
+- Switch: https://m3.material.io/components/switch/overview
+- Tabs: https://m3.material.io/components/tabs/overview
+- Text fields: https://m3.material.io/components/text-fields/overview
+- Time pickers: https://m3.material.io/components/time-pickers/overview
+- Toolbars: https://m3.material.io/components/toolbars/overview
+- Tooltips: https://m3.material.io/components/tooltips/overview
+- Color system: https://m3.material.io/styles/color/system/overview
+- How the color system works: https://m3.material.io/styles/color/system/how-the-system-works
 - Color roles: https://m3.material.io/styles/color/roles
+- Choosing a color scheme: https://m3.material.io/styles/color/choosing-a-scheme
+- Baseline color scheme: https://m3.material.io/styles/color/static/baseline
+- Custom brand colors: https://m3.material.io/styles/color/static/custom-brand
 - Dynamic color: https://m3.material.io/styles/color/dynamic/choosing-a-source
-- Compose dynamic color schemes: https://developer.android.com/develop/ui/compose/designsystems/material3#dynamic_color_schemes
-- Now in Android dynamic color setting: https://raw.githubusercontent.com/android/nowinandroid/main/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt
-- Typography: https://m3.material.io/styles/typography/overview
-- Typography fonts: https://m3.material.io/styles/typography/fonts
-- Google Sans: https://fonts.google.com/specimen/Google+Sans
-- Shape: https://m3.material.io/styles/shape/overview-principles
-- Shape morph: https://m3.material.io/styles/shape/shape-morph
-- Motion: https://m3.material.io/styles/motion/overview/how-it-works
-- Motion transition patterns: https://m3.material.io/styles/motion/transitions/transition-patterns
-- Spacing: https://m3.material.io/styles/spacing/overview
-- Layout: https://m3.material.io/foundations/layout/layout-overview/overview
-- Applying layout: https://m3.material.io/foundations/layout/applying-layout
-- Breakpoints: https://m3.material.io/foundations/layout/breakpoints/compact
+- Content-based dynamic color: https://m3.material.io/styles/color/dynamic/content-based-source
+- User-generated dynamic color: https://m3.material.io/styles/color/dynamic/user-generated-source
+- Advanced color: https://m3.material.io/styles/color/advanced/overview
+- Apply colors: https://m3.material.io/styles/color/advanced/apply-colors
+- Define new colors: https://m3.material.io/styles/color/advanced/define-new-colors
+- Adjust existing colors: https://m3.material.io/styles/color/advanced/adjust-existing-colors
+- Color resources: https://m3.material.io/styles/color/resources
+- Elevation: https://m3.material.io/styles/elevation/overview
+- Applying elevation: https://m3.material.io/styles/elevation/applying-elevation
+- Elevation tokens: https://m3.material.io/styles/elevation/tokens
 - Icons: https://m3.material.io/styles/icons/overview
-- Accessibility: https://m3.material.io/foundations/overview
+- Applying icons: https://m3.material.io/styles/icons/applying-icons
+- Designing icons: https://m3.material.io/styles/icons/designing-icons
+- Motion: https://m3.material.io/styles/motion/overview/how-it-works
+- Motion specs: https://m3.material.io/styles/motion/overview/specs
+- Applying easing and duration: https://m3.material.io/styles/motion/easing-and-duration/applying-easing-and-duration
+- Easing and duration tokens: https://m3.material.io/styles/motion/easing-and-duration/tokens-specs
+- Applying transitions: https://m3.material.io/styles/motion/transitions/applying-transitions
+- Motion transition patterns: https://m3.material.io/styles/motion/transitions/transition-patterns
+- Shape: https://m3.material.io/styles/shape/overview-principles
+- Corner radius scale: https://m3.material.io/styles/shape/corner-radius-scale
+- Shape morph: https://m3.material.io/styles/shape/shape-morph
+- Spacing: https://m3.material.io/styles/spacing/overview
+- Applying spacing: https://m3.material.io/styles/spacing/applying-spacing
+- Spacing tokens: https://m3.material.io/styles/spacing/tokens
+- Typography: https://m3.material.io/styles/typography/overview
+- Applying type: https://m3.material.io/styles/typography/applying-type
+- Editorial treatments: https://m3.material.io/styles/typography/editorial-treatments
+- Typography fonts: https://m3.material.io/styles/typography/fonts
+- Type scale tokens: https://m3.material.io/styles/typography/type-scale-tokens
+- Layout: https://m3.material.io/foundations/layout/layout-overview/overview
+- Parts of layout: https://m3.material.io/foundations/layout/layout-overview/parts-of-layout
+- Adaptive design: https://m3.material.io/foundations/layout/layout-overview/adaptive-design
+- Scaffold: https://m3.material.io/foundations/layout/scaffold/overview
+- Scaffold bars: https://m3.material.io/foundations/layout/scaffold/bars
+- Scaffold rails: https://m3.material.io/foundations/layout/scaffold/rails
+- Scaffold panes: https://m3.material.io/foundations/layout/scaffold/panes
+- Grids and spacing: https://m3.material.io/foundations/layout/grids-spacing/overview
+- Grids: https://m3.material.io/foundations/layout/grids-spacing/grids
+- Layout spacing: https://m3.material.io/foundations/layout/grids-spacing/spacing
+- Density: https://m3.material.io/foundations/layout/grids-spacing/density
+- Breakpoints: https://m3.material.io/foundations/layout/breakpoints/overview
+- Compact breakpoint: https://m3.material.io/foundations/layout/breakpoints/compact
+- Medium breakpoint: https://m3.material.io/foundations/layout/breakpoints/medium
+- Expanded breakpoint: https://m3.material.io/foundations/layout/breakpoints/expanded
+- Large and extra-large breakpoints: https://m3.material.io/foundations/layout/breakpoints/large-extra-large
+- Bidirectionality and RTL: https://m3.material.io/foundations/layout/bidirectionality-rtl
+- Canonical examples: https://m3.material.io/foundations/layout/canonical-examples/overview
+- List-detail: https://m3.material.io/foundations/layout/canonical-examples/list-detail
+- Supporting pane: https://m3.material.io/foundations/layout/canonical-examples/supporting-pane
+- Feed: https://m3.material.io/foundations/layout/canonical-examples/feed
+- Interaction states: https://m3.material.io/foundations/interaction/states/overview
+- Applying states: https://m3.material.io/foundations/interaction/states/applying-states
+- State layers: https://m3.material.io/foundations/interaction/states/state-layers
+- Gestures: https://m3.material.io/foundations/interaction/gestures
+- Inputs: https://m3.material.io/foundations/interaction/inputs
+- Selection: https://m3.material.io/foundations/interaction/selection
+- Design tokens: https://m3.material.io/foundations/design-tokens/overview
+- How to use tokens: https://m3.material.io/foundations/design-tokens/how-to-use-tokens
+- Customization: https://m3.material.io/foundations/customization
+- Usability: https://m3.material.io/foundations/usability/overview
+- Applying M3 Expressive: https://m3.material.io/foundations/usability/applying-m3-expressive
+- Designing: https://m3.material.io/foundations/designing/overview
+- Designing structure: https://m3.material.io/foundations/designing/structure
+- Designing flow: https://m3.material.io/foundations/designing/flow
+- Designing elements: https://m3.material.io/foundations/designing/elements
+- Color contrast: https://m3.material.io/foundations/designing/color-contrast
+- Content design: https://m3.material.io/foundations/content-design/overview
+- UX writing best practices: https://m3.material.io/foundations/content-design/style-guide/ux-writing-best-practices
+- Word choice: https://m3.material.io/foundations/content-design/style-guide/word-choice
+- Grammar and punctuation: https://m3.material.io/foundations/content-design/style-guide/grammar-and-punctuation
+- Global writing: https://m3.material.io/foundations/content-design/global-writing/overview
+- Global word choice: https://m3.material.io/foundations/content-design/global-writing/word-choice
+- Notification content: https://m3.material.io/foundations/content-design/notifications
+- Alt text: https://m3.material.io/foundations/content-design/alt-text
+- Writing best practices: https://m3.material.io/foundations/writing/best-practices
+- Text resizing: https://m3.material.io/foundations/writing/text-resizing
+- Text truncation: https://m3.material.io/foundations/writing/text-truncation
+- Accessibility principles: https://m3.material.io/foundations/overview/principles
+- Assistive technology: https://m3.material.io/foundations/overview/assistive-technology
+- Co-design: https://m3.material.io/foundations/building-for-all/co-design
+- User needs: https://m3.material.io/foundations/building-for-all/user-needs
+- Material glossary: https://m3.material.io/foundations/glossary
+
+### Compose Material 3 APIs and sources
+
+- MaterialExpressiveTheme: https://developer.android.com/reference/kotlin/androidx/compose/material3/MaterialExpressiveTheme.composable
+- expressiveLightColorScheme: https://developer.android.com/reference/kotlin/androidx/compose/material3/package-summary#expressiveLightColorScheme()
+- ColorScheme: https://developer.android.com/reference/kotlin/androidx/compose/material3/ColorScheme
+- Typography API: https://developer.android.com/reference/kotlin/androidx/compose/material3/Typography
+- Shapes: https://developer.android.com/reference/kotlin/androidx/compose/material3/Shapes
+- ShapeDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/ShapeDefaults
+- MaterialShapes: https://developer.android.com/reference/kotlin/androidx/compose/material3/MaterialShapes
+- TopAppBar: https://developer.android.com/reference/kotlin/androidx/compose/material3/TopAppBar.composable
+- TopAppBarDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/TopAppBarDefaults
+- FlexibleBottomAppBar: https://developer.android.com/reference/kotlin/androidx/compose/material3/FlexibleBottomAppBar.composable
+- AppBarWithSearch: https://developer.android.com/reference/kotlin/androidx/compose/material3/AppBarWithSearch.composable
+- SearchBar: https://developer.android.com/reference/kotlin/androidx/compose/material3/SearchBar.composable
+- SearchBarDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/SearchBarDefaults
+- ShortNavigationBar: https://developer.android.com/reference/kotlin/androidx/compose/material3/ShortNavigationBar.composable
+- NavigationBarDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/NavigationBarDefaults
+- WideNavigationRail: https://developer.android.com/reference/kotlin/androidx/compose/material3/WideNavigationRail.composable
+- WideNavigationRailDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/WideNavigationRailDefaults
+- ButtonGroup: https://developer.android.com/reference/kotlin/androidx/compose/material3/ButtonGroup.composable
+- ButtonGroupDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/ButtonGroupDefaults
+- SplitButtonLayout: https://developer.android.com/reference/kotlin/androidx/compose/material3/SplitButtonLayout.composable
+- FloatingActionButtonMenu: https://developer.android.com/reference/kotlin/androidx/compose/material3/FloatingActionButtonMenu.composable
+- ToggleFloatingActionButton: https://developer.android.com/reference/kotlin/androidx/compose/material3/ToggleFloatingActionButton.composable
+- HorizontalFloatingToolbar: https://developer.android.com/reference/kotlin/androidx/compose/material3/HorizontalFloatingToolbar.composable
+- FloatingToolbarDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/FloatingToolbarDefaults
+- ListItem: https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItem.composable
+- ListItemDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItemDefaults
+- SegmentedListItem: https://developer.android.com/reference/kotlin/androidx/compose/material3/SegmentedListItem.composable
+- DropdownMenu: https://developer.android.com/reference/kotlin/androidx/compose/material3/DropdownMenu.composable
+- DropdownMenuPopup: https://developer.android.com/reference/kotlin/androidx/compose/material3/DropdownMenuPopup.composable
+- DropdownMenuGroup: https://developer.android.com/reference/kotlin/androidx/compose/material3/DropdownMenuGroup.composable
+- MenuDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/MenuDefaults
+- ModalBottomSheet: https://developer.android.com/reference/kotlin/androidx/compose/material3/ModalBottomSheet.composable
+- AlertDialog: https://developer.android.com/reference/kotlin/androidx/compose/material3/AlertDialog.composable
+- SnackbarHost: https://developer.android.com/reference/kotlin/androidx/compose/material3/SnackbarHost.composable
+- Switch: https://developer.android.com/reference/kotlin/androidx/compose/material3/Switch.composable
+- RadioButton: https://developer.android.com/reference/kotlin/androidx/compose/material3/RadioButton.composable
+- FilterChip: https://developer.android.com/reference/kotlin/androidx/compose/material3/FilterChip.composable
+- TextField: https://developer.android.com/reference/kotlin/androidx/compose/material3/TextField.composable
+- OutlinedTextField: https://developer.android.com/reference/kotlin/androidx/compose/material3/OutlinedTextField.composable
+- LoadingIndicator: https://developer.android.com/reference/kotlin/androidx/compose/material3/LoadingIndicator.composable
+- ContainedLoadingIndicator: https://developer.android.com/reference/kotlin/androidx/compose/material3/ContainedLoadingIndicator.composable
+- LoadingIndicatorDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/LoadingIndicatorDefaults
+- PullToRefreshBox: https://developer.android.com/reference/kotlin/androidx/compose/material3/pulltorefresh/PullToRefreshBox.composable
+- SwipeToDismissBox: https://developer.android.com/reference/kotlin/androidx/compose/material3/SwipeToDismissBox.composable
+- SwipeToDismissBoxDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/SwipeToDismissBoxDefaults
+- TooltipBox: https://developer.android.com/reference/kotlin/androidx/compose/material3/TooltipBox.composable
+- Compose Material 3 source: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/
+- LoadingIndicator source: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/LoadingIndicator.kt
+- Compose Material 3 tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/
+- Compose Material 3 type scale tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/TypeScaleTokens.kt
+- Compose Material 3 typography tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/TypographyTokens.kt
+- Compose Material 3 shape tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ShapeTokens.kt
+- Compose Material 3 state tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/StateTokens.kt
+- Compose Material 3 elevation tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ElevationTokens.kt
+- Expressive motion tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExpressiveMotionTokens.kt
+- Compose Material 3 list tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ListTokens.kt
+- Compose Material 3 expanded list tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExpandedListTokens.kt
+- Compose Material 3 reorder list tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ReorderListTokens.kt
+- Compose Material 3 reveal list tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/RevealListTokens.kt
+- Compose Material 3 small top app bar tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/AppBarSmallTokens.kt
+- Compose Material 3 search bar tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SearchBarTokens.kt
+- Compose Material 3 search view tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SearchViewTokens.kt
+- Compose Material 3 navigation bar tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/NavigationBarTokens.kt
+- Compose Material 3 collapsed navigation rail tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/NavigationRailCollapsedTokens.kt
+- Compose Material 3 icon button tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/IconButtonTokens.kt
+- Compose Material 3 small icon button tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SmallIconButtonTokens.kt
+- Compose Material 3 small button tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ButtonSmallTokens.kt
+- Compose Material 3 filter chip tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/FilterChipTokens.kt
+- Compose Material 3 switch tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SwitchTokens.kt
+- Compose Material 3 radio button tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/RadioButtonTokens.kt
+- Compose Material 3 filled text field tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/FilledTextFieldTokens.kt
+- Compose Material 3 dialog tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/DialogTokens.kt
+- Compose Material 3 snackbar tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SnackbarTokens.kt
+- Compose Material 3 standard menu tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/StandardMenuTokens.kt
+- Compose Material 3 vibrant menu tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/VibrantMenuTokens.kt
+- Compose Material 3 segmented menu tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SegmentedMenuTokens.kt
+- Compose Material 3 bottom sheet tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SheetBottomTokens.kt
+- Compose Material 3 drag handle tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/DragHandleTokens.kt
+- Compose Material 3 loading indicator tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/LoadingIndicatorTokens.kt
+- Compose Material 3 samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/
+- Compose Material 3 list samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/ListSamples.kt
+- Compose Material 3 app bar samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/AppBarSamples.kt
+- Compose Material 3 navigation bar samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/NavigationBarSamples.kt
+- Material 3 catalog app: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/integration-tests/material3-catalog/
+- Now in Android: https://github.com/android/nowinandroid
+- Now in Android dynamic color setting: https://raw.githubusercontent.com/android/nowinandroid/main/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt
+- Compose samples: https://github.com/android/compose-samples
+- Android documentation snippets: https://github.com/android/snippets
+- Android SettingsLib: https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/packages/SettingsLib/
+- Android Settings main switch bar: https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/packages/SettingsLib/MainSwitchPreference/
+
+### Fonts and icons
+
+- Google Sans: https://fonts.google.com/specimen/Google+Sans
+- Google Fonts CSS API: https://developers.google.com/fonts/docs/css2
 - Material Symbols guide: https://developers.google.com/fonts/docs/material_symbols
 - Material Symbols catalogue: https://fonts.google.com/icons
-- Maskable icons: https://web.dev/articles/maskable-icon
-- Swipe to dismiss: https://developer.android.com/develop/ui/compose/touch-input/user-interactions/swipe-to-dismiss
 - Material Symbols Android drawables: https://github.com/google/material-design-icons/tree/master/symbols/android
+- Material Symbols web SVGs: https://github.com/google/material-design-icons/tree/master/symbols/web
+- Maskable icons: https://web.dev/articles/maskable-icon
 
 ### Web
 - Material Design 3 for Web: https://m3.material.io/develop/web
 - Material Web components: https://github.com/material-components/material-web
 - Material Color Utilities: https://github.com/material-foundation/material-color-utilities
-- Compose Material 3 tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/
-- Expressive motion tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExpressiveMotionTokens.kt
-- LoadingIndicator source: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/LoadingIndicator.kt
-- ListItemDefaults: https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItemDefaults
-- SegmentedListItem: https://developer.android.com/reference/kotlin/androidx/compose/material3/SegmentedListItem.composable
-- Compose Material 3 navigation bar samples: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/NavigationBarSamples.kt
-- Material Symbols web SVGs: https://github.com/google/material-design-icons/tree/master/symbols/web
-- Google Fonts CSS API: https://developers.google.com/fonts/docs/css2
 - CSS linear() easing: https://developer.chrome.com/docs/css-ui/css-linear-easing-function
 - CSS light-dark(): https://web.dev/articles/light-dark
 - overscroll-behavior: https://developer.chrome.com/blog/overscroll-behavior
-- Compose Material 3 search bar tokens: https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SearchBarTokens.kt
-- Android Settings main switch bar: https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/packages/SettingsLib/MainSwitchPreference/
+- Learn PWA: https://web.dev/learn/pwa
+- Web app manifest: https://web.dev/learn/pwa/web-app-manifest
+- Service workers: https://web.dev/learn/pwa/service-workers
+- PWA caching: https://web.dev/learn/pwa/caching
+- PWA updates: https://web.dev/learn/pwa/update
+- PWA installation: https://web.dev/learn/pwa/installation
+- PWA app design: https://web.dev/learn/pwa/app-design
+- PWA OS integration: https://web.dev/learn/pwa/os-integration
+- Push notifications: https://web.dev/articles/push-notifications-overview
+- Web Push protocol: https://web.dev/articles/push-notifications-web-push-protocol
+- Badging API: https://developer.chrome.com/docs/capabilities/web-apis/badging-api
+- Storage for the web: https://web.dev/articles/storage-for-the-web
+- Back/forward cache: https://web.dev/articles/bfcache
+- Baseline: https://web.dev/baseline
+- Learn CSS: https://web.dev/learn/css
+- Learn Forms: https://web.dev/learn/forms
+- Learn Images: https://web.dev/learn/images
+- Learn Performance: https://web.dev/learn/performance
+- Core Web Vitals: https://web.dev/articles/vitals
+- Interaction to Next Paint: https://web.dev/articles/inp
+- Font best practices: https://web.dev/articles/font-best-practices
+- dialog element: https://web.dev/learn/html/dialog
+- Popover API: https://developer.chrome.com/blog/introducing-popover-api
+- Anchor positioning: https://developer.chrome.com/docs/css-ui/anchor-positioning-api
+- View transitions: https://developer.chrome.com/docs/web-platform/view-transitions
+- Scroll-driven animations: https://developer.chrome.com/docs/css-ui/scroll-driven-animations
+- Edge-to-edge on Chrome for Android: https://developer.chrome.com/docs/css-ui/edge-to-edge
 
 ### Cloudflare
 - Workers Builds: https://developers.cloudflare.com/workers/ci-cd/builds/
@@ -197,8 +466,6 @@
 - Window insets: https://developer.android.com/develop/ui/compose/system/insets
 - System bars: https://developer.android.com/develop/ui/compose/system/system-bars
 - Edge to edge in Compose: https://developer.android.com/develop/ui/compose/system/setup-e2e
-- Edge-to-edge design: https://developer.android.com/design/ui/mobile/guides/layout-and-content/edge-to-edge
-- System bars design: https://developer.android.com/design/ui/mobile/guides/foundations/system-bars
 - Predictive back in Compose: https://developer.android.com/develop/ui/compose/system/predictive-back
 - Adaptive icons: https://developer.android.com/develop/ui/compose/system/icon_design_adaptive
 - System color resources: https://developer.android.com/reference/android/R.color
@@ -342,6 +609,22 @@
 - TV hardware: https://developer.android.com/training/tv/get-started/hardware
 - Compose on Android TV: https://developer.android.com/training/tv/playback/compose
 - Adaptive apps for TV: https://developer.android.com/develop/adaptive-apps/guides/tv/build-adaptive-apps-for-tv
+- TV design: https://developer.android.com/design/ui/tv
+- Design for TV: https://developer.android.com/design/ui/tv/guides/foundations/design-for-tv
+- Navigation on TV: https://developer.android.com/design/ui/tv/guides/foundations/navigation-on-tv
+- Color on TV: https://developer.android.com/design/ui/tv/guides/foundations/color-on-tv
+- TV color system: https://developer.android.com/design/ui/tv/guides/styles/color-system
+- TV focus system: https://developer.android.com/design/ui/tv/guides/styles/focus-system
+- TV typography: https://developer.android.com/design/ui/tv/guides/styles/typography
+- TV components: https://developer.android.com/design/ui/tv/guides/components
+- TV buttons: https://developer.android.com/design/ui/tv/guides/components/buttons
+- TV cards: https://developer.android.com/design/ui/tv/guides/components/cards
+- TV lists: https://developer.android.com/design/ui/tv/guides/components/lists
+- TV immersive list: https://developer.android.com/design/ui/tv/guides/components/immersive-list
+- TV featured carousels: https://developer.android.com/design/ui/tv/guides/components/featured-carousel
+- TV navigation drawer: https://developer.android.com/design/ui/tv/guides/components/navigation-drawer
+- TV tabs: https://developer.android.com/design/ui/tv/guides/components/tabs
+- TV design samples: https://developer.android.com/design/ui/tv/samples/overview
 - TV layouts and overscan: https://developer.android.com/design/ui/tv/guides/styles/layouts
 - TV app icons and banners: https://developer.android.com/design/ui/tv/guides/system/tv-app-icon-guidelines
 - TV app quality: https://developer.android.com/docs/quality-guidelines/tv-app-quality
