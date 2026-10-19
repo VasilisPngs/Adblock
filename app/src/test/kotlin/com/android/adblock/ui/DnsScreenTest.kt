@@ -1,6 +1,8 @@
 package com.android.adblock.ui
 
 import android.content.pm.PackageManager
+import android.view.View
+import android.view.WindowManager
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
@@ -30,15 +32,18 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogWindowProvider
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
 import com.android.adblock.data.ThemeMode
@@ -317,6 +322,21 @@ class DnsScreenTest {
         compose.runOnIdle { backDispatcher.onBackPressed() }
         assertScaled(home, 1f, compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot())
         compose.onAllNodesWithText(string(R.string.theme)).assertCountEquals(0)
+    }
+
+    @Test
+    fun `blurs and dims behind dialogs through the dialog properties`() {
+        show(DnsUiState(url = SERVER))
+
+        compose.onNodeWithText(string(R.string.settings)).performClick()
+        compose.onNodeWithText(string(R.string.theme)).performClick()
+
+        val dialog = compose.onNode(isDialog()).fetchSemanticsNode().root as View
+        val attributes = (dialog.parent as DialogWindowProvider).window.attributes
+        val blur = context.getSystemService(WindowManager::class.java).isCrossWindowBlurEnabled
+        assertTrue(attributes.flags and WindowManager.LayoutParams.FLAG_BLUR_BEHIND != 0)
+        assertEquals(with(Density(context)) { 10.dp.roundToPx() }, attributes.blurBehindRadius)
+        assertEquals(if (blur) 0.2f else 0.32f, attributes.dimAmount, 0f)
     }
 
     @Test

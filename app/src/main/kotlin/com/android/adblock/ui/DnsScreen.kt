@@ -10,7 +10,6 @@ import android.content.res.Resources
 import android.net.VpnService
 import android.os.PowerManager
 import android.provider.Settings
-import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -76,7 +75,6 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -100,7 +98,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.isCrossWindowBlurEnabled
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -110,7 +109,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -130,7 +129,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
-import java.util.function.Consumer
 
 private val CompactMargin = 16.dp
 private val ContentMargin = 16.dp
@@ -148,9 +146,9 @@ private val PredictiveBackExitFade = Easing { (PredictiveBackEasing.transform(it
 private val PredictiveBackEnterFade = Easing {
     ((PredictiveBackEasing.transform(it) - PREDICTIVE_BACK_FADE_THRESHOLD) / (1f - PREDICTIVE_BACK_FADE_THRESHOLD)).coerceAtLeast(0f)
 }
-private const val BLUR_BEHIND_RADIUS = 20
-private const val DIM_WITH_BLUR = 0.1f
-private const val DIM_WITHOUT_BLUR = 0.4f
+private val DialogBlurRadius = 10.dp
+private const val BLURRED_SCRIM_ALPHA = 0.2f
+private const val SCRIM_ALPHA = 0.32f
 
 @Serializable
 private sealed interface Screen : NavKey {
@@ -579,7 +577,6 @@ private fun UrlDialog(
         },
         title = { Text(text = stringResource(R.string.server_url)) },
         text = {
-            DialogBlurBehind()
             val invalid = state.text.isNotBlank() && url == null
             OutlinedTextField(
                 state = state,
@@ -605,7 +602,8 @@ private fun UrlDialog(
                 onKeyboardAction = { url?.let(onSave) },
                 lineLimits = TextFieldLineLimits.SingleLine
             )
-        }
+        },
+        properties = dialogProperties()
     )
 }
 
@@ -631,7 +629,6 @@ private fun ThemeDialog(
         },
         title = { Text(text = stringResource(R.string.theme)) },
         text = {
-            DialogBlurBehind()
             Column(modifier = Modifier.selectableGroup()) {
                 ThemeMode.entries.forEach { mode ->
                     val selected = mode == current
@@ -649,7 +646,8 @@ private fun ThemeDialog(
                     }
                 }
             }
-        }
+        },
+        properties = dialogProperties()
     )
 }
 
@@ -666,19 +664,10 @@ private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun DialogBlurBehind() {
-    val window = (LocalView.current.parent as? DialogWindowProvider)?.window ?: return
-    DisposableEffect(window) {
-        val windowManager = window.windowManager
-        val listener = Consumer<Boolean> { enabled ->
-            window.setDimAmount(if (enabled) DIM_WITH_BLUR else DIM_WITHOUT_BLUR)
-        }
-        window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-        window.attributes = window.attributes.apply { blurBehindRadius = BLUR_BEHIND_RADIUS }
-        windowManager.addCrossWindowBlurEnabledListener(listener)
-        onDispose { windowManager.removeCrossWindowBlurEnabledListener(listener) }
-    }
-}
+private fun dialogProperties() = DialogProperties(
+    blurBehindRadius = DialogBlurRadius,
+    scrimAlpha = if (LocalWindowInfo.current.isCrossWindowBlurEnabled) BLURRED_SCRIM_ALPHA else SCRIM_ALPHA
+)
 
 private fun fadeThrough(motion: MotionScheme) =
     (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), FADE_THROUGH_SCALE))
