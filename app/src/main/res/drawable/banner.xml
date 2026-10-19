@@ -4,7 +4,7 @@
     android:viewportWidth="320"
     android:viewportHeight="180">
     <path
-        android:fillColor="@android:color/system_accent1_600"
+        android:fillColor="@color/ic_launcher_background"
         android:pathData="M0,0h320v180h-320z" />
     <group
         android:scaleX="0.065"
