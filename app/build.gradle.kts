@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -65,8 +66,8 @@ android {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.navigationevent)
-    implementation(libs.androidx.navigationevent.compose)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.datastore.preferences)
@@ -76,6 +77,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.text.google.fonts)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.core)
     androidLintTool(platform(libs.asm.bom))
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(platform(libs.androidx.compose.bom))

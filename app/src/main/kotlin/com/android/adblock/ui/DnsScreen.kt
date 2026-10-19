@@ -16,11 +16,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.animation.DeferredAnimatedContent
-import androidx.compose.animation.MutableContentTransform
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.DeferredTransitionState
-import androidx.compose.animation.core.rememberDeferredTransition
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -55,6 +53,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
@@ -80,12 +79,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -111,17 +110,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigationevent.NavigationEventInfo
-import androidx.navigationevent.NavigationEventTransitionState
-import androidx.navigationevent.compose.NavigationBackHandler
-import androidx.navigationevent.compose.NavigationEventState
-import androidx.navigationevent.compose.rememberNavigationEventState
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.ui.NavDisplay
 import androidx.window.core.layout.WindowSizeClass
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
@@ -131,6 +128,8 @@ import com.android.adblock.vpn.TunnelState
 import com.android.adblock.vpn.dohUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.serializer
 import java.util.function.Consumer
 
 private val CompactMargin = 16.dp
@@ -145,18 +144,33 @@ private const val PREDICTIVE_BACK_EXIT_SCALE = 0.9f
 private const val PREDICTIVE_BACK_ENTER_SCALE = 1.1f
 private const val PREDICTIVE_BACK_FADE_THRESHOLD = 0.35f
 private val PredictiveBackEasing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
+private val PredictiveBackExitFade = Easing { (PredictiveBackEasing.transform(it) / PREDICTIVE_BACK_FADE_THRESHOLD).coerceAtMost(1f) }
+private val PredictiveBackEnterFade = Easing {
+    ((PredictiveBackEasing.transform(it) - PREDICTIVE_BACK_FADE_THRESHOLD) / (1f - PREDICTIVE_BACK_FADE_THRESHOLD)).coerceAtLeast(0f)
+}
 private const val BLUR_BEHIND_RADIUS = 20
 private const val DIM_WITH_BLUR = 0.1f
 private const val DIM_WITHOUT_BLUR = 0.4f
 
-private enum class AppTab(
+@Serializable
+private sealed interface Screen : NavKey {
+    @Serializable
+    data object Home : Screen
+
+    @Serializable
+    data object Settings : Screen
+}
+
+private class TopLevelItem(
     @StringRes val labelRes: Int,
     @DrawableRes val iconRes: Int,
     @DrawableRes val selectedIconRes: Int
-) {
-    Home(R.string.home, R.drawable.ic_home, R.drawable.ic_home_filled),
-    Settings(R.string.settings, R.drawable.ic_settings, R.drawable.ic_settings_filled)
-}
+)
+
+private val TopLevelItems = mapOf(
+    Screen.Home to TopLevelItem(R.string.home, R.drawable.ic_home, R.drawable.ic_home_filled),
+    Screen.Settings to TopLevelItem(R.string.settings, R.drawable.ic_settings, R.drawable.ic_settings_filled)
+)
 
 @Composable
 fun DnsScreen(
@@ -221,7 +235,8 @@ internal fun DnsScreen(
     onDynamicColorChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by rememberSaveable { mutableStateOf(AppTab.Home) }
+    val backStack = rememberSerializable(serializer = serializer()) { NavBackStack<Screen>(Screen.Home) }
+    val current = backStack.last()
     var editing by rememberSaveable { mutableStateOf(false) }
     var themeDialog by rememberSaveable { mutableStateOf(false) }
     val homeListState = rememberLazyListState()
@@ -233,34 +248,19 @@ internal fun DnsScreen(
     val inputModeManager = LocalInputModeManager.current
     val coroutineScope = rememberCoroutineScope()
     var backNavigation by remember { mutableStateOf(false) }
-    val backState = rememberNavigationEventState(NavigationEventInfo.None)
-    val backProgress = remember(backState) { BackProgress(backState) }
-    val inBackGesture by remember(backState) {
-        derivedStateOf { backState.transitionState is NavigationEventTransitionState.InProgress }
-    }
-    val tabState = remember { DeferredTransitionState(selectedTab) }
-    if (inBackGesture) tabState.defer(AppTab.Home) else tabState.animateTo(selectedTab)
-    val tabTransition = rememberDeferredTransition(tabState)
-    NavigationBackHandler(
-        state = backState,
-        isBackEnabled = selectedTab != AppTab.Home,
-        onBackCompleted = {
-            backNavigation = true
-            selectedTab = AppTab.Home
-        }
-    )
 
     LaunchedEffect(Unit) {
         if (inputModeManager.inputMode == InputMode.Keyboard) homeFocus.requestFocus()
     }
 
-    val activeListState = if (selectedTab == AppTab.Home) homeListState else settingsListState
-    val activeBarState = if (selectedTab == AppTab.Home) homeBarState else settingsBarState
-    val activeFocus = if (selectedTab == AppTab.Home) homeFocus else settingsFocus
-    val selectTab: (AppTab) -> Unit = { tab ->
-        if (tab != selectedTab) {
+    val activeListState = if (current == Screen.Home) homeListState else settingsListState
+    val activeBarState = if (current == Screen.Home) homeBarState else settingsBarState
+    val activeFocus = if (current == Screen.Home) homeFocus else settingsFocus
+    val navigate: (Screen) -> Unit = { screen ->
+        if (screen != current) {
             backNavigation = false
-            selectedTab = tab
+            backStack.subList(1, backStack.size).clear()
+            if (screen != Screen.Home) backStack.add(screen)
         } else {
             coroutineScope.reveal(activeListState, activeBarState)
         }
@@ -289,22 +289,22 @@ internal fun DnsScreen(
 
     NavigationSuiteScaffold(
         navigationItems = {
-            AppTab.entries.forEach { tab ->
-                val selected = tab == selectedTab
+            TopLevelItems.forEach { (screen, item) ->
+                val selected = screen == current
                 NavigationSuiteItem(
                     selected = selected,
-                    onClick = { selectTab(tab) },
+                    onClick = { navigate(screen) },
                     icon = {
                         Icon(
-                            painter = painterResource(if (selected) tab.selectedIconRes else tab.iconRes),
+                            painter = painterResource(if (selected) item.selectedIconRes else item.iconRes),
                             contentDescription = null
                         )
                     },
-                    label = { Text(text = stringResource(tab.labelRes)) },
+                    label = { Text(text = stringResource(item.labelRes)) },
                     navigationSuiteType = navigationSuiteType,
                     modifier = Modifier.focusProperties {
-                        val first = tab == AppTab.entries.first()
-                        val last = tab == AppTab.entries.last()
+                        val first = screen == TopLevelItems.keys.first()
+                        val last = screen == TopLevelItems.keys.last()
                         if (navigationBar) {
                             up = activeFocus
                             if (first) start = FocusRequester.Cancel
@@ -322,29 +322,18 @@ internal fun DnsScreen(
         navigationSuiteType = navigationSuiteType
     ) {
         val motion = MaterialTheme.motionScheme
-        tabTransition.DeferredAnimatedContent(
-            transitionSpec = {
-                if (backNavigation) {
-                    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), PREDICTIVE_BACK_ENTER_SCALE))
-                        .togetherWith(fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), PREDICTIVE_BACK_EXIT_SCALE))
-                } else {
-                    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), FADE_THROUGH_SCALE))
-                        .togetherWith(fadeOut(motion.fastEffectsSpec()))
-                }
-            },
-            mutableTransformSpec = { predictiveBackTransform(backProgress) }
-        ) { tab ->
-            val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(if (tab == AppTab.Home) homeBarState else settingsBarState)
+        val content: @Composable (Screen) -> Unit = { screen ->
+            val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(if (screen == Screen.Home) homeBarState else settingsBarState)
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text(text = stringResource(tab.labelRes)) },
+                        title = { Text(text = stringResource(TopLevelItems.getValue(screen).labelRes)) },
                         windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
                         contentPadding = PaddingValues(horizontal = barMargin),
                         scrollBehavior = scrollBehavior
                     )
                 },
-                snackbarHost = { if (tab == selectedTab) SnackbarHost(hostState = snackbarHostState) },
+                snackbarHost = { if (screen == current) SnackbarHost(hostState = snackbarHostState) },
                 contentWindowInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
             ) { padding ->
                 val layoutDirection = LocalLayoutDirection.current
@@ -354,8 +343,8 @@ internal fun DnsScreen(
                     end = padding.calculateEndPadding(layoutDirection) + margin,
                     bottom = padding.calculateBottomPadding() + margin
                 )
-                when (tab) {
-                    AppTab.Home -> HomeView(
+                when (screen) {
+                    Screen.Home -> HomeView(
                         listState = homeListState,
                         nestedScroll = scrollBehavior.nestedScrollConnection,
                         focus = homeFocus,
@@ -366,7 +355,7 @@ internal fun DnsScreen(
                         onPrivateDns = onPrivateDns,
                         onVpnSettings = onVpnSettings
                     )
-                    AppTab.Settings -> SettingsView(
+                    Screen.Settings -> SettingsView(
                         listState = settingsListState,
                         nestedScroll = scrollBehavior.nestedScrollConnection,
                         focus = settingsFocus,
@@ -378,6 +367,16 @@ internal fun DnsScreen(
                 }
             }
         }
+        NavDisplay(
+            backStack = backStack,
+            onBack = {
+                backNavigation = true
+                backStack.removeLastOrNull()
+            },
+            transitionSpec = { fadeThrough(motion) },
+            popTransitionSpec = { if (backNavigation) backTransition(motion) else fadeThrough(motion) },
+            predictivePopTransitionSpec = { predictiveBackTransition() }
+        ) { screen -> NavEntry(screen, content = content) }
     }
 
     if (themeDialog) {
@@ -681,28 +680,17 @@ private fun DialogBlurBehind() {
     }
 }
 
-private class BackProgress(private val state: NavigationEventState<*>) {
-    private var last = 0f
+private fun fadeThrough(motion: MotionScheme) =
+    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), FADE_THROUGH_SCALE))
+        .togetherWith(fadeOut(motion.fastEffectsSpec()))
 
-    val value: Float
-        get() {
-            (state.transitionState as? NavigationEventTransitionState.InProgress)?.let {
-                last = PredictiveBackEasing.transform(it.latestEvent.progress)
-            }
-            return last
-        }
-}
+private fun backTransition(motion: MotionScheme) =
+    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), PREDICTIVE_BACK_ENTER_SCALE))
+        .togetherWith(fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), PREDICTIVE_BACK_EXIT_SCALE))
 
-private fun predictiveBackTransform(progress: BackProgress) = MutableContentTransform {
-    initialContentTransform {
-        scale = lerp(1f, PREDICTIVE_BACK_EXIT_SCALE, progress.value)
-        alpha = 1f - (progress.value / PREDICTIVE_BACK_FADE_THRESHOLD).coerceAtMost(1f)
-    }
-    targetContentTransform {
-        scale = lerp(PREDICTIVE_BACK_ENTER_SCALE, 1f, progress.value)
-        alpha = ((progress.value - PREDICTIVE_BACK_FADE_THRESHOLD) / (1f - PREDICTIVE_BACK_FADE_THRESHOLD)).coerceAtLeast(0f)
-    }
-}
+private fun predictiveBackTransition() =
+    (fadeIn(tween(easing = PredictiveBackEnterFade)) + scaleIn(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_ENTER_SCALE))
+        .togetherWith(fadeOut(tween(easing = PredictiveBackExitFade)) + scaleOut(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_EXIT_SCALE))
 
 private fun CoroutineScope.reveal(listState: LazyListState, barState: TopAppBarState) {
     launch {
