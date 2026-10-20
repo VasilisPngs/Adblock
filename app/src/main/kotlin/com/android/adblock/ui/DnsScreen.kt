@@ -191,7 +191,7 @@ fun DnsScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
 
     if (uiState.readyToConnect) {
-        LaunchedEffect(Unit) {
+        SideEffect(Unit) {
             viewModel.connectRequestHandled()
             VpnService.prepare(context)?.let(consent::launch) ?: connect()
         }
@@ -275,7 +275,7 @@ internal fun DnsScreen(
         navigationSuiteType == NavigationSuiteType.ShortNavigationBarMedium
     val window = LocalActivity.current?.window
     val navigationBarScrim = !navigationBar && WindowInsets.navigationBars.getBottom(LocalDensity.current) > 0
-    SideEffect { window?.isNavigationBarContrastEnforced = navigationBarScrim }
+    SideEffect(window, navigationBarScrim) { window?.isNavigationBarContrastEnforced = navigationBarScrim }
 
     val context = LocalContext.current
     val television = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
