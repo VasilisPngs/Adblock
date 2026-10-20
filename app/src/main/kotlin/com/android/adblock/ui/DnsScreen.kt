@@ -1,5 +1,6 @@
 package com.android.adblock.ui
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
@@ -187,6 +188,10 @@ fun DnsScreen(
     val consent = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) connect() else viewModel.cancel()
     }
+    val activity = LocalActivity.current
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        viewModel.turnOn()
+    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
 
@@ -208,7 +213,13 @@ fun DnsScreen(
         DnsScreen(
             uiState = uiState,
             snackbarHostState = snackbarHostState,
-            onEnabledChange = { enabled -> if (enabled) viewModel.turnOn() else viewModel.turnOff() },
+            onEnabledChange = { enabled ->
+                when {
+                    !enabled -> viewModel.turnOff()
+                    askForNotifications(context, activity) -> notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    else -> viewModel.turnOn()
+                }
+            },
             onUrlChange = viewModel::setUrl,
             onPrivateDns = { openSettings(context, Settings.ACTION_WIRELESS_SETTINGS) },
             onVpnSettings = { openSettings(context, Settings.ACTION_VPN_SETTINGS) },
@@ -715,6 +726,10 @@ internal fun DohResult.text(resources: Resources): String =
     } else {
         resources.getString(R.string.server_unreachable)
     }
+
+private fun askForNotifications(context: Context, activity: Activity?): Boolean =
+    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+        activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == false
 
 @SuppressLint("BatteryLife")
 private fun requestUnrestrictedBattery(context: Context) {
