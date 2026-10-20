@@ -20,6 +20,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
@@ -44,11 +45,26 @@ jobs:
             -k "$ANDROID_KEYSTORE_PASSWORD"
           test -s release.keystore
 
-      - name: Lint, test and build release APK
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Lint and test
+        run: ./gradlew :app:lintRelease :app:testDebugUnitTest --no-daemon
+
+      - name: Generate Baseline Profile and build release APK
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        run: ./gradlew :app:lintRelease :app:testDebugUnitTest :app:assembleRelease --no-daemon
+        run: >-
+          ./gradlew :app:generateReleaseBaselineProfile :app:assembleRelease
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect --no-daemon
+
+      - name: Show device test results
+        if: failure()
+        run: find . -path '*/build/outputs/androidTest-results/*' -name '*.xml' -exec cat {} +
 
       - name: Publish release
         env:
@@ -73,3 +89,20 @@ jobs:
               --title "Adblock" \
               --notes " "
           fi
+
+      - name: Benchmark startup
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          ./gradlew :baselineprofile:pixel10Api37BenchmarkReleaseAndroidTest \
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
+            -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=Macrobenchmark \
+            -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR \
+            --no-daemon
+          {
+            echo '| Startup | Median time to initial display |'
+            echo '| --- | --- |'
+            find baselineprofile/build/outputs -name '*benchmarkData.json' -exec \
+              jq -r '.benchmarks[] | "| \(.name) | \(.metrics.timeToInitialDisplayMs.median) ms |"' {} +
+          } >> "$GITHUB_STEP_SUMMARY"

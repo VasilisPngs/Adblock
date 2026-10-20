@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "Adblock"
 
 include(":app")
+include(":baselineprofile")
