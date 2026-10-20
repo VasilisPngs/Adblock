@@ -15,10 +15,13 @@ import com.android.adblock.R
 import com.android.adblock.data.AppPreferences
 import com.android.adblock.data.Appearance
 import com.android.adblock.data.DnsPreferences
+import com.android.adblock.data.SelfUpdater
 import com.android.adblock.data.ThemeMode
 import com.android.adblock.vpn.DnsTunnel
 import com.android.adblock.vpn.DohResult
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -32,6 +35,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowActivity
 import java.io.File
+import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
 class NotificationPermissionTest {
@@ -84,7 +88,13 @@ class NotificationPermissionTest {
             context,
             PreferenceDataStoreFactory.create { File(folder.root, "app.preferences_pb") }
         )
-        val viewModel = DnsViewModel(preferences, appPreferences, DnsTunnel(context), MutableStateFlow(null)) { server, _ ->
+        val viewModel = DnsViewModel(
+            preferences,
+            appPreferences,
+            DnsTunnel(context),
+            MutableStateFlow(null),
+            SelfUpdater(context, MainScope(), flowOf(true)) { throw IOException("Offline") }
+        ) { server, _ ->
             asked += server
             DohResult.Failed
         }

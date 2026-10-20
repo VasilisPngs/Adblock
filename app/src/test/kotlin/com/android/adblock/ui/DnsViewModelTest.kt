@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.android.adblock.data.AppPreferences
 import com.android.adblock.data.Appearance
 import com.android.adblock.data.DnsPreferences
+import com.android.adblock.data.SelfUpdater
 import com.android.adblock.data.ThemeMode
 import com.android.adblock.vpn.DnsTunnel
 import com.android.adblock.vpn.DnsVpnService
@@ -19,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -42,6 +44,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import java.io.File
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -69,7 +72,7 @@ class DnsViewModelTest {
     fun `shows the saved server once it is read`() = runTest {
         val preferences = preferences()
         preferences.setUrl(SERVER)
-        val viewModel = DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer) { _, _ -> DohResult.Failed }
+        val viewModel = DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer, selfUpdater()) { _, _ -> DohResult.Failed }
 
         assertFalse(viewModel.uiState.value.loaded)
         assertEquals(SERVER, withTimeoutOrNull(WAIT_MILLIS) { viewModel.uiState.first { it.loaded } }?.url)
@@ -124,7 +127,7 @@ class DnsViewModelTest {
         val preferences = preferences()
         preferences.setUrl(SERVER)
         tunnel.update(TunnelState.On)
-        val viewModel = loaded(DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer) { _, _ -> answer.await() })
+        val viewModel = loaded(DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer, selfUpdater()) { _, _ -> answer.await() })
         viewModel.setUrl(OTHER)
 
         tunnel.update(TunnelState.Off)
@@ -141,7 +144,7 @@ class DnsViewModelTest {
         val preferences = preferences()
         preferences.setUrl(SERVER)
         tunnel.update(TunnelState.On)
-        val viewModel = loaded(DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer) { _, _ -> CompletableDeferred<DohResult>().also(answers::add).await() })
+        val viewModel = loaded(DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer, selfUpdater()) { _, _ -> CompletableDeferred<DohResult>().also(answers::add).await() })
         viewModel.setUrl(OTHER)
         viewModel.setUrl(THIRD)
 
@@ -219,7 +222,7 @@ class DnsViewModelTest {
         val answer = CompletableDeferred<DohResult>()
         val preferences = preferences()
         preferences.setUrl(SERVER)
-        val viewModel = loaded(DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer) { _, _ -> answer.await() })
+        val viewModel = loaded(DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer, selfUpdater()) { _, _ -> answer.await() })
         viewModel.turnOn()
 
         viewModel.turnOff()
@@ -292,6 +295,8 @@ class DnsViewModelTest {
         PreferenceDataStoreFactory.create(scope = backgroundScope) { File(folder.root, "app.preferences_pb") }
     )
 
+    private fun TestScope.selfUpdater() = SelfUpdater(context, backgroundScope, flowOf(true)) { throw IOException("Offline") }
+
     private fun TestScope.preferences() = DnsPreferences(
         PreferenceDataStoreFactory.create(scope = backgroundScope) { File(folder.root, "dns.preferences_pb") }
     )
@@ -305,7 +310,7 @@ class DnsViewModelTest {
     private suspend fun TestScope.viewModel(preferences: DnsPreferences, result: DohResult, url: String = ""): DnsViewModel {
         preferences.setUrl(url)
         return loaded(
-            DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer) { server, query ->
+            DnsViewModel(preferences, appPreferences(), tunnel, privateDnsServer, selfUpdater()) { server, query ->
                 asked += server to query
                 result
             }

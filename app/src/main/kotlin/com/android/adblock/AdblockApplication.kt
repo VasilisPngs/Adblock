@@ -3,13 +3,21 @@ package com.android.adblock
 import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.http.HttpEngine
 import androidx.compose.material3.ComposeMaterial3Flags
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.android.adblock.data.AppPreferences
 import com.android.adblock.data.DnsPreferences
 import com.android.adblock.data.NetworkMonitor
+import com.android.adblock.data.SelfUpdater
 import com.android.adblock.vpn.DnsTunnel
 import com.android.adblock.vpn.DohClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.map
 
 class AdblockApplication : Application() {
     val container by lazy { AppContainer(this) }
@@ -22,9 +30,18 @@ class AdblockApplication : Application() {
 }
 
 class AppContainer(context: Context) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val http = HttpEngine.Builder(context).build()
+
     val preferences = DnsPreferences(context)
     val appPreferences = AppPreferences(context)
-    val doh = DohClient(context)
+    val doh = DohClient(http)
+    val selfUpdater = SelfUpdater(
+        context,
+        scope,
+        ProcessLifecycleOwner.get().lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.STARTED) },
+        http::openConnection
+    )
     val tunnel = DnsTunnel(context)
     val network = NetworkMonitor(context.getSystemService(ConnectivityManager::class.java))
 }

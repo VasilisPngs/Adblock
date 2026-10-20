@@ -1,6 +1,5 @@
 package com.android.adblock.vpn
 
-import android.content.Context
 import android.net.http.HttpEngine
 import android.net.http.HttpException
 import android.net.http.UrlRequest
@@ -29,8 +28,7 @@ internal fun dnsAnswer(query: ByteArray, response: ByteArray): DohResult =
         DohResult.Failed
     }
 
-class DohClient(context: Context) {
-    private val engine = HttpEngine.Builder(context).build()
+class DohClient(private val engine: HttpEngine) {
     private val executor = Executors.newSingleThreadExecutor()
 
     fun resolve(url: String, query: ByteArray, onResult: (DohResult) -> Unit) {

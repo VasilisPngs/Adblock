@@ -23,6 +23,12 @@ class AppPreferences(
         .map { preferences -> Appearance(preferences.themeMode(), preferences[DYNAMIC_COLOR] ?: false) }
         .distinctUntilChanged()
 
+    val automaticUpdates: Flow<Boolean> = store.data.map { it[AUTOMATIC_UPDATES] ?: false }.distinctUntilChanged()
+
+    suspend fun setAutomaticUpdates(value: Boolean) {
+        store.edit { it[AUTOMATIC_UPDATES] = value }
+    }
+
     suspend fun setThemeMode(mode: ThemeMode) {
         store.edit { it[THEME_MODE] = mode.name }
         applyNightMode(mode)
@@ -43,5 +49,6 @@ class AppPreferences(
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+        val AUTOMATIC_UPDATES = booleanPreferencesKey("automatic_updates")
     }
 }

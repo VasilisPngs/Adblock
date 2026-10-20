@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -31,6 +32,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -46,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
+import com.android.adblock.data.AppUpdate
+import com.android.adblock.data.SelfUpdate
 import com.android.adblock.data.ThemeMode
 import com.android.adblock.ui.theme.AdblockTheme
 import com.android.adblock.vpn.DohResult
@@ -75,6 +79,9 @@ class DnsScreenTest {
     private var vpnSettingsOpened = 0
     private val themes = mutableListOf<ThemeMode>()
     private val dynamicColors = mutableListOf<Boolean>()
+    private val automaticUpdates = mutableListOf<Boolean>()
+    private var appUpdate by mutableStateOf(AppUpdate())
+    private var appUpdates = 0
     private lateinit var backDispatcher: OnBackPressedDispatcher
 
     @Test
@@ -363,6 +370,55 @@ class DnsScreenTest {
 
     @Test
     @Config(qualifiers = "w411dp-h891dp")
+    fun `turns automatic updates on from settings`() {
+        show(DnsUiState(url = SERVER))
+
+        compose.onNodeWithText(string(R.string.settings)).performClick()
+        compose.onNodeWithText(string(R.string.automatic_updates)).assertIsOff().assert(SwitchRole).performClick()
+
+        assertEquals(listOf(true), automaticUpdates)
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun `shows in settings that the app is up to date`() {
+        appUpdate = AppUpdate(status = SelfUpdate.UpToDate)
+        show(DnsUiState(url = SERVER))
+
+        compose.onNodeWithText(string(R.string.settings)).performClick()
+
+        compose.onNodeWithText(string(R.string.self_update_up_to_date)).assertIsDisplayed()
+        compose.onAllNodesWithText(string(R.string.update)).assertCountEquals(0)
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun `updates the app from settings when a new version is available`() {
+        appUpdate = AppUpdate(status = SelfUpdate.Available)
+        show(DnsUiState(url = SERVER))
+
+        compose.onNodeWithText(string(R.string.settings)).performClick()
+        compose.onNodeWithText(string(R.string.self_update_available)).assertIsDisplayed()
+        compose.onNodeWithText(string(R.string.update)).performClick()
+
+        assertEquals(1, appUpdates)
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun `shows the download of the app update`() {
+        appUpdate = AppUpdate(automatic = true, status = SelfUpdate.Downloading(0.42f))
+        show(DnsUiState(url = SERVER))
+
+        compose.onNodeWithText(string(R.string.settings)).performClick()
+
+        compose.onNodeWithText(string(R.string.self_update_downloading, 42)).assertIsDisplayed()
+        compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo(0.42f, 0f..1f))).assertIsDisplayed()
+        compose.onAllNodesWithText(string(R.string.update)).assertCountEquals(0)
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
     fun `measures the settings by Google's list and app bar tokens`() {
         show(DnsUiState(url = SERVER))
         compose.onNodeWithText(string(R.string.settings)).performClick()
@@ -382,6 +438,8 @@ class DnsScreenTest {
         assertEquals(ListItemDefaults.SegmentedGap, dynamicItem.top - themeItem.bottom)
         assertEquals(true to false, corners(string(R.string.theme)))
         assertEquals(false to true, corners(string(R.string.dynamic_color)))
+        assertEquals(true to false, corners(string(R.string.automatic_updates)))
+        assertEquals(false to true, corners(string(R.string.app_update)))
 
         compose.onNodeWithText(string(R.string.theme)).performClick()
         val light = compose.onNodeWithText(string(R.string.theme_light)).getBoundsInRoot()
@@ -443,7 +501,10 @@ class DnsScreenTest {
                     onVpnSettings = { vpnSettingsOpened++ },
                     appearance = Appearance(ThemeMode.System, dynamicColor = false),
                     onThemeChange = { themes += it },
-                    onDynamicColorChange = { dynamicColors += it }
+                    onDynamicColorChange = { dynamicColors += it },
+                    appUpdate = appUpdate,
+                    onAutomaticUpdatesChange = { automaticUpdates += it },
+                    onUpdateApp = { appUpdates++ }
                 )
             }
         }

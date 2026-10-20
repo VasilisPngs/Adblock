@@ -1,5 +1,6 @@
 package com.android.adblock.ui
 
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
@@ -8,7 +9,9 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.android.adblock.AdblockApplication
 import com.android.adblock.data.AppPreferences
 import com.android.adblock.data.Appearance
+import com.android.adblock.data.AppUpdate
 import com.android.adblock.data.DnsPreferences
+import com.android.adblock.data.SelfUpdater
 import com.android.adblock.data.ThemeMode
 import com.android.adblock.vpn.DnsTunnel
 import com.android.adblock.vpn.DohResult
@@ -52,6 +55,7 @@ class DnsViewModel(
     private val appPreferences: AppPreferences,
     private val tunnel: DnsTunnel,
     privateDnsServer: Flow<String?>,
+    private val selfUpdater: SelfUpdater,
     private val resolve: suspend (String, ByteArray) -> DohResult
 ) : ViewModel() {
     private val request = MutableStateFlow(Request())
@@ -75,9 +79,18 @@ class DnsViewModel(
             DnsUiState(tunnel = tunnel.state.value, vpnSettings = tunnel.vpnSettings)
         )
 
+    val appUpdate: StateFlow<AppUpdate> = combine(appPreferences.automaticUpdates, selfUpdater.status, ::AppUpdate)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), AppUpdate())
+
+    val updateConfirmation: StateFlow<Intent?> = selfUpdater.confirmation
+
     val appearance: StateFlow<Appearance?> = appPreferences.appearance
         .onStart { appPreferences.restoreThemeMode() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
+
+    init {
+        viewModelScope.launch { selfUpdater.check(appPreferences.automaticUpdates.first()) }
+    }
 
     fun setUrl(value: String) {
         urlCheck?.cancel()
@@ -138,6 +151,15 @@ class DnsViewModel(
         viewModelScope.launch { appPreferences.setThemeMode(mode) }
     }
 
+    fun setAutomaticUpdates(enabled: Boolean) {
+        if (appUpdate.value.automatic == enabled) return
+        viewModelScope.launch { appPreferences.setAutomaticUpdates(enabled) }
+    }
+
+    fun updateApp() = selfUpdater.update()
+
+    fun updateConfirmationShown(intent: Intent) = selfUpdater.confirmationShown(intent)
+
     fun setDynamicColor(enabled: Boolean) {
         if (appearance.value?.dynamicColor == enabled) return
         viewModelScope.launch { appPreferences.setDynamicColor(enabled) }
@@ -154,6 +176,7 @@ class DnsViewModel(
                     container.appPreferences,
                     container.tunnel,
                     container.network.privateDnsServer,
+                    container.selfUpdater,
                     container.doh::resolve
                 )
             }

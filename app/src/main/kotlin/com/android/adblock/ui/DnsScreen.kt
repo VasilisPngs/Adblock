@@ -51,8 +51,11 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.OutlinedTextField
@@ -123,6 +126,8 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.window.core.layout.WindowSizeClass
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
+import com.android.adblock.data.AppUpdate
+import com.android.adblock.data.SelfUpdate
 import com.android.adblock.data.ThemeMode
 import com.android.adblock.vpn.DohResult
 import com.android.adblock.vpn.TunnelState
@@ -131,6 +136,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
+import kotlin.math.roundToInt
 
 private val CompactMargin = 16.dp
 private val ContentMargin = 16.dp
@@ -179,6 +185,8 @@ fun DnsScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val appUpdate by viewModel.appUpdate.collectAsStateWithLifecycle()
+    val updateConfirmation by viewModel.updateConfirmation.collectAsStateWithLifecycle()
     ReportDrawnWhen { uiState.loaded }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -201,6 +209,13 @@ fun DnsScreen(
         SideEffect(Unit) {
             viewModel.connectRequestHandled()
             VpnService.prepare(context)?.let(consent::launch) ?: connect()
+        }
+    }
+
+    updateConfirmation?.let { confirmation ->
+        SideEffect(confirmation) {
+            viewModel.updateConfirmationShown(confirmation)
+            runCatching { context.startActivity(confirmation) }
         }
     }
 
@@ -228,6 +243,9 @@ fun DnsScreen(
             appearance = appearance,
             onThemeChange = viewModel::setThemeMode,
             onDynamicColorChange = viewModel::setDynamicColor,
+            appUpdate = appUpdate,
+            onAutomaticUpdatesChange = viewModel::setAutomaticUpdates,
+            onUpdateApp = viewModel::updateApp,
             modifier = modifier
         )
     }
@@ -244,6 +262,9 @@ internal fun DnsScreen(
     appearance: Appearance,
     onThemeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    appUpdate: AppUpdate,
+    onAutomaticUpdatesChange: (Boolean) -> Unit,
+    onUpdateApp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val backStack = rememberSerializable(serializer = serializer()) { NavBackStack<Screen>(Screen.Home) }
@@ -373,7 +394,10 @@ internal fun DnsScreen(
                         contentPadding = contentPadding,
                         appearance = appearance,
                         onTheme = { themeDialog = true },
-                        onDynamicColorChange = onDynamicColorChange
+                        onDynamicColorChange = onDynamicColorChange,
+                        appUpdate = appUpdate,
+                        onAutomaticUpdatesChange = onAutomaticUpdatesChange,
+                        onUpdateApp = onUpdateApp
                     )
                 }
             }
@@ -521,7 +545,10 @@ private fun SettingsView(
     contentPadding: PaddingValues,
     appearance: Appearance,
     onTheme: () -> Unit,
-    onDynamicColorChange: (Boolean) -> Unit
+    onDynamicColorChange: (Boolean) -> Unit,
+    appUpdate: AppUpdate,
+    onAutomaticUpdatesChange: (Boolean) -> Unit,
+    onUpdateApp: () -> Unit
 ) {
     LazyColumn(
         state = listState,
@@ -561,6 +588,63 @@ private fun SettingsView(
                 Text(text = stringResource(R.string.dynamic_color))
             }
         }
+
+        item(key = "updates") {
+            SectionHeader(text = stringResource(R.string.updates), modifier = Modifier.padding(top = ContentMargin))
+        }
+
+        item(key = "automatic-updates") {
+            SegmentedListItem(
+                checked = appUpdate.automatic,
+                onCheckedChange = onAutomaticUpdatesChange,
+                modifier = Modifier.semantics { role = Role.Switch },
+                shapes = ListItemDefaults.segmentedShapes(0, 2),
+                colors = listItemColors(),
+                supportingContent = { Text(text = stringResource(R.string.automatic_updates_description)) },
+                trailingContent = { Switch(checked = appUpdate.automatic, onCheckedChange = null) }
+            ) {
+                Text(text = stringResource(R.string.automatic_updates))
+            }
+        }
+
+        item(key = "app-update") {
+            AppUpdateItem(status = appUpdate.status, onUpdate = onUpdateApp, shapes = ListItemDefaults.segmentedShapes(1, 2))
+        }
+    }
+}
+
+@Composable
+private fun AppUpdateItem(status: SelfUpdate, onUpdate: () -> Unit, shapes: ListItemShapes) {
+    val text = when (status) {
+        SelfUpdate.Checking -> stringResource(R.string.self_update_checking)
+        SelfUpdate.UpToDate -> stringResource(R.string.self_update_up_to_date)
+        SelfUpdate.CheckFailed -> stringResource(R.string.check_failed)
+        SelfUpdate.Available -> stringResource(R.string.self_update_available)
+        is SelfUpdate.Downloading -> stringResource(R.string.self_update_downloading, (status.progress * 100).roundToInt())
+        SelfUpdate.Ready -> stringResource(R.string.self_update_ready)
+        SelfUpdate.Installing -> stringResource(R.string.self_update_installing)
+        SelfUpdate.Failed -> stringResource(R.string.self_update_failed)
+    }
+    SegmentedListItem(
+        shapes = shapes,
+        colors = listItemColors(),
+        supportingContent = {
+            Column {
+                Text(text = text)
+                when (status) {
+                    is SelfUpdate.Downloading -> LinearWavyProgressIndicator(progress = { status.progress }, modifier = Modifier.fillMaxWidth())
+                    SelfUpdate.Installing -> LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    else -> Unit
+                }
+            }
+        },
+        trailingContent = if (status == SelfUpdate.Available || status == SelfUpdate.Ready || status == SelfUpdate.Failed) {
+            { FilledTonalButton(onClick = onUpdate, shapes = ButtonDefaults.shapes()) { Text(text = stringResource(R.string.update)) } }
+        } else {
+            null
+        }
+    ) {
+        Text(text = stringResource(R.string.app_update))
     }
 }
 
