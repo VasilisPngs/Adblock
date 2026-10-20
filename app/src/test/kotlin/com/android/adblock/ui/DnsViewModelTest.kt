@@ -20,7 +20,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -295,7 +294,7 @@ class DnsViewModelTest {
         PreferenceDataStoreFactory.create(scope = backgroundScope) { File(folder.root, "app.preferences_pb") }
     )
 
-    private fun TestScope.selfUpdater() = SelfUpdater(context, backgroundScope, flowOf(true)) { throw IOException("Offline") }
+    private fun TestScope.selfUpdater() = SelfUpdater(context, backgroundScope) { throw IOException("Offline") }
 
     private fun TestScope.preferences() = DnsPreferences(
         PreferenceDataStoreFactory.create(scope = backgroundScope) { File(folder.root, "dns.preferences_pb") }

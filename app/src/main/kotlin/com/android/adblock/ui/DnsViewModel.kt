@@ -9,8 +9,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.android.adblock.AdblockApplication
 import com.android.adblock.data.AppPreferences
 import com.android.adblock.data.Appearance
-import com.android.adblock.data.AppUpdate
 import com.android.adblock.data.DnsPreferences
+import com.android.adblock.data.SelfUpdate
 import com.android.adblock.data.SelfUpdater
 import com.android.adblock.data.ThemeMode
 import com.android.adblock.vpn.DnsTunnel
@@ -79,8 +79,7 @@ class DnsViewModel(
             DnsUiState(tunnel = tunnel.state.value, vpnSettings = tunnel.vpnSettings)
         )
 
-    val appUpdate: StateFlow<AppUpdate> = combine(appPreferences.automaticUpdates, selfUpdater.status, ::AppUpdate)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), AppUpdate())
+    val selfUpdate: StateFlow<SelfUpdate> = selfUpdater.status
 
     val updateConfirmation: StateFlow<Intent?> = selfUpdater.confirmation
 
@@ -89,7 +88,7 @@ class DnsViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
     init {
-        viewModelScope.launch { selfUpdater.check(appPreferences.automaticUpdates.first()) }
+        selfUpdater.check()
     }
 
     fun setUrl(value: String) {
@@ -149,11 +148,6 @@ class DnsViewModel(
     fun setThemeMode(mode: ThemeMode) {
         if (appearance.value?.themeMode == mode) return
         viewModelScope.launch { appPreferences.setThemeMode(mode) }
-    }
-
-    fun setAutomaticUpdates(enabled: Boolean) {
-        if (appUpdate.value.automatic == enabled) return
-        viewModelScope.launch { appPreferences.setAutomaticUpdates(enabled) }
     }
 
     fun updateApp() = selfUpdater.update()

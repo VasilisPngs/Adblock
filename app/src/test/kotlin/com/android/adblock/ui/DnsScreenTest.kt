@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -40,7 +41,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
@@ -48,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
-import com.android.adblock.data.AppUpdate
 import com.android.adblock.data.SelfUpdate
 import com.android.adblock.data.ThemeMode
 import com.android.adblock.ui.theme.AdblockTheme
@@ -79,8 +82,7 @@ class DnsScreenTest {
     private var vpnSettingsOpened = 0
     private val themes = mutableListOf<ThemeMode>()
     private val dynamicColors = mutableListOf<Boolean>()
-    private val automaticUpdates = mutableListOf<Boolean>()
-    private var appUpdate by mutableStateOf(AppUpdate())
+    private var selfUpdate by mutableStateOf<SelfUpdate>(SelfUpdate.Idle)
     private var appUpdates = 0
     private lateinit var backDispatcher: OnBackPressedDispatcher
 
@@ -370,51 +372,58 @@ class DnsScreenTest {
 
     @Test
     @Config(qualifiers = "w411dp-h891dp")
-    fun `turns automatic updates on from settings`() {
+    fun `shows nothing about app updates in settings while the app is up to date`() {
         show(DnsUiState(url = SERVER))
 
         compose.onNodeWithText(string(R.string.settings)).performClick()
-        compose.onNodeWithText(string(R.string.automatic_updates)).assertIsOff().assert(SwitchRole).performClick()
 
-        assertEquals(listOf(true), automaticUpdates)
+        compose.onNodeWithText(string(R.string.appearance)).assertIsDisplayed()
+        compose.onAllNodesWithText(string(R.string.self_update_available)).assertCountEquals(0)
     }
 
     @Test
     @Config(qualifiers = "w411dp-h891dp")
-    fun `shows in settings that the app is up to date`() {
-        appUpdate = AppUpdate(status = SelfUpdate.UpToDate)
+    fun `updates the app from the first row of settings when a new version is available`() {
+        selfUpdate = SelfUpdate.Available
         show(DnsUiState(url = SERVER))
 
         compose.onNodeWithText(string(R.string.settings)).performClick()
-
-        compose.onNodeWithText(string(R.string.self_update_up_to_date)).assertIsDisplayed()
-        compose.onAllNodesWithText(string(R.string.update)).assertCountEquals(0)
-    }
-
-    @Test
-    @Config(qualifiers = "w411dp-h891dp")
-    fun `updates the app from settings when a new version is available`() {
-        appUpdate = AppUpdate(status = SelfUpdate.Available)
-        show(DnsUiState(url = SERVER))
-
-        compose.onNodeWithText(string(R.string.settings)).performClick()
-        compose.onNodeWithText(string(R.string.self_update_available)).assertIsDisplayed()
-        compose.onNodeWithText(string(R.string.update)).performClick()
+        val update = compose.onNodeWithText(string(R.string.self_update_available)).getBoundsInRoot()
+        val heading = text(string(R.string.appearance))
+        assertTrue(update.bottom < heading.top)
+        assertEquals(true to true, corners(string(R.string.self_update_available)))
+        compose.onNodeWithText(string(R.string.self_update_install)).assertIsDisplayed()
+        compose.onNodeWithText(string(R.string.self_update_available)).performClick()
 
         assertEquals(1, appUpdates)
     }
 
     @Test
     @Config(qualifiers = "w411dp-h891dp")
-    fun `shows the download of the app update`() {
-        appUpdate = AppUpdate(automatic = true, status = SelfUpdate.Downloading(0.42f))
+    fun `shows the download of the app update without starting it again`() {
+        selfUpdate = SelfUpdate.Downloading(0.42f)
         show(DnsUiState(url = SERVER))
 
         compose.onNodeWithText(string(R.string.settings)).performClick()
-
         compose.onNodeWithText(string(R.string.self_update_downloading, 42)).assertIsDisplayed()
         compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo(0.42f, 0f..1f))).assertIsDisplayed()
-        compose.onAllNodesWithText(string(R.string.update)).assertCountEquals(0)
+        compose.onNodeWithText(string(R.string.self_update_available)).performClick()
+
+        assertEquals(0, appUpdates)
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-television")
+    fun `reaches the app update with the d-pad on television`() {
+        selfUpdate = SelfUpdate.Available
+        show(DnsUiState(url = SERVER), keyboard = true)
+        compose.onNodeWithText(string(R.string.settings)).performClick()
+        compose.onNodeWithText(string(R.string.theme)).requestFocus()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        compose.onNodeWithText(string(R.string.self_update_available)).assertIsFocused()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithText(string(R.string.theme)).assertIsFocused()
     }
 
     @Test
@@ -438,8 +447,6 @@ class DnsScreenTest {
         assertEquals(ListItemDefaults.SegmentedGap, dynamicItem.top - themeItem.bottom)
         assertEquals(true to false, corners(string(R.string.theme)))
         assertEquals(false to true, corners(string(R.string.dynamic_color)))
-        assertEquals(true to false, corners(string(R.string.automatic_updates)))
-        assertEquals(false to true, corners(string(R.string.app_update)))
 
         compose.onNodeWithText(string(R.string.theme)).performClick()
         val light = compose.onNodeWithText(string(R.string.theme_light)).getBoundsInRoot()
@@ -502,8 +509,7 @@ class DnsScreenTest {
                     appearance = Appearance(ThemeMode.System, dynamicColor = false),
                     onThemeChange = { themes += it },
                     onDynamicColorChange = { dynamicColors += it },
-                    appUpdate = appUpdate,
-                    onAutomaticUpdatesChange = { automaticUpdates += it },
+                    selfUpdate = selfUpdate,
                     onUpdateApp = { appUpdates++ }
                 )
             }

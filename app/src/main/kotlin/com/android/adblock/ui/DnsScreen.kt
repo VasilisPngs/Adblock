@@ -51,11 +51,9 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.OutlinedTextField
@@ -126,7 +124,6 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.window.core.layout.WindowSizeClass
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
-import com.android.adblock.data.AppUpdate
 import com.android.adblock.data.SelfUpdate
 import com.android.adblock.data.ThemeMode
 import com.android.adblock.vpn.DohResult
@@ -185,7 +182,7 @@ fun DnsScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val appUpdate by viewModel.appUpdate.collectAsStateWithLifecycle()
+    val selfUpdate by viewModel.selfUpdate.collectAsStateWithLifecycle()
     val updateConfirmation by viewModel.updateConfirmation.collectAsStateWithLifecycle()
     ReportDrawnWhen { uiState.loaded }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -243,8 +240,7 @@ fun DnsScreen(
             appearance = appearance,
             onThemeChange = viewModel::setThemeMode,
             onDynamicColorChange = viewModel::setDynamicColor,
-            appUpdate = appUpdate,
-            onAutomaticUpdatesChange = viewModel::setAutomaticUpdates,
+            selfUpdate = selfUpdate,
             onUpdateApp = viewModel::updateApp,
             modifier = modifier
         )
@@ -262,8 +258,7 @@ internal fun DnsScreen(
     appearance: Appearance,
     onThemeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
-    appUpdate: AppUpdate,
-    onAutomaticUpdatesChange: (Boolean) -> Unit,
+    selfUpdate: SelfUpdate,
     onUpdateApp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -395,8 +390,7 @@ internal fun DnsScreen(
                         appearance = appearance,
                         onTheme = { themeDialog = true },
                         onDynamicColorChange = onDynamicColorChange,
-                        appUpdate = appUpdate,
-                        onAutomaticUpdatesChange = onAutomaticUpdatesChange,
+                        selfUpdate = selfUpdate,
                         onUpdateApp = onUpdateApp
                     )
                 }
@@ -546,8 +540,7 @@ private fun SettingsView(
     appearance: Appearance,
     onTheme: () -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
-    appUpdate: AppUpdate,
-    onAutomaticUpdatesChange: (Boolean) -> Unit,
+    selfUpdate: SelfUpdate,
     onUpdateApp: () -> Unit
 ) {
     LazyColumn(
@@ -560,8 +553,17 @@ private fun SettingsView(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
     ) {
+        if (selfUpdate != SelfUpdate.Idle) {
+            item(key = "app-update") {
+                AppUpdateItem(status = selfUpdate, onUpdate = onUpdateApp)
+            }
+        }
+
         item(key = "appearance") {
-            SectionHeader(text = stringResource(R.string.appearance))
+            SectionHeader(
+                text = stringResource(R.string.appearance),
+                modifier = if (selfUpdate == SelfUpdate.Idle) Modifier else Modifier.padding(top = ContentMargin)
+            )
         }
 
         item(key = "theme") {
@@ -588,63 +590,44 @@ private fun SettingsView(
                 Text(text = stringResource(R.string.dynamic_color))
             }
         }
-
-        item(key = "updates") {
-            SectionHeader(text = stringResource(R.string.updates), modifier = Modifier.padding(top = ContentMargin))
-        }
-
-        item(key = "automatic-updates") {
-            SegmentedListItem(
-                checked = appUpdate.automatic,
-                onCheckedChange = onAutomaticUpdatesChange,
-                modifier = Modifier.semantics { role = Role.Switch },
-                shapes = ListItemDefaults.segmentedShapes(0, 2),
-                colors = listItemColors(),
-                supportingContent = { Text(text = stringResource(R.string.automatic_updates_description)) },
-                trailingContent = { Switch(checked = appUpdate.automatic, onCheckedChange = null) }
-            ) {
-                Text(text = stringResource(R.string.automatic_updates))
-            }
-        }
-
-        item(key = "app-update") {
-            AppUpdateItem(status = appUpdate.status, onUpdate = onUpdateApp, shapes = ListItemDefaults.segmentedShapes(1, 2))
-        }
     }
 }
 
 @Composable
-private fun AppUpdateItem(status: SelfUpdate, onUpdate: () -> Unit, shapes: ListItemShapes) {
-    val text = when (status) {
-        SelfUpdate.Checking -> stringResource(R.string.self_update_checking)
-        SelfUpdate.UpToDate -> stringResource(R.string.self_update_up_to_date)
-        SelfUpdate.CheckFailed -> stringResource(R.string.check_failed)
-        SelfUpdate.Available -> stringResource(R.string.self_update_available)
-        is SelfUpdate.Downloading -> stringResource(R.string.self_update_downloading, (status.progress * 100).roundToInt())
-        SelfUpdate.Ready -> stringResource(R.string.self_update_ready)
-        SelfUpdate.Installing -> stringResource(R.string.self_update_installing)
-        SelfUpdate.Failed -> stringResource(R.string.self_update_failed)
-    }
-    SegmentedListItem(
-        shapes = shapes,
-        colors = listItemColors(),
-        supportingContent = {
-            Column {
-                Text(text = text)
-                when (status) {
-                    is SelfUpdate.Downloading -> LinearWavyProgressIndicator(progress = { status.progress }, modifier = Modifier.fillMaxWidth())
-                    SelfUpdate.Installing -> LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    else -> Unit
-                }
+private fun AppUpdateItem(status: SelfUpdate, onUpdate: () -> Unit, modifier: Modifier = Modifier) {
+    val shapes = ListItemDefaults.segmentedShapes(0, 1)
+    val headline = @Composable { Text(text = stringResource(R.string.self_update_available)) }
+    val supporting = @Composable {
+        when (status) {
+            is SelfUpdate.Downloading -> Column {
+                Text(text = stringResource(R.string.self_update_downloading, (status.progress * 100).roundToInt()))
+                LinearWavyProgressIndicator(progress = { status.progress }, modifier = Modifier.fillMaxWidth())
             }
-        },
-        trailingContent = if (status == SelfUpdate.Available || status == SelfUpdate.Ready || status == SelfUpdate.Failed) {
-            { FilledTonalButton(onClick = onUpdate, shapes = ButtonDefaults.shapes()) { Text(text = stringResource(R.string.update)) } }
-        } else {
-            null
+            SelfUpdate.Installing -> Column {
+                Text(text = stringResource(R.string.self_update_installing))
+                LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            SelfUpdate.Failed -> Text(text = stringResource(R.string.self_update_failed))
+            else -> Text(text = stringResource(R.string.self_update_install))
         }
-    ) {
-        Text(text = stringResource(R.string.app_update))
+    }
+    if (status == SelfUpdate.Available || status == SelfUpdate.Failed) {
+        SegmentedListItem(
+            onClick = onUpdate,
+            shapes = shapes,
+            colors = listItemColors(),
+            modifier = modifier,
+            supportingContent = supporting,
+            content = headline
+        )
+    } else {
+        SegmentedListItem(
+            shapes = shapes,
+            colors = listItemColors(),
+            modifier = modifier,
+            supportingContent = supporting,
+            content = headline
+        )
     }
 }
 

@@ -21,7 +21,6 @@ import com.android.adblock.vpn.DnsTunnel
 import com.android.adblock.vpn.DohResult
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -93,7 +92,7 @@ class NotificationPermissionTest {
             appPreferences,
             DnsTunnel(context),
             MutableStateFlow(null),
-            SelfUpdater(context, MainScope(), flowOf(true)) { throw IOException("Offline") }
+            SelfUpdater(context, MainScope()) { throw IOException("Offline") }
         ) { server, _ ->
             asked += server
             DohResult.Failed
