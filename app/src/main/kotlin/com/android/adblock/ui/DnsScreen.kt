@@ -26,18 +26,22 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.onConsumedWindowInsetsChanged
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -111,6 +115,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -138,6 +143,7 @@ import kotlin.math.roundToInt
 private val CompactMargin = 16.dp
 private val ContentMargin = 16.dp
 private val WideMargin = 24.dp
+private val MaxListWidth = WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND.dp
 private val SmallSpacing = 8.dp
 private val OptionHeight = 56.dp
 private val TvOverscanHorizontal = 48.dp
@@ -299,7 +305,6 @@ internal fun DnsScreen(
     } else {
         CompactMargin
     }
-    val barMargin = margin - CompactMargin
     val navigationBar = navigationSuiteType == NavigationSuiteType.ShortNavigationBarCompact ||
         navigationSuiteType == NavigationSuiteType.ShortNavigationBarMedium
     val window = LocalActivity.current?.window
@@ -351,48 +356,55 @@ internal fun DnsScreen(
         val motion = MaterialTheme.motionScheme
         val content: @Composable (Screen) -> Unit = { screen ->
             val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(if (screen == Screen.Home) homeBarState else settingsBarState)
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text(text = stringResource(TopLevelItems.getValue(screen).labelRes)) },
-                        windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
-                        contentPadding = PaddingValues(horizontal = barMargin),
-                        scrollBehavior = scrollBehavior
-                    )
-                },
-                snackbarHost = { if (screen == current) SnackbarHost(hostState = snackbarHostState) },
-                contentWindowInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
-            ) { padding ->
+            val contentInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
+            var consumedInsets by remember { mutableStateOf(WindowInsets(0)) }
+            BoxWithConstraints(modifier = Modifier.onConsumedWindowInsetsChanged { consumedInsets = it }) {
                 val layoutDirection = LocalLayoutDirection.current
-                val contentPadding = PaddingValues(
-                    start = padding.calculateStartPadding(layoutDirection) + margin,
-                    top = padding.calculateTopPadding(),
-                    end = padding.calculateEndPadding(layoutDirection) + margin,
-                    bottom = padding.calculateBottomPadding() + margin
-                )
-                when (screen) {
-                    Screen.Home -> HomeView(
-                        listState = homeListState,
-                        nestedScroll = scrollBehavior.nestedScrollConnection,
-                        focus = homeFocus,
-                        contentPadding = contentPadding,
-                        uiState = uiState,
-                        onEnabledChange = { enabled -> if (enabled && uiState.url.isEmpty()) editing = true else onEnabledChange(enabled) },
-                        onUrl = { editing = true },
-                        onPrivateDns = onPrivateDns,
-                        onVpnSettings = onVpnSettings
+                val insets = contentInsets.exclude(consumedInsets).asPaddingValues()
+                val safeWidth = maxWidth - insets.calculateStartPadding(layoutDirection) - insets.calculateEndPadding(layoutDirection)
+                val sideMargin = ((safeWidth - MaxListWidth) / 2).coerceAtLeast(margin)
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text(text = stringResource(TopLevelItems.getValue(screen).labelRes)) },
+                            windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+                            contentPadding = PaddingValues(horizontal = sideMargin - CompactMargin),
+                            scrollBehavior = scrollBehavior
+                        )
+                    },
+                    snackbarHost = { if (screen == current) SnackbarHost(hostState = snackbarHostState) },
+                    contentWindowInsets = contentInsets
+                ) { padding ->
+                    val contentPadding = PaddingValues(
+                        start = padding.calculateStartPadding(layoutDirection) + sideMargin,
+                        top = padding.calculateTopPadding(),
+                        end = padding.calculateEndPadding(layoutDirection) + sideMargin,
+                        bottom = padding.calculateBottomPadding() + margin
                     )
-                    Screen.Settings -> SettingsView(
-                        listState = settingsListState,
-                        nestedScroll = scrollBehavior.nestedScrollConnection,
-                        focus = settingsFocus,
-                        contentPadding = contentPadding,
-                        appearance = appearance,
-                        onTheme = { themeDialog = true },
-                        onDynamicColorChange = onDynamicColorChange,
-                        selfUpdate = selfUpdate,
-                        onUpdateApp = onUpdateApp
-                    )
+                    when (screen) {
+                        Screen.Home -> HomeView(
+                            listState = homeListState,
+                            nestedScroll = scrollBehavior.nestedScrollConnection,
+                            focus = homeFocus,
+                            contentPadding = contentPadding,
+                            uiState = uiState,
+                            onEnabledChange = { enabled -> if (enabled && uiState.url.isEmpty()) editing = true else onEnabledChange(enabled) },
+                            onUrl = { editing = true },
+                            onPrivateDns = onPrivateDns,
+                            onVpnSettings = onVpnSettings
+                        )
+                        Screen.Settings -> SettingsView(
+                            listState = settingsListState,
+                            nestedScroll = scrollBehavior.nestedScrollConnection,
+                            focus = settingsFocus,
+                            contentPadding = contentPadding,
+                            appearance = appearance,
+                            onTheme = { themeDialog = true },
+                            onDynamicColorChange = onDynamicColorChange,
+                            selfUpdate = selfUpdate,
+                            onUpdateApp = onUpdateApp
+                        )
+                    }
                 }
             }
         }

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.window.core.layout.WindowSizeClass
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
 import com.android.adblock.data.SelfUpdate
@@ -291,9 +292,16 @@ class DnsScreenTest {
 
     @Test
     @Config(qualifiers = "w960dp-h540dp-television")
-    fun `keeps the content inside the television overscan`() {
+    fun `centers the content inside the television overscan as wide as a compact window`() {
         shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
-        assertContentEdge(24.dp + 48.dp)
+        show(DnsUiState(url = SERVER))
+
+        val width = compose.onRoot().getBoundsInRoot().right
+        val rail = compose.onNodeWithText(string(R.string.settings)).getBoundsInRoot()
+        val item = compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot()
+        assertEquals(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND.dp, item.right - item.left)
+        assertEquals(item.left - rail.right, width - 48.dp - item.right)
+        assertEquals(item.left, text(string(R.string.home)).left)
     }
 
     @Test
