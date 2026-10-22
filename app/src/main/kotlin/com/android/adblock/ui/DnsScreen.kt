@@ -219,7 +219,7 @@ fun DnsScreen(
     updateConfirmation?.let { confirmation ->
         SideEffect(confirmation) {
             viewModel.updateConfirmationShown(confirmation)
-            runCatching { context.startActivity(confirmation) }
+            val _ = runCatching { context.startActivity(confirmation) }
         }
     }
 
