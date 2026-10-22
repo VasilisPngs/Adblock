@@ -54,6 +54,12 @@ jobs:
       - name: Lint and test
         run: ./gradlew :app:lintRelease :app:testDebugUnitTest --no-daemon
 
+      - name: Check accessibility on a device
+        timeout-minutes: 20
+        run: >-
+          ./gradlew :app:pixel10Api37DebugAndroidTest
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect --no-daemon
+
       - name: Generate Baseline Profile and build release APK
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}

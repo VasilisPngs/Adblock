@@ -23,6 +23,7 @@ android {
         }
         versionCode = (System.currentTimeMillis() / 1000).toInt()
         versionName = "Adblock"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     val releaseKeystore = rootProject.file("release.keystore")
@@ -56,6 +57,14 @@ android {
     }
 
     testOptions {
+        managedDevices.localDevices {
+            create("pixel10Api37") {
+                device = "Pixel 10"
+                sdkVersion = 37
+                systemImageSource = "google"
+                testedAbi = "x86_64"
+            }
+        }
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
             it.useJUnitPlatform()
@@ -89,6 +98,10 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4.accessibility)
+    androidTestImplementation(libs.androidx.test.runner)
     testRuntimeOnly(libs.junit.platform.launcher)
     testRuntimeOnly(libs.junit.vintage.engine)
 }
