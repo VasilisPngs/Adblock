@@ -67,7 +67,6 @@ android {
         }
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
-            it.useJUnitPlatform()
             it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED", "--enable-native-access=ALL-UNNAMED")
         }
     }
@@ -92,8 +91,6 @@ dependencies {
     baselineProfile(project(":baselineprofile"))
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(platform(libs.androidx.compose.bom))
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit4)
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
@@ -102,6 +99,4 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4.accessibility)
     androidTestImplementation(libs.androidx.test.runner)
-    testRuntimeOnly(libs.junit.platform.launcher)
-    testRuntimeOnly(libs.junit.vintage.engine)
 }

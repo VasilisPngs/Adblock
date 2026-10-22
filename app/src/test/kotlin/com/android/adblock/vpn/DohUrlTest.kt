@@ -1,8 +1,8 @@
 package com.android.adblock.vpn
 
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
 
 class DohUrlTest {
     @Test
@@ -23,7 +23,7 @@ class DohUrlTest {
             "https:///dns-query",
             "https://bad host/dns-query",
             "https://adblock.example.workers.dev/dns-query#fragment"
-        ).forEach { assertNull(dohUrl(it), it) }
+        ).forEach { assertNull(it, dohUrl(it)) }
     }
 
     @Test

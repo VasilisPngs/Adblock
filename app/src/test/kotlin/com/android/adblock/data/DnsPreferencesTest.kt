@@ -6,16 +6,17 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.io.File
 
 class DnsPreferencesTest {
-    @TempDir
-    lateinit var folder: File
+    @get:Rule
+    val folder = TemporaryFolder()
 
     @Test
     fun `starts with no server and turned off`() = runTest {
@@ -40,5 +41,5 @@ class DnsPreferencesTest {
     }
 
     private fun preferences(scope: CoroutineScope) =
-        DnsPreferences(PreferenceDataStoreFactory.create(scope = scope) { File(folder, "dns.preferences_pb") })
+        DnsPreferences(PreferenceDataStoreFactory.create(scope = scope) { File(folder.root, "dns.preferences_pb") })
 }

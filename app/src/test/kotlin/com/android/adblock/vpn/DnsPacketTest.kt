@@ -1,9 +1,9 @@
 package com.android.adblock.vpn
 
-import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Test
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
 
 class DnsPacketTest {
     private val client = byteArrayOf(10, 111, 0, 1)
