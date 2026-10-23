@@ -260,15 +260,9 @@ class DnsScreenTest {
     }
 
     @Test
-    fun `focuses DNS-over-HTTPS first with a remote or keyboard`() {
+    fun `focuses DNS-over-HTTPS first with a remote and keeps it there while it connects`() {
         show(DnsUiState(url = SERVER), keyboard = true)
-
         compose.onNodeWithText(string(R.string.dns_over_https)).assertIsFocused()
-    }
-
-    @Test
-    fun `keeps the remote focus on DNS-over-HTTPS while it connects`() {
-        show(DnsUiState(url = SERVER), keyboard = true)
 
         state = DnsUiState(url = SERVER, tunnel = TunnelState.Connecting)
         compose.onNodeWithText(string(R.string.dns_over_https)).assertIsFocused()
