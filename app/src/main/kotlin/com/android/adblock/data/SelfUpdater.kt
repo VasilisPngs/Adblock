@@ -77,7 +77,7 @@ class SelfUpdater(
 
     private suspend fun newerRelease(): Release? = withContext(Dispatchers.IO) {
         apk.delete()
-        val assets = fetch(RELEASE_URL) { input, _ -> JSONObject(input.reader().readText()).getJSONArray("assets") }
+        val assets = fetch(RELEASE_URL, GITHUB_HEADERS) { input, _ -> JSONObject(input.reader().readText()).getJSONArray("assets") }
         val asset = (0 until assets.length()).map(assets::getJSONObject).firstOrNull { it.getString("name") == APK_NAME }
             ?: throw IOException("No $APK_NAME in the release")
         val installed = File(context.applicationInfo.sourceDir).inputStream().use(::sha256)
@@ -169,8 +169,9 @@ class SelfUpdater(
         }
     }
 
-    private fun <T> fetch(url: String, read: (InputStream, Long) -> T): T {
+    private fun <T> fetch(url: String, headers: Map<String, String> = emptyMap(), read: (InputStream, Long) -> T): T {
         val connection = open(URL(url)) as HttpURLConnection
+        headers.forEach(connection::setRequestProperty)
         try {
             if (connection.responseCode != HttpURLConnection.HTTP_OK) throw IOException("HTTP ${connection.responseCode}")
             return connection.inputStream.use { read(it, connection.contentLengthLong) }
@@ -182,6 +183,7 @@ class SelfUpdater(
     private companion object {
         const val APK_NAME = "Adblock.apk"
         const val RELEASE_URL = "https://api.github.com/repos/VasilisPngs/Adblock/releases/tags/Adblock"
+        val GITHUB_HEADERS = mapOf("Accept" to "application/vnd.github+json", "X-GitHub-Api-Version" to "2026-03-10")
     }
 }
 
