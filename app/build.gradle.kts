@@ -21,7 +21,7 @@ android {
         targetSdk {
             version = release(37)
         }
-        versionCode = (System.currentTimeMillis() / 1000).toInt()
+        versionCode = (System.currentTimeMillis() / 60_000 + 1_770_000_000).toInt()
         versionName = "Adblock"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

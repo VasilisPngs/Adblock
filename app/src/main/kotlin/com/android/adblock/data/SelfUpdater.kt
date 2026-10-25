@@ -111,9 +111,13 @@ class SelfUpdater(
     private suspend fun install() {
         state.value = SelfUpdate.Installing
         val marker = File(context.noBackupFilesDir, UPDATED_MARKER)
-        val installed = withContext(Dispatchers.IO) {
-            marker.createNewFile()
-            commit()
+        val installed = try {
+            withContext(Dispatchers.IO) {
+                marker.createNewFile()
+                commit()
+            }
+        } catch (_: IOException) {
+            false
         }
         if (!installed) {
             marker.delete()
