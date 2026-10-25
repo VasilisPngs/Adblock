@@ -73,7 +73,13 @@ class DnsVpnService : VpnService() {
     }
 
     private fun publish() {
-        container.tunnel.update(if (isAlwaysOn) TunnelState.AlwaysOn else TunnelState.On)
+        container.tunnel.update(
+            when {
+                isLockdownEnabled -> TunnelState.Lockdown
+                isAlwaysOn -> TunnelState.AlwaysOn
+                else -> TunnelState.On
+            }
+        )
     }
 
     private fun establish(): ParcelFileDescriptor? {

@@ -33,6 +33,8 @@
     <string name="always_on_vpn_description">Turn it on for Adblock in Android\'s VPN settings so Android itself keeps DNS-over-HTTPS running</string>
     <string name="server_unreachable">Couldn\'t get an answer from the server</string>
     <string name="server_rejected">The server answered with HTTP %1$d</string>
+    <string name="lockdown_on">Block connections without VPN is on</string>
+    <string name="lockdown_on_description">Apps lose internet, because Adblock sends only DNS through its VPN. Turn it off in Android\'s VPN settings.</string>
     <string name="private_dns_on">Private DNS is set to %1$s</string>
     <string name="private_dns_on_description">Android sends DNS there instead of this server. Set Private DNS to Off or Automatic.</string>
 </resources>

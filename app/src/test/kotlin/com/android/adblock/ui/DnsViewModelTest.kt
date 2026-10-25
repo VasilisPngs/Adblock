@@ -247,6 +247,16 @@ class DnsViewModelTest {
     }
 
     @Test
+    fun `asks the tunnel again while Block connections without VPN holds it`() = runTest {
+        val viewModel = viewModel(preferences(), DohResult.Failed, url = SERVER)
+        tunnel.update(TunnelState.Lockdown)
+
+        viewModel.refresh()
+
+        assertEquals(DnsVpnService::class.java.name, shadowOf(context).nextStartedService.component?.className)
+    }
+
+    @Test
     fun `follows the Private DNS server as it changes`() = runTest {
         val viewModel = viewModel(preferences(), DohResult.Failed, url = SERVER)
 

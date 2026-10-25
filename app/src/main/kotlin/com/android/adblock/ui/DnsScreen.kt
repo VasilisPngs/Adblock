@@ -458,7 +458,8 @@ private fun HomeView(
 ) {
     val on = uiState.tunnel != TunnelState.Off
     val alwaysOnShown = uiState.vpnSettings && uiState.tunnel == TunnelState.On
-    val count = 2 + (if (alwaysOnShown) 1 else 0) + (if (uiState.privateDnsServer != null) 1 else 0)
+    val lockdown = uiState.tunnel == TunnelState.Lockdown
+    val count = 2 + (if (alwaysOnShown || lockdown) 1 else 0) + (if (uiState.privateDnsServer != null) 1 else 0)
     LazyColumn(
         state = listState,
         modifier = Modifier
@@ -472,7 +473,7 @@ private fun HomeView(
         item(key = "dns") {
             val supporting = @Composable { Text(text = stringResource(uiState.tunnel.labelRes)) }
             val title = @Composable { Text(text = stringResource(R.string.dns_over_https)) }
-            if (uiState.tunnel == TunnelState.AlwaysOn) {
+            if (uiState.tunnel == TunnelState.AlwaysOn || lockdown) {
                 SegmentedListItem(
                     checked = true,
                     onCheckedChange = { onVpnSettings() },
@@ -518,6 +519,26 @@ private fun HomeView(
                     supportingContent = { Text(text = stringResource(R.string.always_on_vpn_description)) }
                 ) {
                     Text(text = stringResource(R.string.always_on_vpn))
+                }
+            }
+        }
+
+        if (lockdown) {
+            item(key = "lockdown") {
+                SegmentedListItem(
+                    onClick = onVpnSettings,
+                    shapes = ListItemDefaults.segmentedShapes(2, count),
+                    colors = listItemColors(),
+                    leadingContent = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_warning),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    supportingContent = { Text(text = stringResource(R.string.lockdown_on_description)) }
+                ) {
+                    Text(text = stringResource(R.string.lockdown_on))
                 }
             }
         }
@@ -796,7 +817,7 @@ private val TunnelState.labelRes: Int
         TunnelState.Off -> R.string.tunnel_off
         TunnelState.Connecting -> R.string.tunnel_connecting
         TunnelState.On -> R.string.tunnel_on
-        TunnelState.AlwaysOn -> R.string.tunnel_always_on
+        TunnelState.AlwaysOn, TunnelState.Lockdown -> R.string.tunnel_always_on
     }
 
 internal fun DohResult.text(resources: Resources): String =

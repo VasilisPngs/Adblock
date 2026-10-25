@@ -50,6 +50,9 @@ class AccessibilityTest {
     fun alwaysOn() = check(DnsUiState(url = SERVER, tunnel = TunnelState.AlwaysOn))
 
     @Test
+    fun lockdown() = check(DnsUiState(url = SERVER, tunnel = TunnelState.Lockdown, vpnSettings = true))
+
+    @Test
     fun serverUrl() {
         show(DnsUiState(url = SERVER), SelfUpdate.Idle)
 

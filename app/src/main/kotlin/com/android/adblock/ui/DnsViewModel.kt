@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 import java.net.URI
 
 private const val STOP_TIMEOUT_MILLIS = 5_000L
-private val Running = setOf(TunnelState.On, TunnelState.AlwaysOn)
+private val Running = setOf(TunnelState.On, TunnelState.AlwaysOn, TunnelState.Lockdown)
 
 data class DnsUiState(
     val url: String = "",

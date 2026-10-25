@@ -199,6 +199,17 @@ class DnsScreenTest {
     }
 
     @Test
+    fun `warns that Block connections without VPN cuts apps off the internet`() {
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.Lockdown, vpnSettings = true))
+
+        compose.onNodeWithText(string(R.string.tunnel_always_on)).assertIsDisplayed()
+        compose.onAllNodesWithText(string(R.string.always_on_vpn)).assertCountEquals(0)
+        compose.onNodeWithText(string(R.string.lockdown_on)).assertIsDisplayed().performClick()
+
+        assertEquals(1, vpnSettingsOpened)
+    }
+
+    @Test
     fun `looks the same on whether the app or Always-on VPN keeps it on`() {
         show(DnsUiState(url = SERVER, tunnel = TunnelState.On))
         val app = compose.onNodeWithText(string(R.string.dns_over_https)).captureToImage().asAndroidBitmap()

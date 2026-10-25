@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class TunnelState { Off, Connecting, On, AlwaysOn }
+enum class TunnelState { Off, Connecting, On, AlwaysOn, Lockdown }
 
 class DnsTunnel(private val context: Context) {
     private val _state = MutableStateFlow(TunnelState.Off)
