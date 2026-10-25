@@ -17,7 +17,7 @@ compile_sdk=$(sed -n '/compileSdk {/,/^    }/p' app/build.gradle.kts)
 api=$(grep -oP 'release\(\K[0-9]+' <<<"$compile_sdk")
 minor=$(grep -oP 'minorApiLevel = \K[0-9]+' <<<"$compile_sdk" || true)
 platform=android-$api${minor:+.$minor}
-skills="adaptive agp-9-upgrade android-cli android-intent-security android-permissions-security edge-to-edge jetpack-compose-performance navigation-3 navigation-event r8-analyzer styles testing-setup"
+skills="adaptive agp-9-upgrade android-cli android-intent-security android-permissions-security anr-audit-and-fix edge-to-edge jetpack-compose-performance navigation-3 navigation-event r8-analyzer styles testing-setup"
 
 if [ ! -x "$java_home/bin/java" ]; then
   mkdir -p "$java_home"
