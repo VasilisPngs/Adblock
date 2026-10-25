@@ -45,6 +45,11 @@ android {
                 enable = true
             }
         }
+        create("nonMinifiedRelease") {
+            optimization {
+                enable = false
+            }
+        }
     }
 
     compileOptions {
