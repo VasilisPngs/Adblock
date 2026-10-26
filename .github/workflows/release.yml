@@ -52,13 +52,13 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Lint and test
-        run: ./gradlew :app:lintRelease :app:testDebugUnitTest --no-daemon
+        run: ./gradlew :app:lintRelease :app:testDebugUnitTest
 
       - name: Check accessibility on a device
         timeout-minutes: 20
         run: >-
           ./gradlew :app:pixel10Api37DebugAndroidTest
-          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect --no-daemon
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: Generate Baseline Profile and build release APK
         env:
@@ -66,7 +66,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: >-
           ./gradlew :app:generateReleaseBaselineProfile :app:assembleRelease
-          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect --no-daemon
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: Show device test results
         if: failure()
