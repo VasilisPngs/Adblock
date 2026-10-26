@@ -73,11 +73,13 @@ class RemoteSearchTest {
         compose.onAllNodes(hasSetTextAction()).assertCountEquals(2)
 
         compose.onAllNodes(hasSetTextAction()).onLast().performImeAction()
-        compose.waitUntil(TIMEOUT_MILLIS) { keyboards.get() == 0 }
+        compose.waitUntil(TIMEOUT_MILLIS) { keyboards.get() == 0 && compose.activity.hasWindowFocus() }
         compose.onNode(hasSetTextAction()).assertIsFocused()
 
         press(KeyEvent.KEYCODE_DPAD_DOWN)
-        compose.waitUntil(TIMEOUT_MILLIS) { compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size == 2 }
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size == 2 && !compose.activity.hasWindowFocus()
+        }
         compose.waitForIdle()
         compose.onAllNodes(hasSetTextAction()).onLast().assertIsFocused()
         assertEquals(0, keyboards.get())
