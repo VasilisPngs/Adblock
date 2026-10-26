@@ -3,18 +3,19 @@ package com.vasilispngs.adblock.ui
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.remember
 import androidx.compose.ui.MotionDurationScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTestConfig
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import com.vasilispngs.adblock.R
-import com.vasilispngs.adblock.data.Appearance
-import com.vasilispngs.adblock.data.SelfUpdate
-import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.ui.theme.AdblockTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -34,13 +35,16 @@ class ReducedMotionTest {
     private lateinit var backDispatcher: OnBackPressedDispatcher
 
     @Test
-    fun `switches screens at once when animations are removed`() {
+    fun `switches destinations at once when animations are removed`() {
         show()
 
-        settlesAtOnce { compose.onNodeWithContentDescription(context.getString(R.string.settings)).performClick() }
-        compose.onAllNodesWithText(context.getString(R.string.dns_over_https)).assertCountEquals(0)
+        settlesAtOnce {
+            compose.onNode(hasText(context.getString(R.string.settings)) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+                .performClick()
+        }
+        compose.onAllNodesWithText(HOME_CONTENT).assertCountEquals(0)
         settlesAtOnce { compose.runOnIdle { backDispatcher.onBackPressed() } }
-        compose.onAllNodesWithText(context.getString(R.string.theme)).assertCountEquals(0)
+        compose.onAllNodesWithText(SETTINGS_CONTENT).assertCountEquals(0)
     }
 
     private fun settlesAtOnce(action: () -> Unit) {
@@ -55,25 +59,20 @@ class ReducedMotionTest {
         compose.setContent {
             backDispatcher = LocalOnBackPressedDispatcherOwner.current!!.onBackPressedDispatcher
             AdblockTheme {
-                DnsScreen(
-                    uiState = DnsUiState(url = SERVER),
+                AdblockNavigation(
                     snackbarHostState = remember { SnackbarHostState() },
-                    onEnabledChange = {},
-                    onUrlChange = {},
-                    onPrivateDns = {},
-                    onVpnSettings = {},
-                    appearance = Appearance(ThemeMode.System, dynamicColor = false),
-                    onThemeChange = {},
-                    onDynamicColorChange = {},
-                    selfUpdate = SelfUpdate.Idle,
-                    onUpdateApp = {}
+                    home = { Text(HOME_CONTENT) },
+                    protection = { Text(PROTECTION_CONTENT) },
+                    settings = { Text(SETTINGS_CONTENT) }
                 )
             }
         }
     }
 
     private companion object {
-        const val SERVER = "https://adblock.example.workers.dev/dns-query/0123abcd"
+        const val HOME_CONTENT = "home content"
+        const val PROTECTION_CONTENT = "protection content"
+        const val SETTINGS_CONTENT = "settings content"
         const val SETTLE_MILLIS = 80L
         val AnimationsRemoved = object : MotionDurationScale {
             override val scaleFactor = 0f

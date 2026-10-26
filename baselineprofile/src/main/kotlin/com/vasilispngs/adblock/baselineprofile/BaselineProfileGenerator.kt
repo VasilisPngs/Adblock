@@ -1,6 +1,7 @@
 package com.vasilispngs.adblock.baselineprofile
 
 import androidx.benchmark.macro.junit4.BaselineProfileRule
+import androidx.test.uiautomator.UiAutomatorTestScope
 import androidx.test.uiautomator.textAsString
 import androidx.test.uiautomator.uiAutomator
 import org.junit.Rule
@@ -23,10 +24,19 @@ class BaselineProfileGenerator {
         pressHome()
         startActivityAndWait()
         uiAutomator {
-            onElement { contentDescription?.toString() == "Settings" }.click()
+            onElement { textAsString() == "Blocked" }.click()
+            onElement { textAsString() == "All" }.click()
+            openTab("Protection")
+            onElement { textAsString() == "Add rule" }.click()
+            onElement { textAsString() == "Cancel" }.click()
+            openTab("Settings")
             onElement { textAsString() == "Theme" }.click()
             onElement { textAsString() == "Cancel" }.click()
-            onElement { contentDescription?.toString() == "Back" }.click()
+            openTab("Home")
         }
+    }
+
+    private fun UiAutomatorTestScope.openTab(label: String) {
+        onElement { textAsString() == label && parent?.run { isClickable && !isCheckable } == true }.click()
     }
 }

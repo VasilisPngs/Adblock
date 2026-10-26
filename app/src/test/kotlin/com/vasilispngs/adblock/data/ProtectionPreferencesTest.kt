@@ -14,32 +14,35 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
-class DnsPreferencesTest {
+class ProtectionPreferencesTest {
     @get:Rule
     val folder = TemporaryFolder()
 
     @Test
-    fun `starts with no server and turned off`() = runTest {
+    fun `starts off, logging, and resolving through Cloudflare`() = runTest {
         val preferences = preferences(backgroundScope)
 
-        assertEquals("", preferences.url.first())
         assertFalse(preferences.enabled.first())
+        assertTrue(preferences.logEnabled.first())
+        assertEquals("https://cloudflare-dns.com/dns-query", preferences.resolver.first())
     }
 
     @Test
-    fun `keeps the server and whether it is on`() = runTest {
+    fun `keeps whether it is on, the log setting and the resolver`() = runTest {
         val writer = Job()
         preferences(CoroutineScope(coroutineContext + writer)).apply {
-            setUrl("https://dns.nextdns.io/abc123")
             setEnabled(true)
+            setLogEnabled(false)
+            setResolver("https://dns.google/dns-query")
         }
         writer.cancelAndJoin()
 
         val preferences = preferences(backgroundScope)
-        assertEquals("https://dns.nextdns.io/abc123", preferences.url.first())
         assertTrue(preferences.enabled.first())
+        assertFalse(preferences.logEnabled.first())
+        assertEquals("https://dns.google/dns-query", preferences.resolver.first())
     }
 
     private fun preferences(scope: CoroutineScope) =
-        DnsPreferences(PreferenceDataStoreFactory.create(scope = scope) { File(folder.root, "dns.preferences_pb") })
+        ProtectionPreferences(PreferenceDataStoreFactory.create(scope = scope) { File(folder.root, "protection.preferences_pb") })
 }

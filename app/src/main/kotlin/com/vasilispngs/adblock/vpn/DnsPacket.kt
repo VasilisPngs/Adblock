@@ -8,11 +8,6 @@ private const val UDP_HEADER = 8
 private const val DNS_HEADER = 12
 private const val TTL = 64
 private const val FRAGMENT_MASK = 0x3FFF
-private const val TYPE_A = 1
-private const val CLASS_IN = 1
-private const val RECURSION_DESIRED = 0x0100
-private const val MAX_LABEL = 63
-internal const val MAX_DNS_MESSAGE = 0xFFFF - IP_HEADER - UDP_HEADER
 
 internal class DnsQuery(
     val source: ByteArray,
@@ -53,21 +48,6 @@ internal fun dnsResponsePacket(query: DnsQuery, message: ByteArray): ByteArray {
     packet.put16(IP_HEADER + 4, udpLength)
     message.copyInto(packet, IP_HEADER + UDP_HEADER)
     return packet
-}
-
-internal fun serverFailure(query: ByteArray): ByteArray = query.copyOf().apply {
-    this[2] = (0x80 or (this[2].toInt() and 0x79)).toByte()
-    this[3] = 0x82.toByte()
-}
-
-internal fun addressQuery(name: String): ByteArray {
-    val labels = name.trimEnd('.').split('.').map(String::toByteArray)
-    require(labels.all { it.size in 1..MAX_LABEL })
-    val question = labels.fold(byteArrayOf()) { bytes, label -> bytes + label.size.toByte() + label }
-    return ByteArray(DNS_HEADER).apply {
-        put16(2, RECURSION_DESIRED)
-        put16(4, 1)
-    } + question + byteArrayOf(0, 0, TYPE_A.toByte(), 0, CLASS_IN.toByte())
 }
 
 private fun headerChecksum(packet: ByteArray): Int {

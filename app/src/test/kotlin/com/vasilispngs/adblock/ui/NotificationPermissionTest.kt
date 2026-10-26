@@ -6,24 +6,27 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.vasilispngs.adblock.R
+import com.vasilispngs.adblock.data.AdblockDatabase
 import com.vasilispngs.adblock.data.AppPreferences
 import com.vasilispngs.adblock.data.Appearance
-import com.vasilispngs.adblock.data.DnsPreferences
+import com.vasilispngs.adblock.data.Blocklists
+import com.vasilispngs.adblock.data.ProtectionPreferences
 import com.vasilispngs.adblock.data.SelfUpdater
 import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.vpn.DnsTunnel
-import com.vasilispngs.adblock.vpn.DohResult
+import com.vasilispngs.adblock.vpn.DnsVpnService
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -33,6 +36,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowActivity
+import org.robolectric.shadows.ShadowVpnService
 import java.io.File
 import java.io.IOException
 
@@ -45,28 +49,31 @@ class NotificationPermissionTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val context = RuntimeEnvironment.getApplication()
-    private val asked = mutableListOf<String>()
+    private val database = AdblockDatabase.create(context)
+    private val protection = hasText(context.getString(R.string.protection)) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)
+
+    @After
+    fun close() = database.close()
 
     @Test
-    fun `asks to show the notification the first time DNS-over-HTTPS is turned on`() {
+    fun `asks to show the notification the first time protection is turned on`() {
         show()
-        compose.onNodeWithText(context.getString(R.string.dns_over_https)).performClick()
+        compose.onNode(protection).performClick()
 
         val request = compose.runOnIdle { shadowOf(compose.activity).lastRequestedPermission }
         assertArrayEquals(arrayOf(Manifest.permission.POST_NOTIFICATIONS), request.requestedPermissions)
 
         compose.runOnIdle { decline(request) }
-        compose.waitUntil { asked.isNotEmpty() }
-        assertEquals(listOf(SERVER), asked)
+        awaitService()
     }
 
     @Test
     fun `turns on at once when notifications are allowed`() {
         shadowOf(context).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         show()
-        compose.onNodeWithText(context.getString(R.string.dns_over_https)).performClick()
+        compose.onNode(protection).performClick()
 
-        compose.waitUntil { asked.isNotEmpty() }
+        awaitService()
         assertNull(shadowOf(compose.activity).lastRequestedPermission)
     }
 
@@ -74,33 +81,33 @@ class NotificationPermissionTest {
     fun `does not ask again once notifications were declined`() {
         shadowOf(context.packageManager).setShouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS, true)
         show()
-        compose.onNodeWithText(context.getString(R.string.dns_over_https)).performClick()
+        compose.onNode(protection).performClick()
 
-        compose.waitUntil { asked.isNotEmpty() }
+        awaitService()
         assertNull(shadowOf(compose.activity).lastRequestedPermission)
     }
 
+    private fun awaitService() {
+        compose.awaitCondition { shadowOf(context).peekNextStartedService()?.component?.className == DnsVpnService::class.java.name }
+    }
+
     private fun show() {
-        val preferences = DnsPreferences(PreferenceDataStoreFactory.create { File(folder.root, "dns.preferences_pb") })
-        runBlocking { preferences.setUrl(SERVER) }
-        val appPreferences = AppPreferences(
-            context,
-            PreferenceDataStoreFactory.create { File(folder.root, "app.preferences_pb") }
-        )
-        val viewModel = DnsViewModel(
+        ShadowVpnService.setPrepareResult(null)
+        val preferences = ProtectionPreferences(PreferenceDataStoreFactory.create { File(folder.root, "protection.preferences_pb") })
+        val appPreferences = AppPreferences(context, PreferenceDataStoreFactory.create { File(folder.root, "app.preferences_pb") })
+        val home = HomeViewModel(DnsTunnel(context), preferences, MutableStateFlow(null), database.rules(), database.queries())
+        val protectionViewModel = ProtectionViewModel(
+            Blocklists(File(context.filesDir, "lists"), database.sources(), { throw IOException("Offline") }, {}),
+            database.sources(),
+            database.rules(),
             preferences,
-            appPreferences,
-            DnsTunnel(context),
-            MutableStateFlow(null),
-            SelfUpdater(context, MainScope()) { throw IOException("Offline") }
-        ) { server, _ ->
-            asked += server
-            DohResult.Failed
-        }
+            { _, _, onResult -> onResult(null) }
+        )
+        val settings = SettingsViewModel(appPreferences, preferences, SelfUpdater(context, MainScope()) { throw IOException("Offline") })
         compose.setContent {
-            DnsScreen(viewModel = viewModel, appearance = Appearance(ThemeMode.System, dynamicColor = false))
+            AdblockApp(home, protectionViewModel, settings, Appearance(ThemeMode.System, dynamicColor = false))
         }
-        compose.waitUntil { compose.onAllNodes(hasText(SERVER)).fetchSemanticsNodes().isNotEmpty() }
+        compose.awaitCondition { home.uiState.value.loaded }
     }
 
     private fun decline(request: ShadowActivity.PermissionsRequest) {
@@ -113,7 +120,4 @@ class NotificationPermissionTest {
         )
     }
 
-    private companion object {
-        const val SERVER = "https://dns.nextdns.io/abc123"
-    }
 }

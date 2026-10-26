@@ -9,17 +9,19 @@ import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.system.OsConstants
-import androidx.core.net.toUri
 import com.vasilispngs.adblock.MainActivity
 import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.appContainer
+import com.vasilispngs.adblock.data.downloadNewLists
+import com.vasilispngs.adblock.data.scheduleDailyLists
+import com.vasilispngs.adblock.dns.DnsEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
@@ -33,20 +35,17 @@ class DnsVpnService : VpnService() {
     private var tunnel: ParcelFileDescriptor? = null
     private var connecting: Job? = null
 
-    @Volatile
-    private var server = ""
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             stop()
             return START_NOT_STICKY
         }
-        startForeground(NOTIFICATION_ID, notification(server.ifEmpty { null }), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
+        startForeground(NOTIFICATION_ID, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
         if (connecting?.isActive == true) {
             if (tunnel != null) publish()
         } else {
             container.tunnel.update(TunnelState.Connecting)
-            connecting = scope.launch { container.preferences.url.map(::dohUrl).collect { connect(it) } }
+            connecting = scope.launch { connect() }
         }
         return START_STICKY
     }
@@ -59,17 +58,15 @@ class DnsVpnService : VpnService() {
         super.onDestroy()
     }
 
-    private suspend fun connect(url: String?) {
-        if (url == null) return stop()
-        if (url != server) {
-            server = url
-            startForeground(NOTIFICATION_ID, notification(url), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
-        }
-        if (tunnel == null) {
-            tunnel = establish() ?: return stop()
-            container.preferences.setEnabled(true)
-        }
+    private suspend fun connect() {
+        val engine = withContext(Dispatchers.IO) { DnsEngine(container.doh, container.queryLog::add) }
+        engine.state = container.engineState.first()
+        tunnel = establish(engine) ?: return stop()
+        container.preferences.setEnabled(true)
         publish()
+        scheduleDailyLists(this)
+        if (container.blocklists.missing()) downloadNewLists(this)
+        container.engineState.collect { engine.state = it }
     }
 
     private fun publish() {
@@ -82,7 +79,7 @@ class DnsVpnService : VpnService() {
         )
     }
 
-    private fun establish(): ParcelFileDescriptor? {
+    private fun establish(engine: DnsEngine): ParcelFileDescriptor? {
         val tunnel = Builder()
             .setSession(getString(R.string.app_name))
             .addAddress(TUNNEL_ADDRESS, 32)
@@ -94,12 +91,11 @@ class DnsVpnService : VpnService() {
             .setBlocking(true)
             .setConfigureIntent(openApp())
             .establish() ?: return null
-        val doh = container.doh
-        thread(name = "dns-tunnel") { forward(tunnel, doh) }
+        thread(name = "dns-tunnel") { forward(tunnel, engine) }
         return tunnel
     }
 
-    private fun forward(tunnel: ParcelFileDescriptor, doh: DohClient) {
+    private fun forward(tunnel: ParcelFileDescriptor, engine: DnsEngine) {
         val input = FileInputStream(tunnel.fileDescriptor)
         val output = FileOutputStream(tunnel.fileDescriptor)
         val packet = ByteArray(MAX_PACKET)
@@ -111,11 +107,13 @@ class DnsVpnService : VpnService() {
             }
             if (length < 0) return
             val query = parseDnsQuery(packet, length) ?: continue
-            doh.resolve(server, query.message) { result ->
-                val message = (result as? DohResult.Answer)?.message ?: serverFailure(query.message)
-                try {
-                    output.write(dnsResponsePacket(query, message))
-                } catch (_: IOException) {
+            engine.handle(query.message) { message ->
+                val response = dnsResponsePacket(query, message)
+                synchronized(output) {
+                    try {
+                        output.write(response)
+                    } catch (_: IOException) {
+                    }
                 }
             }
         }
@@ -136,13 +134,12 @@ class DnsVpnService : VpnService() {
         container.tunnel.update(TunnelState.Off)
     }
 
-    private fun notification(url: String?): Notification {
-        val channel = NotificationChannel(CHANNEL_ID, getString(R.string.dns_over_https), NotificationManager.IMPORTANCE_LOW)
+    private fun notification(): Notification {
+        val channel = NotificationChannel(CHANNEL_ID, getString(R.string.protection), NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle(getString(R.string.dns_over_https_on))
-            .setContentText(url?.toUri()?.host)
+            .setContentTitle(getString(R.string.protection_on))
             .setContentIntent(openApp())
             .setOngoing(true)
             .build()

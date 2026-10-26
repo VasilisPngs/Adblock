@@ -12,12 +12,16 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vasilispngs.adblock.ui.DnsScreen
-import com.vasilispngs.adblock.ui.DnsViewModel
+import com.vasilispngs.adblock.ui.AdblockApp
+import com.vasilispngs.adblock.ui.HomeViewModel
+import com.vasilispngs.adblock.ui.ProtectionViewModel
+import com.vasilispngs.adblock.ui.SettingsViewModel
 import com.vasilispngs.adblock.ui.theme.AdblockTheme
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: DnsViewModel by viewModels { DnsViewModel.Factory }
+    private val homeViewModel: HomeViewModel by viewModels { HomeViewModel.Factory }
+    private val protectionViewModel: ProtectionViewModel by viewModels { ProtectionViewModel.Factory }
+    private val settingsViewModel: SettingsViewModel by viewModels { SettingsViewModel.Factory }
     private var windowBackground = R.color.window_background
     private var ready = false
 
@@ -25,10 +29,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WindowCompat.enableEdgeToEdge(window)
         setContent {
-            val appearance by viewModel.appearance.collectAsStateWithLifecycle()
+            val appearance by settingsViewModel.appearance.collectAsStateWithLifecycle()
             appearance?.let { current ->
                 AdblockTheme(dynamicColor = current.dynamicColor) {
-                    DnsScreen(viewModel = viewModel, appearance = current)
+                    AdblockApp(
+                        homeViewModel = homeViewModel,
+                        protectionViewModel = protectionViewModel,
+                        settingsViewModel = settingsViewModel,
+                        appearance = current
+                    )
                 }
                 SideEffect { showWindow(current.dynamicColor) }
             }
