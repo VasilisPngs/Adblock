@@ -10,10 +10,12 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performImeAction
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.test.platform.app.InstrumentationRegistry
+import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.data.LoggedQuery
 import com.vasilispngs.adblock.ui.theme.AdblockTheme
 import java.util.concurrent.atomic.AtomicInteger
@@ -77,13 +79,12 @@ class RemoteSearchTest {
         compose.onNode(hasSetTextAction()).assertIsFocused()
 
         press(KeyEvent.KEYCODE_DPAD_DOWN)
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size == 2 && !compose.activity.hasWindowFocus()
-        }
-        compose.waitForIdle()
-        compose.onAllNodes(hasSetTextAction()).onLast().assertIsFocused()
+        compose.onNodeWithText(compose.activity.getString(R.string.filter_all)).assertIsFocused()
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(1)
         assertEquals(0, keyboards.get())
 
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        compose.onNode(hasSetTextAction()).assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.waitUntil(TIMEOUT_MILLIS) { keyboards.get() == 1 }
     }

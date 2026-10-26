@@ -60,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
@@ -76,6 +77,7 @@ import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.relocation.BringIntoViewModifierNode
@@ -375,8 +377,8 @@ private fun SearchField(
     val scope = rememberCoroutineScope()
     val collapse: () -> Unit = { scope.launch { searchBarState.animateToCollapsed() } }
     val touch = LocalInputModeManager.current.inputMode == InputMode.Touch
+    val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
-    var downPressed by remember { mutableStateOf(false) }
     CompositionLocalProvider(LocalBringIntoViewSpec provides DefaultBringIntoViewSpec) {
         SearchBarDefaults.InputField(
             textFieldState = search,
@@ -387,23 +389,22 @@ private fun SearchField(
                 .onFocusChanged { state ->
                     if (focused && !state.isFocused) onKeyboardRequestedChange(false)
                     focused = state.isFocused
-                    downPressed = false
                 }
                 .onPreviewKeyEvent { event ->
                     val pressed = event.type == KeyEventType.KeyDown
+                    val collapsed = searchBarState.targetValue == SearchBarValue.Collapsed
                     when {
                         !focused -> false
                         event.key == Key.DirectionCenter -> {
                             if (pressed) {
                                 onKeyboardRequestedChange(true)
-                                if (searchBarState.targetValue == SearchBarValue.Collapsed) scope.launch { searchBarState.animateToExpanded() }
+                                if (collapsed) scope.launch { searchBarState.animateToExpanded() }
                             }
                             false
                         }
-                        event.key == Key.DirectionDown || event.key == Key.NumPadDirectionDown -> {
-                            val releasedOnArrival = !pressed && !downPressed
-                            downPressed = pressed
-                            releasedOnArrival
+                        collapsed && (event.key == Key.DirectionDown || event.key == Key.NumPadDirectionDown) -> {
+                            if (pressed) focusManager.moveFocus(FocusDirection.Down)
+                            true
                         }
                         else -> false
                     }

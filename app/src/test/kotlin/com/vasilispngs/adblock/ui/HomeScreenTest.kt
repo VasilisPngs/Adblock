@@ -281,14 +281,16 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `still opens the search when Down is pressed on it with a remote`() {
-        show(HomeUiState(loaded = true), keyboard = true)
+    fun `moves from the search to the filters and the log with Down on a remote`() {
+        show(HomeUiState(loaded = true), listOf(entry(1, "ads.example", Action.Block, Origin.List, "ads.example")), keyboard = true)
         compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
 
         compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithText(string(R.string.filter_all)).assertIsFocused()
 
-        compose.onAllNodes(hasSetTextAction()).assertCountEquals(2)
-        closeSearch()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithContentDescription(string(R.string.action_on_host, string(R.string.allow), "ads.example")).assertIsFocused()
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(1)
     }
 
     private fun closeSearch() {
