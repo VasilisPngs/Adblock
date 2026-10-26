@@ -54,7 +54,7 @@ jobs:
       - name: Lint and test
         run: ./gradlew :app:lintRelease :app:testDebugUnitTest
 
-      - name: Check accessibility on a device
+      - name: Test on a device
         timeout-minutes: 20
         run: >-
           ./gradlew :app:pixel10Api37DebugAndroidTest

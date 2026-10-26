@@ -28,14 +28,14 @@ class QueryLogTest {
     private fun entry(name: String, at: Long = now, action: Action = Action.Allow) =
         LoggedQuery(at = at, name = name, type = "A", action = action, origin = if (action == Action.Block) Origin.List else Origin.None, rule = null)
 
-    private suspend fun names(action: Action? = null, pattern: String = ""): List<String> {
-        val page = queries.page(now - LOG_RETENTION_MILLIS, action, pattern)
+    private suspend fun names(action: Action? = null, pattern: String = "", since: Long = now - LOG_RETENTION_MILLIS): List<String> {
+        val page = queries.page(since, action, pattern)
             .load(PagingSource.LoadParams.Refresh(key = null, loadSize = 100, placeholdersEnabled = false))
         return (page as PagingSource.LoadResult.Page).data.map(LoggedQuery::name)
     }
 
-    private suspend fun awaitNames(expected: List<String>) = withContext(Dispatchers.Default) {
-        withTimeout(WAIT_MILLIS) { while (names() != expected) delay(10) }
+    private suspend fun awaitNames(expected: List<String>, since: Long = now - LOG_RETENTION_MILLIS) = withContext(Dispatchers.Default) {
+        withTimeout(WAIT_MILLIS) { while (names(since = since) != expected) delay(10) }
     }
 
     @Test
@@ -60,9 +60,7 @@ class QueryLogTest {
         advanceTimeBy(1_001)
         runCurrent()
 
-        awaitNames(listOf("new.test"))
-        val all = queries.page(0, null, "").load(PagingSource.LoadParams.Refresh(key = null, loadSize = 100, placeholdersEnabled = false))
-        assertEquals(listOf("new.test"), (all as PagingSource.LoadResult.Page).data.map(LoggedQuery::name))
+        awaitNames(listOf("new.test"), since = 0)
     }
 
     @Test

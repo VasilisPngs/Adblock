@@ -18,6 +18,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -29,6 +31,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
@@ -40,8 +44,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSerializable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -69,6 +75,14 @@ private const val FADE_OUT_MILLIS = 90
 private const val FADE_IN_MILLIS = 210
 private const val FADE_THROUGH_ENTER_SCALE = 0.8f
 private const val FADE_THROUGH_EXIT_SCALE = 1.05f
+private const val PREDICTIVE_BACK_EXIT_SCALE = 0.9f
+private const val PREDICTIVE_BACK_ENTER_SCALE = 1.1f
+private const val PREDICTIVE_BACK_FADE_THRESHOLD = 0.35f
+private val PredictiveBackEasing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
+private val PredictiveBackExitFade = Easing { (PredictiveBackEasing.transform(it) / PREDICTIVE_BACK_FADE_THRESHOLD).coerceAtMost(1f) }
+private val PredictiveBackEnterFade = Easing {
+    ((PredictiveBackEasing.transform(it) - PREDICTIVE_BACK_FADE_THRESHOLD) / (1f - PREDICTIVE_BACK_FADE_THRESHOLD)).coerceAtLeast(0f)
+}
 
 @Serializable
 internal sealed interface Destination : NavKey {
@@ -211,8 +225,10 @@ internal fun AdblockNavigation(
 ) {
     val backStack = rememberSerializable(serializer = serializer()) { NavBackStack<Destination>(Destination.Home) }
     val current = backStack.last()
+    var backNavigation by remember { mutableStateOf(false) }
     val select: (Destination) -> Unit = { destination ->
         if (destination != current) {
+            backNavigation = false
             backStack.retainAll { it == Destination.Home }
             if (destination != Destination.Home) backStack.add(destination)
         }
@@ -243,12 +259,16 @@ internal fun AdblockNavigation(
         modifier = if (television) modifier.padding(horizontal = TvOverscanHorizontal, vertical = TvOverscanVertical) else modifier,
         navigationSuiteType = navigationSuiteType
     ) {
+        val motion = MaterialTheme.motionScheme
         NavDisplay(
             backStack = backStack,
-            onBack = { backStack.removeLastOrNull() },
+            onBack = {
+                backNavigation = true
+                backStack.removeLastOrNull()
+            },
             transitionSpec = { fadeThrough() },
-            popTransitionSpec = { fadeThrough() },
-            predictivePopTransitionSpec = { fadeThrough() }
+            popTransitionSpec = { if (backNavigation) backTransition(motion) else fadeThrough() },
+            predictivePopTransitionSpec = { predictiveBackTransition() }
         ) { destination ->
             NavEntry(destination) { shown ->
                 val snackbar = snackbarHostState.takeIf { shown == current }
@@ -266,6 +286,14 @@ private fun fadeThrough(): ContentTransform =
     (fadeIn(tween(durationMillis = FADE_IN_MILLIS, delayMillis = FADE_OUT_MILLIS, easing = LinearEasing)) +
         scaleIn(initialScale = FADE_THROUGH_ENTER_SCALE))
         .togetherWith(fadeOut(tween(durationMillis = FADE_OUT_MILLIS, easing = LinearEasing)) + scaleOut(targetScale = FADE_THROUGH_EXIT_SCALE))
+
+private fun backTransition(motion: MotionScheme): ContentTransform =
+    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), PREDICTIVE_BACK_ENTER_SCALE))
+        .togetherWith(fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), PREDICTIVE_BACK_EXIT_SCALE))
+
+private fun predictiveBackTransition(): ContentTransform =
+    (fadeIn(tween(easing = PredictiveBackEnterFade)) + scaleIn(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_ENTER_SCALE))
+        .togetherWith(fadeOut(tween(easing = PredictiveBackExitFade)) + scaleOut(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_EXIT_SCALE))
 
 internal fun ProtectionMessage.text(resources: Resources): String = resources.getString(
     when (this) {

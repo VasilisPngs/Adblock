@@ -46,8 +46,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.data.Action
@@ -186,7 +193,7 @@ private fun SourceItem(source: ListSource, numbers: NumberFormat, index: Int, co
         colors = listItemColors(),
         supportingContent = {
             Column {
-                if (source.name.isNotEmpty()) Text(text = source.url)
+                Text(text = link(source.url))
                 Text(text = status)
             }
         },
@@ -200,6 +207,26 @@ private fun SourceItem(source: ListSource, numbers: NumberFormat, index: Int, co
         }
     ) {
         Text(text = title)
+    }
+}
+
+@Composable
+private fun link(url: String): AnnotatedString {
+    val colors = MaterialTheme.colorScheme
+    return remember(url, colors) {
+        buildAnnotatedString {
+            withLink(
+                LinkAnnotation.Url(
+                    url,
+                    TextLinkStyles(
+                        style = SpanStyle(color = colors.primary, textDecoration = TextDecoration.Underline),
+                        focusedStyle = SpanStyle(color = colors.onPrimaryContainer, background = colors.primaryContainer)
+                    )
+                )
+            ) {
+                append(url)
+            }
+        }
     }
 }
 

@@ -7,14 +7,21 @@ import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.annotation.StringRes
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -22,16 +29,22 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.paging.LoadState
+import androidx.paging.LoadStates
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.window.core.layout.WindowSizeClass
 import com.vasilispngs.adblock.R
+import com.vasilispngs.adblock.data.Action
 import com.vasilispngs.adblock.data.Appearance
 import com.vasilispngs.adblock.data.LoggedQuery
+import com.vasilispngs.adblock.data.Origin
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.ui.theme.AdblockTheme
@@ -50,8 +63,10 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NavigationTest {
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val composeRule = compose.drainingMainLooper()
 
     private val context = RuntimeEnvironment.getApplication()
     private lateinit var backDispatcher: OnBackPressedDispatcher
@@ -124,6 +139,23 @@ class NavigationTest {
     }
 
     @Test
+    @Config(qualifiers = "w960dp-h540dp-television")
+    fun `holds Home still while a remote rests on the search on a television`() {
+        shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
+        show(List(LOG_SIZE) { LoggedQuery(it.toLong(), it.toLong(), "host$it.example", "A", Action.Allow, Origin.None, null) }, keyboard = true)
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNode(hasSetTextAction()).assertIsFocused()
+        compose.mainClock.autoAdvance = false
+
+        val positions = List(FRAMES) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.onNode(hasScrollToIndexAction()).fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        }
+
+        assertEquals(listOf(positions.first()), positions.distinct())
+    }
+
+    @Test
     @Config(qualifiers = "w411dp-h891dp")
     fun `fades through to the next destination without sliding`() {
         show()
@@ -165,11 +197,15 @@ class NavigationTest {
         return List(nodes.fetchSemanticsNodes().size) { nodes[it].getBoundsInRoot() }.minBy { it.top }
     }
 
-    private fun show() {
+    private fun show(entries: List<LoggedQuery> = emptyList(), keyboard: Boolean = false) {
         compose.setContent {
+            if (keyboard) {
+                val inputModeManager = LocalInputModeManager.current
+                LaunchedEffect(Unit) { inputModeManager.requestInputMode(InputMode.Keyboard) }
+            }
             backDispatcher = LocalOnBackPressedDispatcherOwner.current!!.onBackPressedDispatcher
             AdblockTheme {
-                val log = remember { flowOf(PagingData.empty<LoggedQuery>()) }.collectAsLazyPagingItems()
+                val log = remember { flowOf(PagingData.from(entries, Loaded)) }.collectAsLazyPagingItems()
                 AdblockNavigation(
                     snackbarHostState = remember { SnackbarHostState() },
                     home = { snackbar ->
@@ -191,5 +227,8 @@ class NavigationTest {
     private companion object {
         const val RESOLVER = "https://cloudflare-dns.com/dns-query"
         const val FADE_OUT_PEEK_MILLIS = 45L
+        const val LOG_SIZE = 60
+        const val FRAMES = 60
+        val Loaded = LoadStates(LoadState.NotLoading(true), LoadState.NotLoading(true), LoadState.NotLoading(true))
     }
 }

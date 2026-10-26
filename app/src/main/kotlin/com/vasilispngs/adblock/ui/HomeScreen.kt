@@ -4,6 +4,8 @@ import android.text.format.DateFormat
 import android.text.format.DateUtils
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -43,12 +46,15 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,11 +63,23 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.relocation.BringIntoViewModifierNode
+import androidx.compose.ui.relocation.bringIntoView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -104,12 +122,24 @@ internal fun HomeScreen(
 ) {
     val search = rememberTextFieldState(uiState.search)
     val searchBarState = rememberSearchBarState()
+    var searchKeyboard by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val time = rememberTimeFormatter()
     val focus = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
     val searchChange by rememberUpdatedState(onSearchChange)
     LaunchedEffect(search) { snapshotFlow { search.text.toString() }.collect { searchChange(it) } }
+    LaunchedEffect(searchBarState) {
+        snapshotFlow { searchBarState.targetValue }.collect { if (it == SearchBarValue.Collapsed) searchKeyboard = false }
+    }
+    val searchField = @Composable {
+        SearchField(
+            search = search,
+            searchBarState = searchBarState,
+            keyboardRequested = searchKeyboard,
+            onKeyboardRequestedChange = { searchKeyboard = it }
+        )
+    }
     LaunchedEffect(Unit) {
         if (inputModeManager.inputMode == InputMode.Keyboard) focus.requestFocus()
     }
@@ -147,11 +177,12 @@ internal fun HomeScreen(
             item(key = "log-header") { SectionHeader(text = stringResource(R.string.query_log), modifier = Modifier.padding(side)) }
             stickyHeader(key = LOG_BAR_KEY) {
                 LogBar(
-                    search = search,
                     searchBarState = searchBarState,
+                    inputField = searchField,
                     filter = uiState.filter,
                     onFilterChange = onFilterChange,
                     modifier = Modifier
+                        .bringWholeIntoView()
                         .drawBehind { drawRect(barColor) }
                         .padding(side)
                         .padding(top = SmallSpacing, bottom = ContentMargin)
@@ -161,7 +192,7 @@ internal fun HomeScreen(
         }
     }
 
-    FocusedSearch(search = search, searchBarState = searchBarState) {
+    FocusedSearch(searchBarState = searchBarState, inputField = searchField) {
         LazyColumn(
             contentPadding = PaddingValues(vertical = ContentMargin),
             verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
@@ -301,18 +332,14 @@ private fun LazyListScope.logItems(
 
 @Composable
 private fun LogBar(
-    search: TextFieldState,
     searchBarState: SearchBarState,
+    inputField: @Composable () -> Unit,
     filter: LogFilter,
     onFilterChange: (LogFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(LogBarSpacing)) {
-        SearchBar(
-            state = searchBarState,
-            inputField = { SearchField(search = search, searchBarState = searchBarState) },
-            modifier = Modifier.fillMaxWidth()
-        )
+        SearchBar(state = searchBarState, inputField = inputField, modifier = Modifier.fillMaxWidth())
         Row(horizontalArrangement = Arrangement.spacedBy(SmallSpacing)) {
             LogFilter.entries.forEach { option ->
                 val selected = option == filter
@@ -339,33 +366,68 @@ private fun LogBar(
 }
 
 @Composable
-private fun SearchField(search: TextFieldState, searchBarState: SearchBarState) {
+private fun SearchField(
+    search: TextFieldState,
+    searchBarState: SearchBarState,
+    keyboardRequested: Boolean,
+    onKeyboardRequestedChange: (Boolean) -> Unit
+) {
     val scope = rememberCoroutineScope()
     val collapse: () -> Unit = { scope.launch { searchBarState.animateToCollapsed() } }
-    SearchBarDefaults.InputField(
-        textFieldState = search,
-        searchBarState = searchBarState,
-        onSearch = { collapse() },
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text(text = stringResource(R.string.search_domains), modifier = Modifier.clearAndSetSemantics {}) },
-        leadingIcon = {
-            if (searchBarState.currentValue == SearchBarValue.Expanded) {
-                IconAction(icon = R.drawable.ic_arrow_back, label = stringResource(R.string.back), onClick = collapse)
+    val touch = LocalInputModeManager.current.inputMode == InputMode.Touch
+    var focused by remember { mutableStateOf(false) }
+    var downPressed by remember { mutableStateOf(false) }
+    CompositionLocalProvider(LocalBringIntoViewSpec provides DefaultBringIntoViewSpec) {
+        SearchBarDefaults.InputField(
+            textFieldState = search,
+            searchBarState = searchBarState,
+            onSearch = { collapse() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { state ->
+                    if (focused && !state.isFocused) onKeyboardRequestedChange(false)
+                    focused = state.isFocused
+                    downPressed = false
+                }
+                .onPreviewKeyEvent { event ->
+                    val pressed = event.type == KeyEventType.KeyDown
+                    when {
+                        !focused -> false
+                        event.key == Key.DirectionCenter -> {
+                            if (pressed) {
+                                onKeyboardRequestedChange(true)
+                                if (searchBarState.targetValue == SearchBarValue.Collapsed) scope.launch { searchBarState.animateToExpanded() }
+                            }
+                            false
+                        }
+                        event.key == Key.DirectionDown || event.key == Key.NumPadDirectionDown -> {
+                            val releasedOnArrival = !pressed && !downPressed
+                            downPressed = pressed
+                            releasedOnArrival
+                        }
+                        else -> false
+                    }
+                },
+            keyboardOptions = KeyboardOptions(showKeyboardOnFocus = touch || keyboardRequested),
+            placeholder = { Text(text = stringResource(R.string.search_domains), modifier = Modifier.clearAndSetSemantics {}) },
+            leadingIcon = {
+                if (searchBarState.currentValue == SearchBarValue.Expanded) {
+                    IconAction(icon = R.drawable.ic_arrow_back, label = stringResource(R.string.back), onClick = collapse)
+                } else {
+                    Icon(painter = painterResource(R.drawable.ic_search), contentDescription = null)
+                }
+            },
+            trailingIcon = if (search.text.isNotEmpty()) {
+                { IconAction(icon = R.drawable.ic_close, label = stringResource(R.string.clear_search), onClick = search::clearText) }
             } else {
-                Icon(painter = painterResource(R.drawable.ic_search), contentDescription = null)
+                null
             }
-        },
-        trailingIcon = if (search.text.isNotEmpty()) {
-            { IconAction(icon = R.drawable.ic_close, label = stringResource(R.string.clear_search), onClick = search::clearText) }
-        } else {
-            null
-        }
-    )
+        )
+    }
 }
 
 @Composable
-private fun FocusedSearch(search: TextFieldState, searchBarState: SearchBarState, results: @Composable () -> Unit) {
-    val inputField = @Composable { SearchField(search = search, searchBarState = searchBarState) }
+private fun FocusedSearch(searchBarState: SearchBarState, inputField: @Composable () -> Unit, results: @Composable () -> Unit) {
     if (currentWindowAdaptiveInfoV2().windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)) {
         ExpandedDockedSearchBar(state = searchBarState, inputField = inputField) { results() }
     } else {
@@ -492,3 +554,21 @@ private val Origin.labelRes: Int
         Origin.Cache -> R.string.origin_cache
         Origin.Stale -> R.string.origin_stale
     }
+
+private val DefaultBringIntoViewSpec = object : BringIntoViewSpec {}
+
+private fun Modifier.bringWholeIntoView(): Modifier = this then BringWholeIntoViewElement
+
+private data object BringWholeIntoViewElement : ModifierNodeElement<BringWholeIntoViewNode>() {
+    override fun create() = BringWholeIntoViewNode()
+
+    override fun update(node: BringWholeIntoViewNode) = Unit
+
+    override fun InspectorInfo.inspectableProperties() {
+        name = "bringWholeIntoView"
+    }
+}
+
+private class BringWholeIntoViewNode : Modifier.Node(), BringIntoViewModifierNode {
+    override suspend fun bringIntoView(childCoordinates: LayoutCoordinates, boundsProvider: () -> Rect?) = bringIntoView()
+}

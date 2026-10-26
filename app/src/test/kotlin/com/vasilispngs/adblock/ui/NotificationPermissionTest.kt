@@ -45,8 +45,10 @@ class NotificationPermissionTest {
     @get:Rule
     val folder = TemporaryFolder()
 
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
     @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    val composeRule = compose.drainingMainLooper()
 
     private val context = RuntimeEnvironment.getApplication()
     private val database = AdblockDatabase.create(context)

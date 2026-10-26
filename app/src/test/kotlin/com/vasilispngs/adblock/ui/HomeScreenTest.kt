@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -31,10 +32,13 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
@@ -62,8 +66,10 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w411dp-h891dp")
 class HomeScreenTest {
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val composeRule = compose.drainingMainLooper()
 
     private val context = RuntimeEnvironment.getApplication()
     private var state by mutableStateOf(HomeUiState(loaded = true))
@@ -220,9 +226,7 @@ class HomeScreenTest {
         compose.onAllNodes(hasSetTextAction()).onLast().performImeAction()
         compose.onAllNodes(hasSetTextAction()).assertCountEquals(1)
         compose.onNode(hasSetTextAction()).assert(hasText("ads"))
-        compose.mainClock.advanceTimeBy(SETTLE_MILLIS)
-        compose.waitForIdle()
-        shadowOf(Looper.getMainLooper()).idle()
+        settle()
     }
 
     @Test
@@ -253,6 +257,50 @@ class HomeScreenTest {
         show(HomeUiState(loaded = true), keyboard = true)
 
         compose.onNodeWithText(string(R.string.protection)).assertIsFocused()
+    }
+
+    @Test
+    fun `keeps the search closed when a remote moves onto it`() {
+        show(HomeUiState(loaded = true), keyboard = true)
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+
+        compose.onNode(hasSetTextAction()).assertIsFocused()
+    }
+
+    @Test
+    fun `opens the search when OK is pressed on it with a remote`() {
+        show(HomeUiState(loaded = true), keyboard = true)
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(2)
+        compose.onAllNodes(hasSetTextAction()).onLast().assertIsFocused()
+        closeSearch()
+    }
+
+    @Test
+    fun `still opens the search when Down is pressed on it with a remote`() {
+        show(HomeUiState(loaded = true), keyboard = true)
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(2)
+        closeSearch()
+    }
+
+    private fun closeSearch() {
+        compose.onAllNodes(hasSetTextAction()).onLast().performImeAction()
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(1)
+        settle()
+    }
+
+    private fun settle() {
+        compose.mainClock.advanceTimeBy(SETTLE_MILLIS)
+        compose.waitForIdle()
+        shadowOf(Looper.getMainLooper()).idle()
     }
 
     private fun entry(id: Long, name: String, action: Action, origin: Origin, rule: String?) =
