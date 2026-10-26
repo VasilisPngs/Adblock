@@ -14,7 +14,9 @@ import com.vasilispngs.adblock.dns.query
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -47,7 +49,7 @@ class ProtectionViewModelTest {
     private val database = AdblockDatabase.create(context)
     private val probed = mutableListOf<String>()
     private var answers = true
-    private var downloads = 0
+    private val downloads = MutableStateFlow(0)
     private val resolver = Resolver { url, message, onResult ->
         probed += url
         onResult(if (answers) answer(message, answers = emptyList()) else null)
@@ -56,7 +58,7 @@ class ProtectionViewModelTest {
         File(context.filesDir, "lists"),
         database.sources(),
         { throw IOException("Offline") },
-        { downloads += 1 }
+        { downloads.update { it + 1 } }
     )
 
     @Before
@@ -84,7 +86,7 @@ class ProtectionViewModelTest {
         viewModel.addSource(OTHER, " Other ")
         val added = viewModel.uiState.await { it.sources.size == 2 }
         assertEquals("Other", added.sources.last().name)
-        assertEquals(1, downloads)
+        assertEquals(1, downloads.await { it > 0 })
 
         viewModel.removeSource(OTHER)
         assertEquals(listOf(DEFAULT_LIST_URL), viewModel.uiState.await { it.sources.size == 1 }.sources.map { it.url })
