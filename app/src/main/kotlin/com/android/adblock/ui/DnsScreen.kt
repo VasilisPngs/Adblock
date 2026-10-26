@@ -17,6 +17,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.tween
@@ -44,7 +46,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.onConsumedWindowInsetsChanged
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -55,13 +56,17 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
@@ -72,14 +77,13 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldLabelPosition
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -87,7 +91,6 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
@@ -134,11 +137,11 @@ import com.android.adblock.data.ThemeMode
 import com.android.adblock.vpn.DohResult
 import com.android.adblock.vpn.TunnelState
 import com.android.adblock.vpn.dohUrl
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
 import kotlin.math.roundToInt
+import kotlin.math.sign
 
 private val CompactMargin = 16.dp
 private val ContentMargin = 16.dp
@@ -149,7 +152,7 @@ private val HeaderSpacing = 20.dp
 private val OptionHeight = 56.dp
 private val TvOverscanHorizontal = 48.dp
 private val TvOverscanVertical = 27.dp
-private const val FADE_THROUGH_SCALE = 0.92f
+private val ForwardSlide = 96.dp
 private const val PREDICTIVE_BACK_EXIT_SCALE = 0.9f
 private const val PREDICTIVE_BACK_ENTER_SCALE = 1.1f
 private const val PREDICTIVE_BACK_FADE_THRESHOLD = 0.35f
@@ -171,16 +174,12 @@ private sealed interface Screen : NavKey {
     data object Settings : Screen
 }
 
-private class TopLevelItem(
-    @StringRes val labelRes: Int,
-    @DrawableRes val iconRes: Int,
-    @DrawableRes val selectedIconRes: Int
-)
-
-private val TopLevelItems = mapOf(
-    Screen.Home to TopLevelItem(R.string.home, R.drawable.ic_home, R.drawable.ic_home_filled),
-    Screen.Settings to TopLevelItem(R.string.settings, R.drawable.ic_settings, R.drawable.ic_settings_filled)
-)
+@get:StringRes
+private val Screen.titleRes: Int
+    get() = when (this) {
+        Screen.Home -> R.string.home
+        Screen.Settings -> R.string.settings
+    }
 
 @Composable
 fun DnsScreen(
@@ -280,36 +279,23 @@ internal fun DnsScreen(
     val homeFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
-    val coroutineScope = rememberCoroutineScope()
-    var backNavigation by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (inputModeManager.inputMode == InputMode.Keyboard) homeFocus.requestFocus()
     }
 
-    val activeListState = if (current == Screen.Home) homeListState else settingsListState
-    val activeBarState = if (current == Screen.Home) homeBarState else settingsBarState
-    val activeFocus = if (current == Screen.Home) homeFocus else settingsFocus
-    val navigate: (Screen) -> Unit = { screen ->
-        if (screen != current) {
-            backNavigation = false
-            backStack.subList(1, backStack.size).clear()
-            if (screen != Screen.Home) backStack.add(screen)
-        } else {
-            coroutineScope.reveal(activeListState, activeBarState)
-        }
+    val openSettings: () -> Unit = {
+        if (current != Screen.Settings) backStack.add(Screen.Settings)
     }
+    val goBack: () -> Unit = { backStack.removeLastOrNull() }
     val windowInfo = currentWindowAdaptiveInfoV2()
-    val navigationSuiteType = NavigationSuiteScaffoldDefaults.navigationSuiteType(windowInfo)
     val margin = if (windowInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)) {
         WideMargin
     } else {
         CompactMargin
     }
-    val navigationBar = navigationSuiteType == NavigationSuiteType.ShortNavigationBarCompact ||
-        navigationSuiteType == NavigationSuiteType.ShortNavigationBarMedium
     val window = LocalActivity.current?.window
-    val navigationBarScrim = !navigationBar && WindowInsets.navigationBars.getBottom(LocalDensity.current) > 0
+    val navigationBarScrim = WindowInsets.navigationBars.getBottom(LocalDensity.current) > 0
     SideEffect(window, navigationBarScrim) { window?.isNavigationBarContrastEnforced = navigationBarScrim }
 
     val context = LocalContext.current
@@ -320,106 +306,90 @@ internal fun DnsScreen(
         WindowInsets(0)
     }
 
-    NavigationSuiteScaffold(
-        navigationItems = {
-            TopLevelItems.forEach { (screen, item) ->
-                val selected = screen == current
-                NavigationSuiteItem(
-                    selected = selected,
-                    onClick = { navigate(screen) },
-                    icon = {
-                        Icon(
-                            painter = painterResource(if (selected) item.selectedIconRes else item.iconRes),
-                            contentDescription = null
-                        )
-                    },
-                    label = { Text(text = stringResource(item.labelRes)) },
-                    navigationSuiteType = navigationSuiteType,
-                    modifier = Modifier.focusProperties {
-                        val first = screen == TopLevelItems.keys.first()
-                        val last = screen == TopLevelItems.keys.last()
-                        if (navigationBar) {
-                            up = activeFocus
-                            if (first) start = FocusRequester.Cancel
-                            if (last) end = FocusRequester.Cancel
-                        } else {
-                            end = activeFocus
-                            if (first) up = FocusRequester.Cancel
-                            if (last) down = FocusRequester.Cancel
-                        }
-                    }
-                )
-            }
-        },
-        modifier = modifier.windowInsetsPadding(overscan.only(WindowInsetsSides.Start)),
-        navigationSuiteType = navigationSuiteType
-    ) {
-        val motion = MaterialTheme.motionScheme
-        val content: @Composable (Screen) -> Unit = { screen ->
-            val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(if (screen == Screen.Home) homeBarState else settingsBarState)
-            val contentInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
-            var consumedInsets by remember { mutableStateOf(WindowInsets(0)) }
-            BoxWithConstraints(modifier = Modifier.onConsumedWindowInsetsChanged { consumedInsets = it }) {
-                val layoutDirection = LocalLayoutDirection.current
-                val insets = contentInsets.exclude(consumedInsets).asPaddingValues()
-                val safeWidth = maxWidth - insets.calculateStartPadding(layoutDirection) - insets.calculateEndPadding(layoutDirection)
-                val sideMargin = ((safeWidth - MaxListWidth) / 2).coerceAtLeast(margin)
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = { Text(text = stringResource(TopLevelItems.getValue(screen).labelRes)) },
-                            windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
-                            contentPadding = PaddingValues(horizontal = sideMargin - CompactMargin),
-                            scrollBehavior = scrollBehavior
-                        )
-                    },
-                    snackbarHost = { if (screen == current) SnackbarHost(hostState = snackbarHostState) },
-                    contentWindowInsets = contentInsets
-                ) { padding ->
-                    val contentPadding = PaddingValues(
-                        start = padding.calculateStartPadding(layoutDirection) + sideMargin,
-                        top = padding.calculateTopPadding(),
-                        end = padding.calculateEndPadding(layoutDirection) + sideMargin,
-                        bottom = padding.calculateBottomPadding() + margin
+    val motion = MaterialTheme.motionScheme
+    val slide = with(LocalDensity.current) { ForwardSlide.roundToPx() }
+    val content: @Composable (Screen) -> Unit = { screen ->
+        val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(if (screen == Screen.Home) homeBarState else settingsBarState)
+        val contentInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+        var consumedInsets by remember { mutableStateOf(WindowInsets(0)) }
+        BoxWithConstraints(modifier = Modifier.onConsumedWindowInsetsChanged { consumedInsets = it }) {
+            val layoutDirection = LocalLayoutDirection.current
+            val insets = contentInsets.exclude(consumedInsets).asPaddingValues()
+            val safeWidth = maxWidth - insets.calculateStartPadding(layoutDirection) - insets.calculateEndPadding(layoutDirection)
+            val sideMargin = ((safeWidth - MaxListWidth) / 2).coerceAtLeast(margin)
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(text = stringResource(screen.titleRes)) },
+                        navigationIcon = {
+                            if (screen == Screen.Settings) {
+                                BarAction(
+                                    icon = R.drawable.ic_arrow_back,
+                                    label = stringResource(R.string.back),
+                                    onClick = goBack,
+                                    modifier = Modifier.focusProperties { down = settingsFocus }
+                                )
+                            }
+                        },
+                        actions = {
+                            if (screen == Screen.Home) {
+                                BarAction(
+                                    icon = R.drawable.ic_settings,
+                                    label = stringResource(R.string.settings),
+                                    onClick = openSettings,
+                                    modifier = Modifier.focusProperties { down = homeFocus }
+                                )
+                            }
+                        },
+                        windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+                        contentPadding = PaddingValues(horizontal = sideMargin - CompactMargin),
+                        scrollBehavior = scrollBehavior
                     )
-                    when (screen) {
-                        Screen.Home -> HomeView(
-                            listState = homeListState,
-                            nestedScroll = scrollBehavior.nestedScrollConnection,
-                            focus = homeFocus,
-                            contentPadding = contentPadding,
-                            uiState = uiState,
-                            onEnabledChange = { enabled -> if (enabled && uiState.url.isEmpty()) editing = true else onEnabledChange(enabled) },
-                            onUrl = { editing = true },
-                            onPrivateDns = onPrivateDns,
-                            onVpnSettings = onVpnSettings
-                        )
-                        Screen.Settings -> SettingsView(
-                            listState = settingsListState,
-                            nestedScroll = scrollBehavior.nestedScrollConnection,
-                            focus = settingsFocus,
-                            contentPadding = contentPadding,
-                            appearance = appearance,
-                            onTheme = { themeDialog = true },
-                            onDynamicColorChange = onDynamicColorChange,
-                            selfUpdate = selfUpdate,
-                            onUpdateApp = onUpdateApp
-                        )
-                    }
+                },
+                snackbarHost = { if (screen == current) SnackbarHost(hostState = snackbarHostState) },
+                contentWindowInsets = contentInsets
+            ) { padding ->
+                val contentPadding = PaddingValues(
+                    start = padding.calculateStartPadding(layoutDirection) + sideMargin,
+                    top = padding.calculateTopPadding(),
+                    end = padding.calculateEndPadding(layoutDirection) + sideMargin,
+                    bottom = padding.calculateBottomPadding() + margin
+                )
+                when (screen) {
+                    Screen.Home -> HomeView(
+                        listState = homeListState,
+                        nestedScroll = scrollBehavior.nestedScrollConnection,
+                        focus = homeFocus,
+                        contentPadding = contentPadding,
+                        uiState = uiState,
+                        onEnabledChange = { enabled -> if (enabled && uiState.url.isEmpty()) editing = true else onEnabledChange(enabled) },
+                        onUrl = { editing = true },
+                        onPrivateDns = onPrivateDns,
+                        onVpnSettings = onVpnSettings
+                    )
+                    Screen.Settings -> SettingsView(
+                        listState = settingsListState,
+                        nestedScroll = scrollBehavior.nestedScrollConnection,
+                        focus = settingsFocus,
+                        contentPadding = contentPadding,
+                        appearance = appearance,
+                        onTheme = { themeDialog = true },
+                        onDynamicColorChange = onDynamicColorChange,
+                        selfUpdate = selfUpdate,
+                        onUpdateApp = onUpdateApp
+                    )
                 }
             }
         }
-        NavDisplay(
-            backStack = backStack,
-            onBack = {
-                backNavigation = true
-                backStack.removeLastOrNull()
-            },
-            transitionSpec = { fadeThrough(motion) },
-            popTransitionSpec = { if (backNavigation) backTransition(motion) else fadeThrough(motion) },
-            predictivePopTransitionSpec = { predictiveBackTransition() }
-        ) { screen -> NavEntry(screen, content = content) }
     }
+    NavDisplay(
+        backStack = backStack,
+        modifier = modifier,
+        onBack = goBack,
+        transitionSpec = { forwardTransition(motion, slide) },
+        popTransitionSpec = { backTransition(motion) },
+        predictivePopTransitionSpec = { predictiveBackTransition() }
+    ) { screen -> NavEntry(screen, content = content) }
 
     if (themeDialog) {
         ThemeDialog(
@@ -718,6 +688,24 @@ private fun UrlDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BarAction(
+    @DrawableRes icon: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(text = label) } },
+        state = rememberTooltipState()
+    ) {
+        IconButton(onClick = onClick, shapes = IconButtonDefaults.shapes(), modifier = modifier) {
+            Icon(painter = painterResource(icon), contentDescription = label)
+        }
+    }
+}
 @Composable
 private fun ThemeDialog(
     current: ThemeMode,
@@ -780,9 +768,9 @@ private fun dialogProperties() = DialogProperties(
     scrimAlpha = if (LocalWindowInfo.current.isCrossWindowBlurEnabled) BLURRED_SCRIM_ALPHA else SCRIM_ALPHA
 )
 
-private fun fadeThrough(motion: MotionScheme) =
-    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), FADE_THROUGH_SCALE))
-        .togetherWith(fadeOut(motion.fastEffectsSpec()))
+private fun AnimatedContentTransitionScope<*>.forwardTransition(motion: MotionScheme, distance: Int) =
+    (slideIntoContainer(SlideDirection.Start, motion.defaultSpatialSpec()) { it.sign * distance } + fadeIn(motion.fastEffectsSpec()))
+        .togetherWith(slideOutOfContainer(SlideDirection.Start, motion.defaultSpatialSpec()) { it.sign * distance })
 
 private fun backTransition(motion: MotionScheme) =
     (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), PREDICTIVE_BACK_ENTER_SCALE))
@@ -791,13 +779,6 @@ private fun backTransition(motion: MotionScheme) =
 private fun predictiveBackTransition() =
     (fadeIn(tween(easing = PredictiveBackEnterFade)) + scaleIn(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_ENTER_SCALE))
         .togetherWith(fadeOut(tween(easing = PredictiveBackExitFade)) + scaleOut(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_EXIT_SCALE))
-
-private fun CoroutineScope.reveal(listState: LazyListState, barState: TopAppBarState) {
-    launch {
-        listState.animateScrollToItem(0)
-        barState.contentOffset = 0f
-    }
-}
 
 @Composable
 private fun listItemColors() = MaterialTheme.colorScheme.surfaceContainer.let { container ->

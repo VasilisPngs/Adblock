@@ -9,7 +9,7 @@ import androidx.compose.ui.test.ComposeUiTestConfig
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import com.android.adblock.R
 import com.android.adblock.data.Appearance
@@ -37,7 +37,7 @@ class ReducedMotionTest {
     fun `switches screens at once when animations are removed`() {
         show()
 
-        settlesAtOnce { compose.onNodeWithText(context.getString(R.string.settings)).performClick() }
+        settlesAtOnce { compose.onNodeWithContentDescription(context.getString(R.string.settings)).performClick() }
         compose.onAllNodesWithText(context.getString(R.string.dns_over_https)).assertCountEquals(0)
         settlesAtOnce { compose.runOnIdle { backDispatcher.onBackPressed() } }
         compose.onAllNodesWithText(context.getString(R.string.theme)).assertCountEquals(0)

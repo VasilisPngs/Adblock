@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -64,7 +65,7 @@ class AccessibilityTest {
     fun settings() {
         show(DnsUiState(url = SERVER), SelfUpdate.Available)
 
-        compose.onNodeWithText(string(R.string.settings)).performClick()
+        compose.onNodeWithContentDescription(string(R.string.settings)).performClick()
         checkLightAndDark()
         compose.onNodeWithText(string(R.string.theme)).performClick()
         checkLightAndDark()
@@ -74,7 +75,7 @@ class AccessibilityTest {
     fun appUpdateDownload() {
         show(DnsUiState(url = SERVER), SelfUpdate.Downloading(DOWNLOADED))
 
-        compose.onNodeWithText(string(R.string.settings)).performClick()
+        compose.onNodeWithContentDescription(string(R.string.settings)).performClick()
         checkLightAndDark()
     }
 
