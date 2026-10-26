@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.android.adblock"
+    namespace = "com.vasilispngs.adblock"
     compileSdk {
         version = release(37) {
             minorApiLevel = 2
@@ -14,7 +14,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.android.adblock"
+        applicationId = "com.vasilispngs.adblock"
         minSdk {
             version = release(34)
         }
