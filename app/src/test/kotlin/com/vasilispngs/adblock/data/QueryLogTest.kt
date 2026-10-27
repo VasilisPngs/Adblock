@@ -3,6 +3,7 @@ package com.vasilispngs.adblock.data
 import androidx.paging.PagingSource
 import com.vasilispngs.adblock.ui.searchPattern
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -16,6 +17,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class QueryLogTest {
     private val database = AdblockDatabase.create(RuntimeEnvironment.getApplication())

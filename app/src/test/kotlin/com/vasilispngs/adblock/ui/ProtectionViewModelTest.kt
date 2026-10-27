@@ -158,7 +158,7 @@ class ProtectionViewModelTest {
         viewModel.setResolver(GOOGLE)
         viewModel.uiState.first { it.message != null }
         assertEquals("example.com", parse(asked!!).question.name)
-        assertEquals(query("example.com", id = 0).toList(), asked!!.toList())
+        assertEquals(query("example.com", id = 0).toList(), asked.toList())
     }
 
     private fun TestScope.preferences() =
