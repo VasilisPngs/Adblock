@@ -2,17 +2,21 @@ package com.vasilispngs.adblock.ui
 
 import android.os.Looper
 import androidx.annotation.StringRes
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -40,6 +44,9 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
 import androidx.paging.PagingData
@@ -80,6 +87,8 @@ class HomeScreenTest {
     private val removed = mutableListOf<String>()
     private var privateDnsOpened = 0
     private var vpnSettingsOpened = 0
+    private var searchColor = Color.Unspecified
+    private var scrolledSearchColor = Color.Unspecified
 
     @Test
     fun `turns protection on and off with its switch`() {
@@ -253,6 +262,33 @@ class HomeScreenTest {
     }
 
     @Test
+    fun `sets the search apart from the log bar once the bar is stuck`() {
+        show(HomeUiState(loaded = true), List(60) { entry(it.toLong(), "host$it.example", Action.Allow, Origin.None, null) })
+        assertEquals(searchColor, searchBarColor())
+
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(40)
+
+        assertEquals(scrolledSearchColor, searchBarColor())
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h740dp", fontScale = 2f)
+    fun `wraps the filters onto a new line instead of breaking a label at large text sizes`() {
+        show(HomeUiState(loaded = true))
+
+        val labels = listOf(R.string.filter_all, R.string.filter_blocked, R.string.filter_allowed).map { string(it) }
+        labels.forEach { label ->
+            val layouts = mutableListOf<TextLayoutResult>()
+            val node = compose.onNodeWithText(label, useUnmergedTree = true).fetchSemanticsNode()
+            assertTrue(node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts) == true)
+            assertEquals(1, layouts.single().lineCount)
+        }
+        val all = compose.onNodeWithText(labels.first(), useUnmergedTree = true).getBoundsInRoot()
+        val allowed = compose.onNodeWithText(labels.last(), useUnmergedTree = true).getBoundsInRoot()
+        assertTrue(allowed.top > all.bottom)
+    }
+
+    @Test
     fun `focuses protection first with a remote`() {
         show(HomeUiState(loaded = true), keyboard = true)
 
@@ -308,6 +344,13 @@ class HomeScreenTest {
     private fun entry(id: Long, name: String, action: Action, origin: Origin, rule: String?) =
         LoggedQuery(id = id, at = System.currentTimeMillis(), name = name, type = if (id % 2 == 0L) "AAAA" else "A", action = action, origin = origin, rule = rule)
 
+    private fun searchBarColor(): Color {
+        val field = compose.onNode(hasSetTextAction()).getBoundsInRoot()
+        val image = compose.onRoot().captureToImage().asAndroidBitmap()
+        val (x, y) = with(Density(context)) { (field.right - SearchSampleInset).roundToPx() to ((field.top + field.bottom) / 2).roundToPx() }
+        return Color(image.getPixel(x, y))
+    }
+
     private fun corners(text: String): Pair<Boolean, Boolean> {
         val image = compose.onNodeWithText(text).captureToImage().asAndroidBitmap()
         val container = image.getPixel(CORNER_INSET, image.height / 2)
@@ -315,6 +358,7 @@ class HomeScreenTest {
             (image.getPixel(CORNER_INSET, image.height - 1 - CORNER_INSET) != container)
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     private fun show(initial: HomeUiState, entries: List<LoggedQuery> = emptyList(), keyboard: Boolean = false) {
         state = initial
         compose.setContent {
@@ -323,6 +367,10 @@ class HomeScreenTest {
                 LaunchedEffect(Unit) { inputModeManager.requestInputMode(InputMode.Keyboard) }
             }
             AdblockTheme {
+                SearchBarDefaults.appBarWithSearchColors().let {
+                    searchColor = it.searchBarColors.containerColor
+                    scrolledSearchColor = it.scrolledSearchBarContainerColor
+                }
                 val log = remember { flowOf(PagingData.from(entries, Loaded)) }.collectAsLazyPagingItems()
                 HomeScreen(
                     uiState = state,
@@ -346,6 +394,7 @@ class HomeScreenTest {
     private companion object {
         const val CORNER_INSET = 3
         const val SETTLE_MILLIS = 2_000L
+        val SearchSampleInset = 8.dp
         val SwitchRole = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)
         val Loaded = LoadStates(LoadState.NotLoading(true), LoadState.NotLoading(true), LoadState.NotLoading(true))
     }

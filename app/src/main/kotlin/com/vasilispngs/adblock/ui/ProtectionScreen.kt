@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,6 +31,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldLabelPosition
+import androidx.compose.material3.TopAppBarState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -74,17 +78,20 @@ internal fun ProtectionScreen(
     onAddRule: (String, Action) -> Unit,
     onRemoveRule: (String) -> Unit,
     onResolverChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
+    barState: TopAppBarState = rememberTopAppBarState()
 ) {
     var addingSource by rememberSaveable { mutableStateOf(false) }
     var removingSource by rememberSaveable { mutableStateOf<String?>(null) }
     var addingRule by rememberSaveable { mutableStateOf(false) }
     var editingResolver by rememberSaveable { mutableStateOf(false) }
 
-    ScreenScaffold(title = R.string.protection, snackbarHostState = snackbarHostState, modifier = modifier) { contentPadding, contentModifier ->
+    ScreenScaffold(title = R.string.protection, snackbarHostState = snackbarHostState, barState = barState, modifier = modifier) { contentPadding, contentModifier ->
         val locale = LocalConfiguration.current.locales[0]
         val numbers = remember(locale) { NumberFormat.getIntegerInstance(locale) }
         LazyColumn(
+            state = listState,
             modifier = contentModifier
                 .fillMaxSize()
                 .focusRestorer(),

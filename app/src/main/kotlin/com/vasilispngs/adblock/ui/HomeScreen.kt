@@ -9,8 +9,8 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,14 +19,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExpandedDockedSearchBar
-import androidx.compose.material3.ExpandedFullScreenSearchBar
+import androidx.compose.material3.ExpandedDockedSearchBarWithGap
+import androidx.compose.material3.ExpandedFullScreenContainedSearchBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -43,8 +45,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
-import androidx.compose.material3.rememberSearchBarState
+import androidx.compose.material3.rememberContainedSearchBarState
+import androidx.compose.material3.rememberSearchBarWithGapState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -120,16 +125,27 @@ internal fun HomeScreen(
     onSearchChange: (String) -> Unit,
     onRule: (String, Action) -> Unit,
     onRemoveRule: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
+    barState: TopAppBarState = rememberTopAppBarState()
 ) {
+    val wide = currentWindowAdaptiveInfoV2().windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
     val search = rememberTextFieldState(uiState.search)
-    val searchBarState = rememberSearchBarState()
+    val searchBarState = if (wide) rememberSearchBarWithGapState() else rememberContainedSearchBarState()
     var searchKeyboard by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
     val time = rememberTimeFormatter()
     val focus = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
     val searchChange by rememberUpdatedState(onSearchChange)
+    val statusCount = 1 + (if (uiState.alwaysOnShown || uiState.tunnel == TunnelState.Lockdown) 1 else 0) +
+        (if (uiState.privateDnsServer != null) 1 else 0)
+    val barIndex = statusCount + 1
+    val stuck by remember(listState, barIndex) {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > barIndex ||
+                (listState.firstVisibleItemIndex == barIndex && listState.firstVisibleItemScrollOffset > 0)
+        }
+    }
     LaunchedEffect(search) { snapshotFlow { search.text.toString() }.collect { searchChange(it) } }
     LaunchedEffect(searchBarState) {
         snapshotFlow { searchBarState.targetValue }.collect { if (it == SearchBarValue.Collapsed) searchKeyboard = false }
@@ -138,6 +154,7 @@ internal fun HomeScreen(
         SearchField(
             search = search,
             searchBarState = searchBarState,
+            stuck = stuck,
             keyboardRequested = searchKeyboard,
             onKeyboardRequestedChange = { searchKeyboard = it }
         )
@@ -146,21 +163,12 @@ internal fun HomeScreen(
         if (inputModeManager.inputMode == InputMode.Keyboard) focus.requestFocus()
     }
 
-    ScreenScaffold(title = R.string.home, snackbarHostState = snackbarHostState, modifier = modifier) { contentPadding, contentModifier ->
+    ScreenScaffold(title = R.string.home, snackbarHostState = snackbarHostState, barState = barState, modifier = modifier) { contentPadding, contentModifier ->
         val layoutDirection = LocalLayoutDirection.current
         val side = PaddingValues(
             start = contentPadding.calculateStartPadding(layoutDirection),
             end = contentPadding.calculateEndPadding(layoutDirection)
         )
-        val statusCount = 1 + (if (uiState.alwaysOnShown || uiState.tunnel == TunnelState.Lockdown) 1 else 0) +
-            (if (uiState.privateDnsServer != null) 1 else 0)
-        val barIndex = statusCount + 1
-        val stuck by remember(barIndex) {
-            derivedStateOf {
-                listState.firstVisibleItemIndex > barIndex ||
-                    (listState.firstVisibleItemIndex == barIndex && listState.firstVisibleItemScrollOffset > 0)
-            }
-        }
         val colors = TopAppBarDefaults.topAppBarColors()
         val barColor by animateColorAsState(
             targetValue = if (stuck) colors.scrolledContainerColor else colors.containerColor,
@@ -194,7 +202,7 @@ internal fun HomeScreen(
         }
     }
 
-    FocusedSearch(searchBarState = searchBarState, inputField = searchField) {
+    FocusedSearch(wide = wide, searchBarState = searchBarState, inputField = searchField) {
         LazyColumn(
             contentPadding = PaddingValues(vertical = ContentMargin),
             verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
@@ -342,7 +350,7 @@ private fun LogBar(
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(LogBarSpacing)) {
         SearchBar(state = searchBarState, inputField = inputField, modifier = Modifier.fillMaxWidth())
-        Row(horizontalArrangement = Arrangement.spacedBy(SmallSpacing)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(SmallSpacing)) {
             LogFilter.entries.forEach { option ->
                 val selected = option == filter
                 FilterChip(
@@ -367,10 +375,12 @@ private fun LogBar(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchField(
     search: TextFieldState,
     searchBarState: SearchBarState,
+    stuck: Boolean,
     keyboardRequested: Boolean,
     onKeyboardRequestedChange: (Boolean) -> Unit
 ) {
@@ -379,11 +389,22 @@ private fun SearchField(
     val touch = LocalInputModeManager.current.inputMode == InputMode.Touch
     val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
+    val barColors = SearchBarDefaults.appBarWithSearchColors()
+    val container = if (stuck && searchBarState.targetValue == SearchBarValue.Collapsed) {
+        barColors.scrolledSearchBarContainerColor
+    } else {
+        barColors.searchBarColors.containerColor
+    }
     CompositionLocalProvider(LocalBringIntoViewSpec provides DefaultBringIntoViewSpec) {
         SearchBarDefaults.InputField(
             textFieldState = search,
             searchBarState = searchBarState,
             onSearch = { collapse() },
+            colors = SearchBarDefaults.inputFieldColors(
+                focusedContainerColor = container,
+                unfocusedContainerColor = container,
+                disabledContainerColor = container
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { state ->
@@ -428,11 +449,11 @@ private fun SearchField(
 }
 
 @Composable
-private fun FocusedSearch(searchBarState: SearchBarState, inputField: @Composable () -> Unit, results: @Composable () -> Unit) {
-    if (currentWindowAdaptiveInfoV2().windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)) {
-        ExpandedDockedSearchBar(state = searchBarState, inputField = inputField) { results() }
+private fun FocusedSearch(wide: Boolean, searchBarState: SearchBarState, inputField: @Composable () -> Unit, results: @Composable () -> Unit) {
+    if (wide) {
+        ExpandedDockedSearchBarWithGap(state = searchBarState, inputField = inputField) { results() }
     } else {
-        ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) { results() }
+        ExpandedFullScreenContainedSearchBar(state = searchBarState, inputField = inputField) { results() }
     }
 }
 

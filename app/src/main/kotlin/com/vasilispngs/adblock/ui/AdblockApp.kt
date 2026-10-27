@@ -27,25 +27,31 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -66,6 +72,7 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.data.Appearance
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
 
@@ -169,7 +176,7 @@ fun AdblockApp(
     AdblockNavigation(
         snackbarHostState = snackbarHostState,
         modifier = modifier,
-        home = { snackbar ->
+        home = { snackbar, listState, barState ->
             HomeScreen(
                 uiState = home,
                 log = log,
@@ -186,10 +193,12 @@ fun AdblockApp(
                 onFilterChange = homeViewModel::setFilter,
                 onSearchChange = homeViewModel::setSearch,
                 onRule = homeViewModel::setRule,
-                onRemoveRule = homeViewModel::removeRule
+                onRemoveRule = homeViewModel::removeRule,
+                listState = listState,
+                barState = barState
             )
         },
-        protection = { snackbar ->
+        protection = { snackbar, listState, barState ->
             ProtectionScreen(
                 uiState = protection,
                 snackbarHostState = snackbar,
@@ -197,10 +206,12 @@ fun AdblockApp(
                 onRemoveSource = protectionViewModel::removeSource,
                 onAddRule = protectionViewModel::addRule,
                 onRemoveRule = protectionViewModel::removeRule,
-                onResolverChange = protectionViewModel::setResolver
+                onResolverChange = protectionViewModel::setResolver,
+                listState = listState,
+                barState = barState
             )
         },
-        settings = { snackbar ->
+        settings = { snackbar, listState, barState ->
             SettingsScreen(
                 appearance = appearance,
                 logEnabled = logEnabled,
@@ -209,7 +220,9 @@ fun AdblockApp(
                 onThemeChange = settingsViewModel::setThemeMode,
                 onDynamicColorChange = settingsViewModel::setDynamicColor,
                 onLogEnabledChange = settingsViewModel::setLogEnabled,
-                onUpdateApp = settingsViewModel::updateApp
+                onUpdateApp = settingsViewModel::updateApp,
+                listState = listState,
+                barState = barState
             )
         }
     )
@@ -218,19 +231,27 @@ fun AdblockApp(
 @Composable
 internal fun AdblockNavigation(
     snackbarHostState: SnackbarHostState,
-    home: @Composable (SnackbarHostState?) -> Unit,
-    protection: @Composable (SnackbarHostState?) -> Unit,
-    settings: @Composable (SnackbarHostState?) -> Unit,
+    home: @Composable (SnackbarHostState?, LazyListState, TopAppBarState) -> Unit,
+    protection: @Composable (SnackbarHostState?, LazyListState, TopAppBarState) -> Unit,
+    settings: @Composable (SnackbarHostState?, LazyListState, TopAppBarState) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val backStack = rememberSerializable(serializer = serializer()) { NavBackStack<Destination>(Destination.Home) }
     val current = backStack.last()
     var backNavigation by remember { mutableStateOf(false) }
+    val listStates = Destinations.associateWith { rememberLazyListState() }
+    val barStates = Destinations.associateWith { rememberTopAppBarState() }
+    val scope = rememberCoroutineScope()
     val select: (Destination) -> Unit = { destination ->
         if (destination != current) {
             backNavigation = false
             backStack.retainAll { it == Destination.Home }
             if (destination != Destination.Home) backStack.add(destination)
+        } else {
+            scope.launch {
+                listStates.getValue(destination).animateScrollToItem(0)
+                barStates.getValue(destination).contentOffset = 0f
+            }
         }
     }
     val navigationSuiteType = NavigationSuiteScaffoldDefaults.navigationSuiteType(currentWindowAdaptiveInfoV2())
@@ -257,7 +278,8 @@ internal fun AdblockNavigation(
             }
         },
         modifier = if (television) modifier.padding(horizontal = TvOverscanHorizontal, vertical = TvOverscanVertical) else modifier,
-        navigationSuiteType = navigationSuiteType
+        navigationSuiteType = navigationSuiteType,
+        navigationItemVerticalArrangement = Arrangement.Center
     ) {
         val motion = MaterialTheme.motionScheme
         NavDisplay(
@@ -272,10 +294,12 @@ internal fun AdblockNavigation(
         ) { destination ->
             NavEntry(destination) { shown ->
                 val snackbar = snackbarHostState.takeIf { shown == current }
+                val listState = listStates.getValue(shown)
+                val barState = barStates.getValue(shown)
                 when (shown) {
-                    Destination.Home -> home(snackbar)
-                    Destination.Protection -> protection(snackbar)
-                    Destination.Settings -> settings(snackbar)
+                    Destination.Home -> home(snackbar, listState, barState)
+                    Destination.Protection -> protection(snackbar, listState, barState)
+                    Destination.Settings -> settings(snackbar, listState, barState)
                 }
             }
         }

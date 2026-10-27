@@ -141,10 +141,18 @@ class AccessibilityTest {
                 val items = remember { flowOf(PagingData.from(log, Loaded)) }.collectAsLazyPagingItems()
                 AdblockNavigation(
                     snackbarHostState = remember { SnackbarHostState() },
-                    home = { snackbar -> HomeScreen(home, items, snackbar, {}, {}, {}, {}, {}, { _, _ -> }, {}) },
-                    protection = { snackbar -> ProtectionScreen(protection, snackbar, { _, _ -> }, {}, { _, _ -> }, {}, {}) },
-                    settings = { snackbar ->
-                        SettingsScreen(Appearance(ThemeMode.System, dynamicColor = false), true, selfUpdate, snackbar, {}, {}, {}, {})
+                    home = { snackbar, list, bar ->
+                        HomeScreen(home, items, snackbar, {}, {}, {}, {}, {}, { _, _ -> }, {}, listState = list, barState = bar)
+                    },
+                    protection = { snackbar, list, bar ->
+                        ProtectionScreen(protection, snackbar, { _, _ -> }, {}, { _, _ -> }, {}, {}, listState = list, barState = bar)
+                    },
+                    settings = { snackbar, list, bar ->
+                        SettingsScreen(
+                            Appearance(ThemeMode.System, dynamicColor = false), true, selfUpdate, snackbar, {}, {}, {}, {},
+                            listState = list,
+                            barState = bar
+                        )
                     }
                 )
             }

@@ -32,6 +32,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -71,12 +72,13 @@ internal val SmallSpacing = 8.dp
 internal fun ScreenScaffold(
     @StringRes title: Int,
     snackbarHostState: SnackbarHostState?,
+    barState: TopAppBarState,
     modifier: Modifier = Modifier,
     content: @Composable (contentPadding: PaddingValues, contentModifier: Modifier) -> Unit
 ) {
     val wide = currentWindowAdaptiveInfoV2().windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
     val margin = if (wide) WideMargin else CompactMargin
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(barState)
     val contentInsets = ScaffoldDefaults.contentWindowInsets
     var consumedInsets by remember { mutableStateOf(WindowInsets(0)) }
     BoxWithConstraints(modifier = modifier.onConsumedWindowInsetsChanged { consumedInsets = it }) {

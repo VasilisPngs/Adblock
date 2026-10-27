@@ -30,6 +30,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpRect
@@ -113,9 +114,12 @@ class NavigationTest {
         show()
         val home = compose.onNode(tab(R.string.home)).getBoundsInRoot()
         val settings = compose.onNode(tab(R.string.settings)).getBoundsInRoot()
+        val height = compose.onRoot().getBoundsInRoot().bottom
         assertTrue(home.right < 120.dp)
         assertEquals(home.left, settings.left)
         assertTrue(settings.top > home.top)
+        assertTrue(home.top > height / 3)
+        assertTrue(settings.bottom < height * 2 / 3)
 
         val item = findItem(R.string.protection)
         val width = compose.onRoot().getBoundsInRoot().right
@@ -153,6 +157,18 @@ class NavigationTest {
         }
 
         assertEquals(listOf(positions.first()), positions.distinct())
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun `scrolls the current destination back to the top when it is selected again`() {
+        show(List(LOG_SIZE) { LoggedQuery(it.toLong(), it.toLong(), "host$it.example", "A", Action.Allow, Origin.None, null) })
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(LOG_SIZE - 1)
+        compose.onAllNodesWithText(string(R.string.query_log)).assertCountEquals(0)
+
+        compose.onNode(tab(R.string.home)).performClick()
+
+        compose.onNodeWithText(string(R.string.query_log)).assertIsDisplayed()
     }
 
     @Test
@@ -208,14 +224,22 @@ class NavigationTest {
                 val log = remember { flowOf(PagingData.from(entries, Loaded)) }.collectAsLazyPagingItems()
                 AdblockNavigation(
                     snackbarHostState = remember { SnackbarHostState() },
-                    home = { snackbar ->
-                        HomeScreen(HomeUiState(loaded = true), log, snackbar, {}, {}, {}, {}, {}, { _, _ -> }, {})
+                    home = { snackbar, list, bar ->
+                        HomeScreen(HomeUiState(loaded = true), log, snackbar, {}, {}, {}, {}, {}, { _, _ -> }, {}, listState = list, barState = bar)
                     },
-                    protection = { snackbar ->
-                        ProtectionScreen(ProtectionUiState(resolver = RESOLVER, loaded = true), snackbar, { _, _ -> }, {}, { _, _ -> }, {}, {})
+                    protection = { snackbar, list, bar ->
+                        ProtectionScreen(
+                            ProtectionUiState(resolver = RESOLVER, loaded = true), snackbar, { _, _ -> }, {}, { _, _ -> }, {}, {},
+                            listState = list,
+                            barState = bar
+                        )
                     },
-                    settings = { snackbar ->
-                        SettingsScreen(Appearance(ThemeMode.System, dynamicColor = false), true, SelfUpdate.Idle, snackbar, {}, {}, {}, {})
+                    settings = { snackbar, list, bar ->
+                        SettingsScreen(
+                            Appearance(ThemeMode.System, dynamicColor = false), true, SelfUpdate.Idle, snackbar, {}, {}, {}, {},
+                            listState = list,
+                            barState = bar
+                        )
                     }
                 )
             }

@@ -61,9 +61,9 @@ class ReducedMotionTest {
             AdblockTheme {
                 AdblockNavigation(
                     snackbarHostState = remember { SnackbarHostState() },
-                    home = { Text(HOME_CONTENT) },
-                    protection = { Text(PROTECTION_CONTENT) },
-                    settings = { Text(SETTINGS_CONTENT) }
+                    home = { _, _, _ -> Text(HOME_CONTENT) },
+                    protection = { _, _, _ -> Text(PROTECTION_CONTENT) },
+                    settings = { _, _, _ -> Text(SETTINGS_CONTENT) }
                 )
             }
         }

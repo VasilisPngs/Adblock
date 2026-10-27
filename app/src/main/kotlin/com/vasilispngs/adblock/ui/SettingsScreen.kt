@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -16,6 +18,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,12 +53,15 @@ internal fun SettingsScreen(
     onDynamicColorChange: (Boolean) -> Unit,
     onLogEnabledChange: (Boolean) -> Unit,
     onUpdateApp: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
+    barState: TopAppBarState = rememberTopAppBarState()
 ) {
     var themeDialog by rememberSaveable { mutableStateOf(false) }
 
-    ScreenScaffold(title = R.string.settings, snackbarHostState = snackbarHostState, modifier = modifier) { contentPadding, contentModifier ->
+    ScreenScaffold(title = R.string.settings, snackbarHostState = snackbarHostState, barState = barState, modifier = modifier) { contentPadding, contentModifier ->
         LazyColumn(
+            state = listState,
             modifier = contentModifier
                 .fillMaxSize()
                 .focusRestorer(),
