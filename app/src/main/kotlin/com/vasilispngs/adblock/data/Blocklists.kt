@@ -23,9 +23,9 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
+import java.io.Reader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLConnection
@@ -35,6 +35,10 @@ import java.util.concurrent.TimeUnit
 private const val HEAD_LENGTH = 4096
 private const val MAX_TITLE = 120
 private const val INITIAL_CAPACITY = 1024
+private const val READ_SIZE = 8192
+private const val MAX_LINE = 4096
+private const val MAX_CHARACTERS = 128L shl 20
+private const val MAX_DOMAINS = 4_000_000
 private const val TIMEOUT_MILLIS = 60_000
 private const val DAILY_WORK = "blocklists"
 private const val NEW_LISTS_WORK = "new-blocklists"
@@ -60,16 +64,42 @@ internal fun listHost(raw: String): String? {
     return body.lowercase().removeSuffix(".").takeIf(HOST::matches)
 }
 
-internal fun parseList(reader: BufferedReader): ParsedList {
+internal fun parseList(reader: Reader): ParsedList {
     var hashes = LongArray(INITIAL_CAPACITY)
     var count = 0
+    var total = 0L
+    var skipping = false
     val head = StringBuilder()
-    reader.forEachLine { raw ->
-        if (head.length < HEAD_LENGTH) head.append(raw).append('\n')
-        val host = listHost(raw) ?: return@forEachLine
-        if (count == hashes.size) hashes = hashes.copyOf(count * 2)
-        hashes[count++] = hostHash(host)
+    val line = StringBuilder()
+    val buffer = CharArray(READ_SIZE)
+    fun endLine() {
+        if (!skipping) {
+            if (head.length < HEAD_LENGTH) head.append(line).append('\n')
+            listHost(line.toString())?.let { host ->
+                if (count == MAX_DOMAINS) throw IOException("More than $MAX_DOMAINS domains")
+                if (count == hashes.size) hashes = hashes.copyOf(count * 2)
+                hashes[count++] = hostHash(host)
+            }
+        }
+        line.setLength(0)
+        skipping = false
     }
+    while (true) {
+        val read = reader.read(buffer)
+        if (read < 0) break
+        total += read
+        if (total > MAX_CHARACTERS) throw IOException("More than $MAX_CHARACTERS characters")
+        for (index in 0 until read) {
+            val char = buffer[index]
+            when {
+                char == '\n' -> endLine()
+                skipping -> Unit
+                line.length == MAX_LINE -> skipping = true
+                else -> line.append(char)
+            }
+        }
+    }
+    if (line.isNotEmpty() || skipping) endLine()
     val text = head.take(HEAD_LENGTH)
     val title = TITLE.find(text)?.groupValues?.get(1)?.trim()?.takeIf { it.length <= MAX_TITLE }.orEmpty()
     val version = (VERSION.find(text) ?: MODIFIED.find(text))?.groupValues?.get(1)?.trim()
@@ -195,7 +225,7 @@ class Blocklists(
         try {
             if (connection.responseCode == HttpURLConnection.HTTP_NOT_MODIFIED) return source
             if (connection.responseCode != HttpURLConnection.HTTP_OK) throw IOException("HTTP ${connection.responseCode}")
-            val parsed = connection.inputStream.use { parseList(it.bufferedReader()) }
+            val parsed = connection.inputStream.use { parseList(it.reader()) }
             write(source.url, parsed.hashes)
             val etag = connection.getHeaderField("ETag")
             val lastModified = connection.getHeaderField("Last-Modified")

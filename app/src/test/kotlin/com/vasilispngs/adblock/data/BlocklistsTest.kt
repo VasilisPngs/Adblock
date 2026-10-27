@@ -8,6 +8,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,6 +18,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.io.Reader
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -114,14 +116,26 @@ class BlocklistsTest {
 
     @Test
     fun `reads the title and version from the list header`() {
-        val parsed = parseList("! Title: Example list\n! Version: 2026.1026.0933.09\n||ads.example^\n||ads.example^\n".reader().buffered())
+        val parsed = parseList("! Title: Example list\n! Version: 2026.1026.0933.09\n||ads.example^\n||ads.example^\n".reader())
         assertEquals("Example list", parsed.title)
         assertEquals("2026.1026.0933.09", parsed.version)
         assertEquals(1, parsed.hashes.size)
-        assertEquals("27 Sep 2026 08:52 UTC", parseList("# Last modified: 27 Sep 2026 08:52 UTC\n".reader().buffered()).version)
-        assertEquals("2026-09-27", parseList("! Updated: 2026-09-27\n".reader().buffered()).version)
-        assertNull(parseList("0.0.0.0 a.test\n".reader().buffered()).version)
-        assertEquals("", parseList("! Title: ${"x".repeat(121)}\n".reader().buffered()).title)
+        assertEquals("27 Sep 2026 08:52 UTC", parseList("# Last modified: 27 Sep 2026 08:52 UTC\n".reader()).version)
+        assertEquals("2026-09-27", parseList("! Updated: 2026-09-27\n".reader()).version)
+        assertNull(parseList("0.0.0.0 a.test\n".reader()).version)
+        assertEquals("", parseList("! Title: ${"x".repeat(121)}\n".reader()).title)
+    }
+
+    @Test
+    fun `skips lines longer than any rule without holding them`() {
+        val parsed = parseList("||ads.example^\n${"x".repeat(5_000)}\n||tracker.test^".reader())
+        assertEquals(listOf("ads.example", "tracker.test").map(::hostHash).sorted(), parsed.hashes.toList())
+    }
+
+    @Test
+    fun `refuses a list larger than any real one instead of reading it forever`() {
+        assertThrows(IOException::class.java) { parseList(Endless { "x".repeat(65_536) }) }
+        assertThrows(IOException::class.java) { parseList(Endless { "d$it.test\n" }) }
     }
 
     @Test
@@ -231,6 +245,25 @@ class BlocklistsTest {
         val merged = unique(longArrayOf(5, 1, 5, 3, 1))
         assertEquals(listOf(1L, 3L, 5L), merged.toList())
         assertNotNull(hostHash("ads.example"))
+    }
+
+    private class Endless(private val text: (Int) -> String) : Reader() {
+        private var line = 0
+        private var pending = ""
+        private var at = 0
+
+        override fun read(buffer: CharArray, offset: Int, length: Int): Int {
+            for (index in offset until offset + length) {
+                if (at == pending.length) {
+                    pending = text(line++)
+                    at = 0
+                }
+                buffer[index] = pending[at++]
+            }
+            return length
+        }
+
+        override fun close() = Unit
     }
 
     private companion object {

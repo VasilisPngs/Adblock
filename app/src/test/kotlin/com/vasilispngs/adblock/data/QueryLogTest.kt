@@ -1,5 +1,6 @@
 package com.vasilispngs.adblock.data
 
+import android.database.sqlite.SQLiteFullException
 import androidx.paging.PagingSource
 import com.vasilispngs.adblock.ui.searchPattern
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +52,32 @@ class QueryLogTest {
         runCurrent()
 
         awaitNames(listOf("c.test", "b.test", "a.test"))
+    }
+
+    @Test
+    fun `keeps logging after a full disk lost a batch`() = runTest {
+        var full = true
+        val log = QueryLog(
+            object : QueryDao by queries {
+                override suspend fun insert(queries: List<LoggedQuery>) {
+                    if (full) {
+                        full = false
+                        throw SQLiteFullException("database or disk is full")
+                    }
+                    this@QueryLogTest.queries.insert(queries)
+                }
+            },
+            backgroundScope
+        ) { now }
+        log.add(entry("lost.test"))
+        advanceTimeBy(1_001)
+        runCurrent()
+
+        log.add(entry("kept.test"))
+        advanceTimeBy(1_001)
+        runCurrent()
+
+        awaitNames(listOf("kept.test"))
     }
 
     @Test
