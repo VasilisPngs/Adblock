@@ -1,4 +1,4 @@
-package com.vasilispngs.adblock.dns
+package com.vasilispngs.adblock.vpn
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -6,21 +6,24 @@ import org.junit.Test
 
 class DohUrlTest {
     @Test
-    fun `accepts an https URL and trims it`() {
-        assertEquals("https://cloudflare-dns.com/dns-query", httpsUrl("  https://cloudflare-dns.com/dns-query \n"))
+    fun `accepts an https endpoint and trims it`() {
+        assertEquals(
+            "https://adblock.example.workers.dev/dns-query/0123abcd",
+            dohUrl("  https://adblock.example.workers.dev/dns-query/0123abcd \n")
+        )
     }
 
     @Test
-    fun `rejects anything that is not an https URL`() {
+    fun `rejects anything that is not an https endpoint`() {
         listOf(
             "",
-            "cloudflare-dns.com/dns-query",
-            "http://cloudflare-dns.com/dns-query",
+            "adblock.example.workers.dev/dns-query",
+            "http://adblock.example.workers.dev/dns-query",
             "https://",
             "https:///dns-query",
             "https://bad host/dns-query",
-            "https://cloudflare-dns.com/dns-query#fragment"
-        ).forEach { assertNull(it, httpsUrl(it)) }
+            "https://adblock.example.workers.dev/dns-query#fragment"
+        ).forEach { assertNull(it, dohUrl(it)) }
     }
 
     @Test

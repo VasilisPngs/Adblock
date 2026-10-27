@@ -8,7 +8,7 @@ import org.junit.Test
 class DnsPacketTest {
     private val client = byteArrayOf(10, 111, 0, 1)
     private val server = byteArrayOf(10, 111, 0, 53)
-    private val message = byteArrayOf(0x12, 0x34, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0) + byteArrayOf(7) + "example".toByteArray() + byteArrayOf(3) + "com".toByteArray() + byteArrayOf(0, 0, 1, 0, 1)
+    private val message = addressQuery("example.com")
 
     @Test
     fun `reads the DNS message of a UDP query to port 53`() {
@@ -69,6 +69,38 @@ class DnsPacketTest {
         assertEquals(CLIENT_PORT, response.u16(22))
         assertEquals(8 + answer.size, response.u16(24))
         assertArrayEquals(answer, response.copyOfRange(28, response.size))
+    }
+
+    @Test
+    fun `a server failure keeps the id and question of the query`() {
+        val failure = serverFailure(message)
+
+        assertEquals(message.size, failure.size)
+        assertArrayEquals(message.copyOfRange(0, 2), failure.copyOfRange(0, 2))
+        assertEquals(0x81, failure[2].toInt() and 0xFF)
+        assertEquals(0x82, failure[3].toInt() and 0xFF)
+        assertArrayEquals(message.copyOfRange(4, message.size), failure.copyOfRange(4, failure.size))
+    }
+
+    @Test
+    fun `an address query asks one recursive A question`() {
+        val expected = byteArrayOf(0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0) +
+            byteArrayOf(7) + "example".toByteArray() + byteArrayOf(3) + "com".toByteArray() + byteArrayOf(0) +
+            byteArrayOf(0, 1, 0, 1)
+
+        assertArrayEquals(expected, addressQuery("example.com"))
+    }
+
+    @Test
+    fun `accepts only a response to the same query`() {
+        val query = addressQuery("example.com").also { it[0] = 0x12; it[1] = 0x34 }
+        val response = query.copyOf().also { it[2] = 0x81.toByte(); it[3] = 0x80.toByte() }
+
+        assertArrayEquals(response, (dnsAnswer(query, response) as DohResult.Answer).message)
+        assertEquals(DohResult.Failed, dnsAnswer(query, query))
+        assertEquals(DohResult.Failed, dnsAnswer(query, response.copyOf().also { it[1] = 0x35 }))
+        assertEquals(DohResult.Failed, dnsAnswer(query, response.copyOf(11)))
+        assertEquals(DohResult.Failed, dnsAnswer(query, "<html>".toByteArray()))
     }
 
     private fun udpPacket(destinationPort: Int, payload: ByteArray, protocol: Int = 17, fragment: Int = 0): ByteArray {
