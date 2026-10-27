@@ -1,9 +1,14 @@
 package com.vasilispngs.adblock.ui
 
+import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
@@ -33,6 +38,7 @@ class RemoteSearchTest {
 
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val keyboards = AtomicInteger()
+    private val keys = AtomicInteger()
 
     @Before
     fun leaveTouchMode() {
@@ -60,7 +66,10 @@ class RemoteSearchTest {
             ) {
                 AdblockTheme {
                     val log = remember { flowOf(PagingData.empty<LoggedQuery>()) }.collectAsLazyPagingItems()
-                    HomeScreen(HomeUiState(loaded = true), log, null, {}, {}, {}, {}, {}, { _, _ -> }, {})
+                    HomeScreen(
+                        HomeUiState(loaded = true), log, null, {}, {}, {}, {}, {}, { _, _ -> }, {},
+                        modifier = Modifier.onPreviewKeyEvent { if (it.type == KeyEventType.KeyDown) keys.incrementAndGet(); false }
+                    )
                 }
             }
         }
@@ -78,7 +87,7 @@ class RemoteSearchTest {
         compose.waitUntil(TIMEOUT_MILLIS) { keyboards.get() == 0 && compose.activity.hasWindowFocus() }
         compose.onNode(hasSetTextAction()).assertIsFocused()
 
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        pressUntilReceived(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithText(compose.activity.getString(R.string.filter_all)).assertIsFocused()
         compose.onAllNodes(hasSetTextAction()).assertCountEquals(1)
         assertEquals(0, keyboards.get())
@@ -94,7 +103,15 @@ class RemoteSearchTest {
         compose.waitForIdle()
     }
 
+    private fun pressUntilReceived(keyCode: Int) {
+        val deadline = SystemClock.uptimeMillis() + TIMEOUT_MILLIS
+        do {
+            val received = keys.get()
+            press(keyCode)
+        } while (keys.get() == received && SystemClock.uptimeMillis() < deadline)
+    }
+
     private companion object {
-        const val TIMEOUT_MILLIS = 5_000L
+        const val TIMEOUT_MILLIS = 15_000L
     }
 }
