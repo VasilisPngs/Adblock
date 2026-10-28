@@ -54,6 +54,9 @@ class AccessibilityTest {
     fun lockdown() = check(DnsUiState(url = SERVER, tunnel = TunnelState.Lockdown, vpnSettings = true))
 
     @Test
+    fun serverNotAnswering() = check(DnsUiState(url = SERVER, tunnel = TunnelState.On, serverFailing = true))
+
+    @Test
     fun serverUrl() {
         show(DnsUiState(url = SERVER), SelfUpdate.Idle)
 

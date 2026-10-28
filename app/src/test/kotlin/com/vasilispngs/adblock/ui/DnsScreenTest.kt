@@ -266,9 +266,30 @@ class DnsScreenTest {
     }
 
     @Test
+    fun `warns below the server until it answers again`() {
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true, serverFailing = true))
+
+        val url = compose.onNodeWithText(string(R.string.server_url)).getBoundsInRoot()
+        val failing = compose.onNodeWithText(string(R.string.server_not_answering)).getBoundsInRoot()
+        val alwaysOn = compose.onNodeWithText(string(R.string.always_on_vpn)).getBoundsInRoot()
+        assertEquals(ListItemDefaults.SegmentedGap, failing.top - url.bottom)
+        assertEquals(ListItemDefaults.SegmentedGap, alwaysOn.top - failing.bottom)
+        assertEquals(false to false, corners(string(R.string.server_not_answering)))
+        assertEquals(false to true, corners(string(R.string.always_on_vpn)))
+
+        state = DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true)
+        compose.onAllNodesWithText(string(R.string.server_not_answering)).assertCountEquals(0)
+
+        state = DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true, serverFailing = true)
+        compose.onNodeWithText(string(R.string.server_not_answering)).performClick()
+        compose.onNode(hasSetTextAction()).assertIsDisplayed()
+    }
+
+    @Test
     fun `explains why a server could not be used`() {
         assertEquals("The server answered with HTTP 403", DohResult.Rejected(403).text(context.resources))
         assertEquals(string(R.string.server_unreachable), DohResult.Failed.text(context.resources))
+        assertEquals(string(R.string.server_unreachable), DohResult.Unreachable.text(context.resources))
     }
 
     @Test

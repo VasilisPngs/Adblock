@@ -268,6 +268,19 @@ class DnsViewModelTest {
     }
 
     @Test
+    fun `warns about a failing server only while the tunnel runs`() = runTest {
+        val viewModel = viewModel(preferences(), DohResult.Failed, url = SERVER)
+        tunnel.report(DohResult.Rejected(503))
+        assertFalse(viewModel.uiState.value.serverFailing)
+
+        tunnel.update(TunnelState.On)
+        assertTrue(viewModel.uiState.first { it.serverFailing }.serverFailing)
+
+        tunnel.report(DohResult.Answer(ByteArray(12)))
+        assertFalse(viewModel.uiState.first { !it.serverFailing }.serverFailing)
+    }
+
+    @Test
     fun `knows whether Android has VPN settings to open`() = runTest {
         assertFalse(DnsTunnel(context).vpnSettings)
 

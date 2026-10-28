@@ -19,6 +19,7 @@ sealed interface DohResult {
     class Answer(val message: ByteArray) : DohResult
     data class Rejected(val status: Int) : DohResult
     data object Failed : DohResult
+    data object Unreachable : DohResult
 }
 
 internal fun dnsAnswer(query: ByteArray, response: ByteArray): DohResult =
@@ -72,7 +73,7 @@ class DohClient(private val engine: HttpEngine) {
 
         override fun onSucceeded(request: UrlRequest, info: UrlResponseInfo) = onResult(dnsAnswer(query, body.toByteArray()))
 
-        override fun onFailed(request: UrlRequest, info: UrlResponseInfo?, error: HttpException) = onResult(DohResult.Failed)
+        override fun onFailed(request: UrlRequest, info: UrlResponseInfo?, error: HttpException) = onResult(DohResult.Unreachable)
 
         override fun onCanceled(request: UrlRequest, info: UrlResponseInfo?) = onResult(result)
     }

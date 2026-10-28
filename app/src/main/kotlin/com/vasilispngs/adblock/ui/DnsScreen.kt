@@ -429,7 +429,8 @@ private fun HomeView(
     val on = uiState.tunnel != TunnelState.Off
     val alwaysOnShown = uiState.vpnSettings && uiState.tunnel == TunnelState.On
     val lockdown = uiState.tunnel == TunnelState.Lockdown
-    val count = 2 + (if (alwaysOnShown || lockdown) 1 else 0) + (if (uiState.privateDnsServer != null) 1 else 0)
+    val serverRows = if (uiState.serverFailing) 1 else 0
+    val count = 2 + serverRows + (if (alwaysOnShown || lockdown) 1 else 0) + (if (uiState.privateDnsServer != null) 1 else 0)
     LazyColumn(
         state = listState,
         modifier = Modifier
@@ -480,11 +481,31 @@ private fun HomeView(
             }
         }
 
+        if (uiState.serverFailing) {
+            item(key = "server-failing") {
+                SegmentedListItem(
+                    onClick = onUrl,
+                    shapes = ListItemDefaults.segmentedShapes(2, count),
+                    colors = listItemColors(),
+                    leadingContent = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_warning),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    supportingContent = { Text(text = stringResource(R.string.server_not_answering_description)) }
+                ) {
+                    Text(text = stringResource(R.string.server_not_answering))
+                }
+            }
+        }
+
         if (alwaysOnShown) {
             item(key = "always-on") {
                 SegmentedListItem(
                     onClick = onVpnSettings,
-                    shapes = ListItemDefaults.segmentedShapes(2, count),
+                    shapes = ListItemDefaults.segmentedShapes(2 + serverRows, count),
                     colors = listItemColors(),
                     supportingContent = { Text(text = stringResource(R.string.always_on_vpn_description)) }
                 ) {
@@ -497,7 +518,7 @@ private fun HomeView(
             item(key = "lockdown") {
                 SegmentedListItem(
                     onClick = onVpnSettings,
-                    shapes = ListItemDefaults.segmentedShapes(2, count),
+                    shapes = ListItemDefaults.segmentedShapes(2 + serverRows, count),
                     colors = listItemColors(),
                     leadingContent = {
                         Icon(

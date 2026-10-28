@@ -46,7 +46,14 @@ class DnsVpnService : VpnService() {
             if (tunnel != null) publish()
         } else {
             container.tunnel.update(TunnelState.Connecting)
-            connecting = scope.launch { container.preferences.url.map(::dohUrl).collect { connect(it) } }
+            connecting = scope.launch {
+                launch {
+                    container.tunnel.serverFailing.collect {
+                        if (tunnel != null) getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification(server))
+                    }
+                }
+                container.preferences.url.map(::dohUrl).collect { connect(it) }
+            }
         }
         return START_STICKY
     }
@@ -63,6 +70,7 @@ class DnsVpnService : VpnService() {
         if (url == null) return stop()
         if (url != server) {
             server = url
+            container.tunnel.serverChanged()
             startForeground(NOTIFICATION_ID, notification(url), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
         }
         if (tunnel == null) {
@@ -111,12 +119,14 @@ class DnsVpnService : VpnService() {
             }
             if (length < 0) return
             val query = parseDnsQuery(packet, length) ?: continue
-            doh.resolve(server, query.message) { result ->
+            val url = server
+            doh.resolve(url, query.message) { result ->
                 val message = (result as? DohResult.Answer)?.message ?: serverFailure(query.message)
                 try {
                     output.write(dnsResponsePacket(query, message))
                 } catch (_: IOException) {
                 }
+                if (url == server) container.tunnel.report(result)
             }
         }
     }
@@ -139,10 +149,11 @@ class DnsVpnService : VpnService() {
     private fun notification(url: String?): Notification {
         val channel = NotificationChannel(CHANNEL_ID, getString(R.string.dns_over_https), NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val host = url?.toUri()?.host
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_shield)
             .setContentTitle(getString(R.string.dns_over_https_on))
-            .setContentText(url?.toUri()?.host)
+            .setContentText(if (host != null && container.tunnel.serverFailing.value) getString(R.string.server_not_answering_host, host) else host)
             .setContentIntent(openApp())
             .setOngoing(true)
             .build()
