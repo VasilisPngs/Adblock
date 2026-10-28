@@ -63,6 +63,12 @@ android {
         compose = true
     }
 
+    packaging {
+        jniLibs {
+            excludes += "**/libdatastore_shared_counter.so"
+        }
+    }
+
     testOptions {
         managedDevices.localDevices {
             create("pixel10Api37") {
