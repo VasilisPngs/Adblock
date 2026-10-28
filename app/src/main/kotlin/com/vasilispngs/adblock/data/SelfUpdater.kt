@@ -212,7 +212,7 @@ internal fun Context.notifyUpdated() {
         UPDATED_ID,
         Notification.Builder(this, UPDATES_CHANNEL)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle(getString(R.string.update_installed, getString(R.string.app_name)))
+            .setContentTitle(getString(R.string.app_updated))
             .setContentIntent(PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE))
             .setAutoCancel(true)
             .build()

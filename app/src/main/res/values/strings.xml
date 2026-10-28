@@ -25,9 +25,9 @@
     <string name="self_update_available">Update available</string>
     <string name="self_update_install">Download and install</string>
     <string name="self_update_downloading">Downloading · %1$d%%</string>
-    <string name="self_update_installing">Installing</string>
-    <string name="self_update_failed">Couldn\'t update. Try again</string>
-    <string name="update_installed">%1$s was updated</string>
+    <string name="self_update_installing">Installing…</string>
+    <string name="self_update_failed">Couldn\'t update. Try again.</string>
+    <string name="app_updated">App updated</string>
     <string name="always_on_vpn">Always-on VPN</string>
     <string name="always_on_vpn_description">Turn it on for Adblock in Android\'s VPN settings so Android itself keeps DNS-over-HTTPS running</string>
     <string name="server_unreachable">Couldn\'t get an answer from the server</string>
