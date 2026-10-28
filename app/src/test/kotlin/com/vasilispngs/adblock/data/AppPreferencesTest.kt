@@ -24,20 +24,16 @@ class AppPreferencesTest {
     private val uiModeManager = context.getSystemService(UiModeManager::class.java)
 
     @Test
-    fun `starts with the system theme and without dynamic color`() = runTest {
-        assertEquals(Appearance(ThemeMode.System, dynamicColor = false), preferences().appearance.first())
+    fun `starts with the system theme`() = runTest {
+        assertEquals(ThemeMode.System, preferences().themeMode.first())
     }
 
     @Test
-    fun `remembers the theme and dynamic color apart`() = runTest {
+    fun `remembers the chosen theme`() = runTest {
         val preferences = preferences()
-        preferences.setDynamicColor(true)
         preferences.setThemeMode(ThemeMode.Dark)
 
-        assertEquals(Appearance(ThemeMode.Dark, dynamicColor = true), preferences.appearance.first())
-
-        preferences.setDynamicColor(false)
-        assertEquals(Appearance(ThemeMode.Dark, dynamicColor = false), preferences.appearance.first())
+        assertEquals(ThemeMode.Dark, preferences.themeMode.first())
     }
 
     @Test

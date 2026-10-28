@@ -8,7 +8,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.vasilispngs.adblock.AdblockApplication
 import com.vasilispngs.adblock.data.AppPreferences
-import com.vasilispngs.adblock.data.Appearance
 import com.vasilispngs.adblock.data.DnsPreferences
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.SelfUpdater
@@ -85,7 +84,7 @@ class DnsViewModel(
 
     val updateConfirmation: StateFlow<Intent?> = selfUpdater.confirmation
 
-    val appearance: StateFlow<Appearance?> = appPreferences.appearance
+    val themeMode: StateFlow<ThemeMode?> = appPreferences.themeMode
         .onStart { appPreferences.restoreThemeMode() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
@@ -148,18 +147,13 @@ class DnsViewModel(
     }
 
     fun setThemeMode(mode: ThemeMode) {
-        if (appearance.value?.themeMode == mode) return
+        if (themeMode.value == mode) return
         viewModelScope.launch { appPreferences.setThemeMode(mode) }
     }
 
     fun updateApp() = selfUpdater.update()
 
     fun updateConfirmationShown(intent: Intent) = selfUpdater.confirmationShown(intent)
-
-    fun setDynamicColor(enabled: Boolean) {
-        if (appearance.value?.dynamicColor == enabled) return
-        viewModelScope.launch { appPreferences.setDynamicColor(enabled) }
-    }
 
     private suspend fun ask(server: String): DohResult = resolve(server, addressQuery(URI(server).host))
 

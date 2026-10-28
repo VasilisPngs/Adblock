@@ -15,7 +15,6 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.vasilispngs.adblock.R
-import com.vasilispngs.adblock.data.Appearance
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.ui.theme.AdblockTheme
@@ -104,9 +103,8 @@ class AccessibilityTest {
                     onUrlChange = {},
                     onPrivateDns = {},
                     onVpnSettings = {},
-                    appearance = Appearance(ThemeMode.System, dynamicColor = false),
+                    themeMode = ThemeMode.System,
                     onThemeChange = {},
-                    onDynamicColorChange = {},
                     selfUpdate = selfUpdate,
                     onUpdateApp = {}
                 )

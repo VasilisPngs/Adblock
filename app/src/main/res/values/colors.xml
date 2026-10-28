@@ -1,5 +1,4 @@
 <resources>
-    <color name="window_background">#FFFAF9FE</color>
-    <color name="dynamic_window_background">@android:color/system_surface_light</color>
-    <color name="ic_launcher_background">#FFFF383C</color>
+    <color name="window_background">#FFFCF8F9</color>
+    <color name="ic_launcher_background">#FFEA4335</color>
 </resources>

@@ -1,7 +1,6 @@
 package com.vasilispngs.adblock
 
 import android.content.res.Configuration
-import android.content.res.Resources
 import android.os.Bundle
 import android.view.View
 import android.view.ViewTreeObserver
@@ -18,19 +17,18 @@ import com.vasilispngs.adblock.ui.theme.AdblockTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: DnsViewModel by viewModels { DnsViewModel.Factory }
-    private var windowBackground = R.color.window_background
     private var ready = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.enableEdgeToEdge(window)
         setContent {
-            val appearance by viewModel.appearance.collectAsStateWithLifecycle()
-            appearance?.let { current ->
-                AdblockTheme(dynamicColor = current.dynamicColor) {
-                    DnsScreen(viewModel = viewModel, appearance = current)
+            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            themeMode?.let { current ->
+                AdblockTheme {
+                    DnsScreen(viewModel = viewModel, themeMode = current)
                 }
-                SideEffect { showWindow(current.dynamicColor) }
+                SideEffect { ready = true }
             }
         }
         val content = findViewById<View>(android.R.id.content)
@@ -49,16 +47,6 @@ class MainActivity : ComponentActivity() {
             isAppearanceLightStatusBars = light
             isAppearanceLightNavigationBars = light
         }
-        window.setBackgroundDrawableResource(windowBackground)
-    }
-
-    private fun showWindow(dynamicColor: Boolean) {
-        val background = if (dynamicColor) R.color.dynamic_window_background else R.color.window_background
-        if (!ready || background != windowBackground) {
-            windowBackground = background
-            window.setBackgroundDrawableResource(background)
-            splashScreen.setSplashScreenTheme(if (dynamicColor) R.style.Theme_Adblock_DynamicColor else Resources.ID_NULL)
-        }
-        ready = true
+        window.setBackgroundDrawableResource(R.color.window_background)
     }
 }

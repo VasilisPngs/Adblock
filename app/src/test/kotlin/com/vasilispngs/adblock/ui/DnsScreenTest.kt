@@ -53,7 +53,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.window.core.layout.WindowSizeClass
 import com.vasilispngs.adblock.R
-import com.vasilispngs.adblock.data.Appearance
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.ui.theme.AdblockTheme
@@ -83,7 +82,6 @@ class DnsScreenTest {
     private var privateDnsOpened = 0
     private var vpnSettingsOpened = 0
     private val themes = mutableListOf<ThemeMode>()
-    private val dynamicColors = mutableListOf<Boolean>()
     private var selfUpdate by mutableStateOf<SelfUpdate>(SelfUpdate.Idle)
     private var appUpdates = 0
     private lateinit var backDispatcher: OnBackPressedDispatcher
@@ -337,7 +335,6 @@ class DnsScreenTest {
 
         openSettings()
         compose.onNodeWithText(string(R.string.theme)).assertIsDisplayed()
-        compose.onNodeWithText(string(R.string.dynamic_color)).assertIsDisplayed()
         compose.onAllNodesWithText(string(R.string.dns_over_https)).assertCountEquals(0)
 
         compose.runOnIdle { backDispatcher.onBackPressed() }
@@ -410,16 +407,6 @@ class DnsScreenTest {
         compose.onNodeWithText(string(R.string.theme_dark)).performClick()
 
         assertEquals(listOf(ThemeMode.Dark), themes)
-    }
-
-    @Test
-    fun `turns dynamic color on from settings`() {
-        show(DnsUiState(url = SERVER))
-
-        openSettings()
-        compose.onNodeWithText(string(R.string.dynamic_color)).assertIsOff().assert(SwitchRole).performClick()
-
-        assertEquals(listOf(true), dynamicColors)
     }
 
     @Test
@@ -498,19 +485,13 @@ class DnsScreenTest {
         val heading = text(string(R.string.appearance))
         val themeItem = compose.onNodeWithText(string(R.string.theme)).getBoundsInRoot()
         val themeTitle = text(string(R.string.theme))
-        val dynamicItem = compose.onNodeWithText(string(R.string.dynamic_color)).getBoundsInRoot()
         val title = text(string(R.string.settings))
 
         assertEquals(56.dp, title.left)
         assertEquals(themeTitle.left, heading.left)
         assertEquals(themeItem.left + 16.dp, themeTitle.left)
         assertEquals(72.dp, themeItem.bottom - themeItem.top)
-        assertEquals(72.dp, dynamicItem.bottom - dynamicItem.top)
-        assertEquals(themeItem.left, dynamicItem.left)
-        assertEquals(themeItem.right, dynamicItem.right)
-        assertEquals(ListItemDefaults.SegmentedGap, dynamicItem.top - themeItem.bottom)
-        assertEquals(true to false, corners(string(R.string.theme)))
-        assertEquals(false to true, corners(string(R.string.dynamic_color)))
+        assertEquals(true to true, corners(string(R.string.theme)))
 
         compose.onNodeWithText(string(R.string.theme)).performClick()
         val light = compose.onNodeWithText(string(R.string.theme_light)).getBoundsInRoot()
@@ -576,9 +557,8 @@ class DnsScreenTest {
                     onUrlChange = { urls += it },
                     onPrivateDns = { privateDnsOpened++ },
                     onVpnSettings = { vpnSettingsOpened++ },
-                    appearance = Appearance(ThemeMode.System, dynamicColor = false),
+                    themeMode = ThemeMode.System,
                     onThemeChange = { themes += it },
-                    onDynamicColorChange = { dynamicColors += it },
                     selfUpdate = selfUpdate,
                     onUpdateApp = { appUpdates++ }
                 )

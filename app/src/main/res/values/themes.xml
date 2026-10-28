@@ -6,8 +6,4 @@
         <item name="android:windowLightStatusBar">@bool/light_system_bars</item>
         <item name="android:windowLightNavigationBar">@bool/light_system_bars</item>
     </style>
-
-    <style name="Theme.Adblock.DynamicColor">
-        <item name="android:windowBackground">@color/dynamic_window_background</item>
-    </style>
 </resources>

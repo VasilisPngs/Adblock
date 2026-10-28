@@ -6,7 +6,6 @@ import android.content.IntentFilter
 import android.provider.Settings
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.vasilispngs.adblock.data.AppPreferences
-import com.vasilispngs.adblock.data.Appearance
 import com.vasilispngs.adblock.data.DnsPreferences
 import com.vasilispngs.adblock.data.SelfUpdater
 import com.vasilispngs.adblock.data.ThemeMode
@@ -298,18 +297,14 @@ class DnsViewModelTest {
         withTimeoutOrNull(WAIT_MILLIS) { uiState.first { it.failure != null } }?.failure
 
     @Test
-    fun `keeps the theme and dynamic color it is given`() = runTest {
+    fun `keeps the theme it is given`() = runTest {
         val viewModel = viewModel(preferences(), DohResult.Failed)
-        backgroundScope.launch { viewModel.appearance.collect {} }
-        assertEquals(Appearance(ThemeMode.System, dynamicColor = false), viewModel.appearance.first { it != null })
+        backgroundScope.launch { viewModel.themeMode.collect {} }
+        assertEquals(ThemeMode.System, viewModel.themeMode.first { it != null })
 
         viewModel.setThemeMode(ThemeMode.Light)
-        viewModel.setDynamicColor(true)
 
-        assertEquals(
-            Appearance(ThemeMode.Light, dynamicColor = true),
-            withTimeoutOrNull(WAIT_MILLIS) { viewModel.appearance.first { it?.dynamicColor == true && it.themeMode == ThemeMode.Light } }
-        )
+        assertEquals(ThemeMode.Light, withTimeoutOrNull(WAIT_MILLIS) { viewModel.themeMode.first { it == ThemeMode.Light } })
     }
 
     private fun TestScope.appPreferences() = AppPreferences(

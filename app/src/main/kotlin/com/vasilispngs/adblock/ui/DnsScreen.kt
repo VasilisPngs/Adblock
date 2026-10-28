@@ -131,7 +131,6 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.NavDisplay
 import androidx.window.core.layout.WindowSizeClass
 import com.vasilispngs.adblock.R
-import com.vasilispngs.adblock.data.Appearance
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.vpn.DohResult
@@ -184,7 +183,7 @@ private val Screen.titleRes: Int
 @Composable
 fun DnsScreen(
     viewModel: DnsViewModel,
-    appearance: Appearance,
+    themeMode: ThemeMode,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -243,9 +242,8 @@ fun DnsScreen(
             onUrlChange = viewModel::setUrl,
             onPrivateDns = { openSettings(context, Settings.ACTION_WIRELESS_SETTINGS) },
             onVpnSettings = { openSettings(context, Settings.ACTION_VPN_SETTINGS) },
-            appearance = appearance,
+            themeMode = themeMode,
             onThemeChange = viewModel::setThemeMode,
-            onDynamicColorChange = viewModel::setDynamicColor,
             selfUpdate = selfUpdate,
             onUpdateApp = viewModel::updateApp,
             modifier = modifier
@@ -261,9 +259,8 @@ internal fun DnsScreen(
     onUrlChange: (String) -> Unit,
     onPrivateDns: () -> Unit,
     onVpnSettings: () -> Unit,
-    appearance: Appearance,
+    themeMode: ThemeMode,
     onThemeChange: (ThemeMode) -> Unit,
-    onDynamicColorChange: (Boolean) -> Unit,
     selfUpdate: SelfUpdate,
     onUpdateApp: () -> Unit,
     modifier: Modifier = Modifier
@@ -372,9 +369,8 @@ internal fun DnsScreen(
                         nestedScroll = scrollBehavior.nestedScrollConnection,
                         focus = settingsFocus,
                         contentPadding = contentPadding,
-                        appearance = appearance,
+                        themeMode = themeMode,
                         onTheme = { themeDialog = true },
-                        onDynamicColorChange = onDynamicColorChange,
                         selfUpdate = selfUpdate,
                         onUpdateApp = onUpdateApp
                     )
@@ -393,7 +389,7 @@ internal fun DnsScreen(
 
     if (themeDialog) {
         ThemeDialog(
-            current = appearance.themeMode,
+            current = themeMode,
             onDismiss = { themeDialog = false },
             onSelect = { mode ->
                 themeDialog = false
@@ -562,9 +558,8 @@ private fun SettingsView(
     nestedScroll: NestedScrollConnection,
     focus: FocusRequester,
     contentPadding: PaddingValues,
-    appearance: Appearance,
+    themeMode: ThemeMode,
     onTheme: () -> Unit,
-    onDynamicColorChange: (Boolean) -> Unit,
     selfUpdate: SelfUpdate,
     onUpdateApp: () -> Unit
 ) {
@@ -591,25 +586,11 @@ private fun SettingsView(
         item(key = "theme") {
             SegmentedListItem(
                 onClick = onTheme,
-                shapes = ListItemDefaults.segmentedShapes(0, 2),
+                shapes = ListItemDefaults.segmentedShapes(0, 1),
                 colors = listItemColors(),
-                supportingContent = { Text(text = stringResource(appearance.themeMode.labelRes)) }
+                supportingContent = { Text(text = stringResource(themeMode.labelRes)) }
             ) {
                 Text(text = stringResource(R.string.theme))
-            }
-        }
-
-        item(key = "dynamic-color") {
-            SegmentedListItem(
-                checked = appearance.dynamicColor,
-                onCheckedChange = onDynamicColorChange,
-                modifier = Modifier.semantics { role = Role.Switch },
-                shapes = ListItemDefaults.segmentedShapes(1, 2),
-                colors = listItemColors(),
-                supportingContent = { Text(text = stringResource(R.string.dynamic_color_description)) },
-                trailingContent = { Switch(checked = appearance.dynamicColor, onCheckedChange = null) }
-            ) {
-                Text(text = stringResource(R.string.dynamic_color))
             }
         }
     }

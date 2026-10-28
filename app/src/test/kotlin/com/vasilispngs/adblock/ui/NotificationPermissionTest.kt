@@ -13,7 +13,6 @@ import androidx.compose.ui.test.performClick
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.data.AppPreferences
-import com.vasilispngs.adblock.data.Appearance
 import com.vasilispngs.adblock.data.DnsPreferences
 import com.vasilispngs.adblock.data.SelfUpdater
 import com.vasilispngs.adblock.data.ThemeMode
@@ -98,7 +97,7 @@ class NotificationPermissionTest {
             DohResult.Failed
         }
         compose.setContent {
-            DnsScreen(viewModel = viewModel, appearance = Appearance(ThemeMode.System, dynamicColor = false))
+            DnsScreen(viewModel = viewModel, themeMode = ThemeMode.System)
         }
         compose.waitUntil { compose.onAllNodes(hasText(SERVER)).fetchSemanticsNodes().isNotEmpty() }
     }

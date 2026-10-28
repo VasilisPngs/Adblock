@@ -12,7 +12,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import com.vasilispngs.adblock.R
-import com.vasilispngs.adblock.data.Appearance
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.ui.theme.AdblockTheme
@@ -62,9 +61,8 @@ class ReducedMotionTest {
                     onUrlChange = {},
                     onPrivateDns = {},
                     onVpnSettings = {},
-                    appearance = Appearance(ThemeMode.System, dynamicColor = false),
+                    themeMode = ThemeMode.System,
                     onThemeChange = {},
-                    onDynamicColorChange = {},
                     selfUpdate = SelfUpdate.Idle,
                     onUpdateApp = {}
                 )
