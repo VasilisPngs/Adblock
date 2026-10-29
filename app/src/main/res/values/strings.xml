@@ -24,7 +24,7 @@
     <string name="updates">Updates</string>
     <string name="self_update_available">Update available</string>
     <string name="self_update_install">Download and install</string>
-    <string name="self_update_downloading">Downloading · %1$d%%</string>
+    <string name="self_update_downloading">Downloading • %1$d%%</string>
     <string name="self_update_installing">Installing…</string>
     <string name="self_update_failed">Couldn\'t update. Try again.</string>
     <string name="app_updated">App updated</string>
