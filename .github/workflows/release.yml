@@ -71,7 +71,9 @@ jobs:
 
       - name: Show device test results
         if: failure()
-        run: find . -path '*/build/outputs/androidTest-results/*' -name '*.xml' -exec cat {} +
+        run: |
+          find . -path '*/build/outputs/androidTest-results/*' -name '*.xml' -exec cat {} +
+          find . -path '*/build/*' -name 'logcat-*.txt' -exec tail -n 200 {} +
 
       - name: Publish release
         env:
