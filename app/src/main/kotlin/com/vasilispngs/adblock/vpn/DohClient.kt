@@ -4,6 +4,8 @@ import android.net.http.HttpEngine
 import android.net.http.HttpException
 import android.net.http.UrlRequest
 import android.net.http.UrlResponseInfo
+import com.vasilispngs.adblock.data.ErrorCode
+import com.vasilispngs.adblock.data.errorCode
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
@@ -19,7 +21,14 @@ sealed interface DohResult {
     class Answer(val message: ByteArray) : DohResult
     data class Rejected(val status: Int) : DohResult
     data object Failed : DohResult
-    data object Unreachable : DohResult
+    data class Unreachable(val code: ErrorCode) : DohResult
+}
+
+internal fun DohResult.errorCode(): ErrorCode? = when (this) {
+    is DohResult.Answer -> null
+    is DohResult.Rejected -> ErrorCode.Http(status)
+    DohResult.Failed -> ErrorCode.Http(HTTP_OK)
+    is DohResult.Unreachable -> code
 }
 
 internal fun dnsAnswer(query: ByteArray, response: ByteArray): DohResult =
@@ -73,7 +82,8 @@ class DohClient(private val engine: HttpEngine) {
 
         override fun onSucceeded(request: UrlRequest, info: UrlResponseInfo) = onResult(dnsAnswer(query, body.toByteArray()))
 
-        override fun onFailed(request: UrlRequest, info: UrlResponseInfo?, error: HttpException) = onResult(DohResult.Unreachable)
+        override fun onFailed(request: UrlRequest, info: UrlResponseInfo?, error: HttpException) =
+            onResult(DohResult.Unreachable(error.errorCode()))
 
         override fun onCanceled(request: UrlRequest, info: UrlResponseInfo?) = onResult(result)
     }

@@ -18,6 +18,7 @@ import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.ui.theme.AdblockTheme
+import com.vasilispngs.adblock.vpn.DohResult
 import com.vasilispngs.adblock.vpn.TunnelState
 import org.junit.Before
 import org.junit.Rule
@@ -53,7 +54,7 @@ class AccessibilityTest {
     fun lockdown() = check(DnsUiState(url = SERVER, tunnel = TunnelState.Lockdown, vpnSettings = true))
 
     @Test
-    fun serverNotAnswering() = check(DnsUiState(url = SERVER, tunnel = TunnelState.On, serverFailing = true))
+    fun serverNotAnswering() = check(DnsUiState(url = SERVER, tunnel = TunnelState.On, serverFailure = DohResult.Rejected(503)))
 
     @Test
     fun serverUrl() {

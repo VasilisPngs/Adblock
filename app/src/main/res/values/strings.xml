@@ -35,6 +35,8 @@
     <string name="server_not_answering">The server isn\'t answering</string>
     <string name="server_not_answering_description">Apps lose internet until it answers again. Check the server URL or turn DNS-over-HTTPS off.</string>
     <string name="server_not_answering_host">%1$s isn\'t answering</string>
+    <string name="error_with_code">%1$s (%2$s)</string>
+    <string name="error_code_http" translatable="false">HTTP %1$d</string>
     <string name="lockdown_on">Block connections without VPN is on</string>
     <string name="lockdown_on_description">Apps lose internet, because Adblock sends only DNS through its VPN. Turn it off in Android\'s VPN settings.</string>
     <string name="private_dns_on">Private DNS is set to %1$s</string>

@@ -65,7 +65,7 @@ class SelfUpdater(
 
     fun update() {
         val newer = release ?: return
-        if (state.value != SelfUpdate.Available && state.value != SelfUpdate.Failed) return
+        if (state.value != SelfUpdate.Available && state.value !is SelfUpdate.Failed) return
         work = scope.launch {
             if (download(newer)) install()
         }
@@ -101,32 +101,33 @@ class SelfUpdater(
                     }
                 } == release.digest
             }
-        } catch (_: IOException) {
-            false
+        } catch (exception: IOException) {
+            state.value = SelfUpdate.Failed(exception.errorCode())
+            return false
         }
-        if (!downloaded) state.value = SelfUpdate.Failed
+        if (!downloaded) state.value = SelfUpdate.Failed(null)
         return downloaded
     }
 
     private suspend fun install() {
         state.value = SelfUpdate.Installing
         val marker = File(context.noBackupFilesDir, UPDATED_MARKER)
-        val installed = try {
+        val failure = try {
             withContext(Dispatchers.IO) {
                 marker.createNewFile()
                 commit()
             }
-        } catch (_: IOException) {
-            false
+        } catch (exception: IOException) {
+            SelfUpdate.Failed(exception.errorCode())
         }
-        if (!installed) {
+        if (failure != null) {
             marker.delete()
-            state.value = SelfUpdate.Failed
+            state.value = failure
         }
         apk.delete()
     }
 
-    private suspend fun commit(): Boolean {
+    private suspend fun commit(): SelfUpdate.Failed? {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setSize(apk.length())
@@ -134,14 +135,14 @@ class SelfUpdater(
         }
         val id = installer.createSession(params)
         val action = "${context.packageName}.SELF_UPDATE_$id"
-        val result = CompletableDeferred<Boolean>()
+        val result = CompletableDeferred<SelfUpdate.Failed?>()
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(receiverContext: Context, intent: Intent) {
                 when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
                     PackageInstaller.STATUS_PENDING_USER_ACTION ->
                         pendingConfirmation.value = intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
-                    PackageInstaller.STATUS_SUCCESS -> result.complete(true)
-                    else -> result.complete(false)
+                    PackageInstaller.STATUS_SUCCESS -> result.complete(null)
+                    else -> result.complete(SelfUpdate.Failed(installerCode(intent)))
                 }
             }
         }
@@ -164,9 +165,9 @@ class SelfUpdater(
                 )
             }
             result.await()
-        } catch (_: IOException) {
+        } catch (exception: IOException) {
             installer.abandonSession(id)
-            false
+            SelfUpdate.Failed(exception.errorCode())
         } finally {
             pendingConfirmation.value = null
             context.unregisterReceiver(receiver)
@@ -177,17 +178,23 @@ class SelfUpdater(
         val connection = open(URL(url)) as HttpURLConnection
         headers.forEach(connection::setRequestProperty)
         try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) throw IOException("HTTP ${connection.responseCode}")
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) throw HttpStatusException(connection.responseCode)
             return connection.inputStream.use { read(it, connection.contentLengthLong) }
         } finally {
             connection.disconnect()
         }
     }
 
+    private fun installerCode(status: Intent): ErrorCode? =
+        status.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+            ?.let { INSTALL_STATUS_PATTERN.find(it)?.value }
+            ?.let(ErrorCode::Named)
+
     private companion object {
         const val APK_NAME = "Adblock.apk"
         const val RELEASE_URL = "https://api.github.com/repos/VasilisPngs/Adblock/releases/tags/Adblock"
         val GITHUB_HEADERS = mapOf("Accept" to "application/vnd.github+json", "X-GitHub-Api-Version" to "2026-03-10")
+        val INSTALL_STATUS_PATTERN = Regex("^INSTALL_[A-Z_]+")
     }
 }
 

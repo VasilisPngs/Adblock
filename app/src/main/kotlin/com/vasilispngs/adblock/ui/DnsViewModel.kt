@@ -37,7 +37,7 @@ data class DnsUiState(
     val url: String = "",
     val tunnel: TunnelState = TunnelState.Off,
     val privateDnsServer: String? = null,
-    val serverFailing: Boolean = false,
+    val serverFailure: DohResult? = null,
     val vpnSettings: Boolean = false,
     val loaded: Boolean = false,
     val readyToConnect: Boolean = false,
@@ -63,12 +63,12 @@ class DnsViewModel(
     private var urlCheck: Job? = null
 
     val uiState: StateFlow<DnsUiState> =
-        combine(preferences.url, tunnel.state, privateDnsServer, request, tunnel.serverFailing) { url, state, privateDns, request, failing ->
+        combine(preferences.url, tunnel.state, privateDnsServer, request, tunnel.serverFailure) { url, state, privateDns, request, serverFailure ->
             DnsUiState(
                 url = url,
                 tunnel = if (request.starting && state == TunnelState.Off) TunnelState.Connecting else state,
                 privateDnsServer = privateDns,
-                serverFailing = failing && state in Running,
+                serverFailure = serverFailure.takeIf { state in Running },
                 vpnSettings = tunnel.vpnSettings,
                 loaded = true,
                 readyToConnect = request.readyToConnect,

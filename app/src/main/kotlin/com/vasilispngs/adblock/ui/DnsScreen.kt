@@ -131,11 +131,13 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.NavDisplay
 import androidx.window.core.layout.WindowSizeClass
 import com.vasilispngs.adblock.R
+import com.vasilispngs.adblock.data.ErrorCode
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.vpn.DohResult
 import com.vasilispngs.adblock.vpn.TunnelState
 import com.vasilispngs.adblock.vpn.dohUrl
+import com.vasilispngs.adblock.vpn.errorCode
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
@@ -425,7 +427,7 @@ private fun HomeView(
     val on = uiState.tunnel != TunnelState.Off
     val alwaysOnShown = uiState.vpnSettings && uiState.tunnel == TunnelState.On
     val lockdown = uiState.tunnel == TunnelState.Lockdown
-    val serverRows = if (uiState.serverFailing) 1 else 0
+    val serverRows = if (uiState.serverFailure != null) 1 else 0
     val count = 2 + serverRows + (if (alwaysOnShown || lockdown) 1 else 0) + (if (uiState.privateDnsServer != null) 1 else 0)
     LazyColumn(
         state = listState,
@@ -477,7 +479,7 @@ private fun HomeView(
             }
         }
 
-        if (uiState.serverFailing) {
+        uiState.serverFailure?.let { failure ->
             item(key = "server-failing") {
                 SegmentedListItem(
                     onClick = onUrl,
@@ -492,7 +494,7 @@ private fun HomeView(
                     },
                     supportingContent = { Text(text = stringResource(R.string.server_not_answering_description)) }
                 ) {
-                    Text(text = stringResource(R.string.server_not_answering))
+                    Text(text = stringResource(R.string.server_not_answering).withCode(failure.errorCode(), LocalResources.current))
                 }
             }
         }
@@ -610,11 +612,11 @@ private fun AppUpdateItem(status: SelfUpdate, onUpdate: () -> Unit, modifier: Mo
                 Text(text = stringResource(R.string.self_update_installing))
                 LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
-            SelfUpdate.Failed -> Text(text = stringResource(R.string.self_update_failed))
+            is SelfUpdate.Failed -> Text(text = stringResource(R.string.self_update_failed).withCode(status.code, LocalResources.current))
             else -> Text(text = stringResource(R.string.self_update_install))
         }
     }
-    if (status == SelfUpdate.Available || status == SelfUpdate.Failed) {
+    if (status == SelfUpdate.Available || status is SelfUpdate.Failed) {
         SegmentedListItem(
             onClick = onUpdate,
             shapes = shapes,
@@ -807,8 +809,16 @@ internal fun DohResult.text(resources: Resources): String =
     if (this is DohResult.Rejected) {
         resources.getString(R.string.server_rejected, status)
     } else {
-        resources.getString(R.string.server_unreachable)
+        resources.getString(R.string.server_unreachable).withCode(errorCode(), resources)
     }
+
+internal fun String.withCode(code: ErrorCode?, resources: Resources): String =
+    code?.let { resources.getString(R.string.error_with_code, this, it.text(resources)) } ?: this
+
+private fun ErrorCode.text(resources: Resources): String = when (this) {
+    is ErrorCode.Http -> resources.getString(R.string.error_code_http, status)
+    is ErrorCode.Named -> name
+}
 
 private fun askForNotifications(context: Context, activity: Activity?): Boolean =
     context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&

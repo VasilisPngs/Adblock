@@ -13,8 +13,8 @@ class DnsTunnel(private val context: Context) {
     private val _state = MutableStateFlow(TunnelState.Off)
     val state: StateFlow<TunnelState> = _state.asStateFlow()
 
-    private val _serverFailing = MutableStateFlow(false)
-    val serverFailing: StateFlow<Boolean> = _serverFailing.asStateFlow()
+    private val _serverFailure = MutableStateFlow<DohResult?>(null)
+    val serverFailure: StateFlow<DohResult?> = _serverFailure.asStateFlow()
 
     val vpnSettings = Intent(Settings.ACTION_VPN_SETTINGS).resolveActivity(context.packageManager) != null
 
@@ -28,18 +28,18 @@ class DnsTunnel(private val context: Context) {
 
     internal fun update(state: TunnelState) {
         _state.value = state
-        if (state == TunnelState.Connecting) _serverFailing.value = false
+        if (state == TunnelState.Connecting) _serverFailure.value = null
     }
 
     internal fun serverChanged() {
-        _serverFailing.value = false
+        _serverFailure.value = null
     }
 
     internal fun report(result: DohResult) {
-        _serverFailing.value = when (result) {
-            is DohResult.Answer -> false
-            is DohResult.Rejected, DohResult.Failed -> true
-            DohResult.Unreachable -> return
+        _serverFailure.value = when (result) {
+            is DohResult.Answer -> null
+            is DohResult.Rejected, DohResult.Failed -> result
+            is DohResult.Unreachable -> return
         }
     }
 }

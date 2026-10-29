@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.window.core.layout.WindowSizeClass
 import com.vasilispngs.adblock.R
+import com.vasilispngs.adblock.data.ErrorCode
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.ThemeMode
 import com.vasilispngs.adblock.ui.theme.AdblockTheme
@@ -265,29 +266,33 @@ class DnsScreenTest {
 
     @Test
     fun `warns below the server until it answers again`() {
-        show(DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true, serverFailing = true))
+        show(DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true, serverFailure = DohResult.Rejected(503)))
 
+        val notAnswering = string(R.string.server_not_answering) + " (HTTP 503)"
         val url = compose.onNodeWithText(string(R.string.server_url)).getBoundsInRoot()
-        val failing = compose.onNodeWithText(string(R.string.server_not_answering)).getBoundsInRoot()
+        val failing = compose.onNodeWithText(notAnswering).getBoundsInRoot()
         val alwaysOn = compose.onNodeWithText(string(R.string.always_on_vpn)).getBoundsInRoot()
         assertEquals(ListItemDefaults.SegmentedGap, failing.top - url.bottom)
         assertEquals(ListItemDefaults.SegmentedGap, alwaysOn.top - failing.bottom)
-        assertEquals(false to false, corners(string(R.string.server_not_answering)))
+        assertEquals(false to false, corners(notAnswering))
         assertEquals(false to true, corners(string(R.string.always_on_vpn)))
 
         state = DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true)
-        compose.onAllNodesWithText(string(R.string.server_not_answering)).assertCountEquals(0)
+        compose.onAllNodesWithText(notAnswering).assertCountEquals(0)
 
-        state = DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true, serverFailing = true)
-        compose.onNodeWithText(string(R.string.server_not_answering)).performClick()
+        state = DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true, serverFailure = DohResult.Rejected(503))
+        compose.onNodeWithText(notAnswering).performClick()
         compose.onNode(hasSetTextAction()).assertIsDisplayed()
     }
 
     @Test
     fun `explains why a server could not be used`() {
         assertEquals("The server answered with HTTP 403", DohResult.Rejected(403).text(context.resources))
-        assertEquals(string(R.string.server_unreachable), DohResult.Failed.text(context.resources))
-        assertEquals(string(R.string.server_unreachable), DohResult.Unreachable.text(context.resources))
+        assertEquals("Couldn't get an answer from the server (HTTP 200)", DohResult.Failed.text(context.resources))
+        assertEquals(
+            "Couldn't get an answer from the server (ERROR_HOSTNAME_NOT_RESOLVED)",
+            DohResult.Unreachable(ErrorCode.Named("ERROR_HOSTNAME_NOT_RESOLVED")).text(context.resources)
+        )
     }
 
     @Test
@@ -449,6 +454,19 @@ class DnsScreenTest {
         compose.onNodeWithText(string(R.string.self_update_available)).performClick()
 
         assertEquals(0, appUpdates)
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun `says why the app update failed and offers it again`() {
+        selfUpdate = SelfUpdate.Failed(ErrorCode.Http(404))
+        show(DnsUiState(url = SERVER))
+
+        openSettings()
+        compose.onNodeWithText(string(R.string.self_update_failed) + " (HTTP 404)").assertIsDisplayed()
+        compose.onNodeWithText(string(R.string.self_update_available)).performClick()
+
+        assertEquals(1, appUpdates)
     }
 
     @Test

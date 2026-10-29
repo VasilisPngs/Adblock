@@ -5,5 +5,5 @@ sealed interface SelfUpdate {
     data object Available : SelfUpdate
     data class Downloading(val progress: Float) : SelfUpdate
     data object Installing : SelfUpdate
-    data object Failed : SelfUpdate
+    data class Failed(val code: ErrorCode?) : SelfUpdate
 }

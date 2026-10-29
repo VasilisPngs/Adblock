@@ -13,6 +13,7 @@ import androidx.core.net.toUri
 import com.vasilispngs.adblock.MainActivity
 import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.appContainer
+import com.vasilispngs.adblock.ui.withCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,7 +49,7 @@ class DnsVpnService : VpnService() {
             container.tunnel.update(TunnelState.Connecting)
             connecting = scope.launch {
                 launch {
-                    container.tunnel.serverFailing.collect {
+                    container.tunnel.serverFailure.collect {
                         if (tunnel != null) getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification(server))
                     }
                 }
@@ -150,10 +151,17 @@ class DnsVpnService : VpnService() {
         val channel = NotificationChannel(CHANNEL_ID, getString(R.string.dns_over_https), NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         val host = url?.toUri()?.host
+        val failure = container.tunnel.serverFailure.value
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_shield)
             .setContentTitle(getString(R.string.dns_over_https_on))
-            .setContentText(if (host != null && container.tunnel.serverFailing.value) getString(R.string.server_not_answering_host, host) else host)
+            .setContentText(
+                if (host != null && failure != null) {
+                    getString(R.string.server_not_answering_host, host).withCode(failure.errorCode(), resources)
+                } else {
+                    host
+                }
+            )
             .setContentIntent(openApp())
             .setOngoing(true)
             .build()

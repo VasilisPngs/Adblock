@@ -270,13 +270,13 @@ class DnsViewModelTest {
     fun `warns about a failing server only while the tunnel runs`() = runTest {
         val viewModel = viewModel(preferences(), DohResult.Failed, url = SERVER)
         tunnel.report(DohResult.Rejected(503))
-        assertFalse(viewModel.uiState.value.serverFailing)
+        assertNull(viewModel.uiState.value.serverFailure)
 
         tunnel.update(TunnelState.On)
-        assertTrue(viewModel.uiState.first { it.serverFailing }.serverFailing)
+        assertEquals(DohResult.Rejected(503), viewModel.uiState.first { it.serverFailure != null }.serverFailure)
 
         tunnel.report(DohResult.Answer(ByteArray(12)))
-        assertFalse(viewModel.uiState.first { !it.serverFailing }.serverFailing)
+        assertNull(viewModel.uiState.first { it.serverFailure == null }.serverFailure)
     }
 
     @Test
