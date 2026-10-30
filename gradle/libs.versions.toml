@@ -14,7 +14,7 @@ robolectric = "4.17"
 benchmark = "1.6.0-alpha01"
 profileinstaller = "1.4.1"
 uiautomator = "2.4.0"
-androidxTestRunner = "1.8.0-alpha01"
+androidxTestRunner = "1.8.0-alpha03"
 
 [libraries]
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
