@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.content.res.Resources
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.system.OsConstants
@@ -150,18 +151,10 @@ class DnsVpnService : VpnService() {
     private fun notification(url: String?): Notification {
         val channel = NotificationChannel(CHANNEL_ID, getString(R.string.dns_over_https), NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-        val host = url?.toUri()?.host
-        val failure = container.tunnel.serverFailure.value
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_shield)
             .setContentTitle(getString(R.string.dns_over_https_on))
-            .setContentText(
-                if (host != null && failure != null) {
-                    getString(R.string.server_not_answering_host, host).withCode(failure.errorCode(), resources)
-                } else {
-                    host
-                }
-            )
+            .serverStatus(url?.toUri()?.host, container.tunnel.serverFailure.value, resources)
             .setContentIntent(openApp())
             .setOngoing(true)
             .build()
@@ -179,3 +172,11 @@ class DnsVpnService : VpnService() {
         private const val MAX_PACKET = 0xFFFF
     }
 }
+
+internal fun Notification.Builder.serverStatus(host: String?, failure: DohResult?, resources: Resources): Notification.Builder =
+    if (host != null && failure != null) {
+        val text = resources.getString(R.string.server_not_answering_host, host).withCode(failure.errorCode(), resources)
+        setContentText(text).setStyle(Notification.BigTextStyle().bigText(text))
+    } else {
+        setContentText(host)
+    }
