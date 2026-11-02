@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.graphics.get
 import androidx.window.core.layout.WindowSizeClass
 import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.data.ErrorCode
@@ -184,7 +185,7 @@ class DnsScreenTest {
         val enabled = compose.onNodeWithText(string(R.string.private_dns_on, "dns.google")).captureToImage().asAndroidBitmap()
         val disabled = compose.onNodeWithText(string(R.string.server_url)).captureToImage().asAndroidBitmap()
 
-        assertEquals(enabled.getPixel(enabled.width / 2, 2), disabled.getPixel(disabled.width / 2, 2))
+        assertEquals(enabled[enabled.width / 2, 2], disabled[disabled.width / 2, 2])
     }
 
     @Test
@@ -217,7 +218,7 @@ class DnsScreenTest {
         state = DnsUiState(url = SERVER, tunnel = TunnelState.AlwaysOn)
         val system = compose.onNodeWithText(string(R.string.dns_over_https)).captureToImage().asAndroidBitmap()
 
-        assertEquals(app.getPixel(app.width / 2, 2), system.getPixel(system.width / 2, 2))
+        assertEquals(app[app.width / 2, 2], system[system.width / 2, 2])
     }
 
     @Test
@@ -525,9 +526,9 @@ class DnsScreenTest {
 
     private fun corners(text: String): Pair<Boolean, Boolean> {
         val image = compose.onNodeWithText(text).captureToImage().asAndroidBitmap()
-        val container = image.getPixel(CORNER_INSET, image.height / 2)
-        return (image.getPixel(CORNER_INSET, CORNER_INSET) != container) to
-            (image.getPixel(CORNER_INSET, image.height - 1 - CORNER_INSET) != container)
+        val container = image[CORNER_INSET, image.height / 2]
+        return (image[CORNER_INSET, CORNER_INSET] != container) to
+            (image[CORNER_INSET, image.height - 1 - CORNER_INSET] != container)
     }
 
     private fun backGesture(progress: Float) {
