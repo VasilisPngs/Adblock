@@ -109,6 +109,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalWindow
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.isCrossWindowBlurEnabled
 import androidx.compose.ui.res.painterResource
@@ -295,7 +296,7 @@ internal fun DnsScreen(
     } else {
         CompactMargin
     }
-    val window = LocalActivity.current?.window
+    val window = LocalWindow.current
     val navigationBarScrim = WindowInsets.navigationBars.getBottom(LocalDensity.current) > 0
     SideEffect(window, navigationBarScrim) { window?.isNavigationBarContrastEnforced = navigationBarScrim }
 
