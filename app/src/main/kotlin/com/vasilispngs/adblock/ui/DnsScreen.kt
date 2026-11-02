@@ -62,6 +62,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.OutlinedTextField
@@ -165,6 +166,7 @@ private val PredictiveBackEnterFade = Easing {
 private val DialogBlurRadius = 10.dp
 private const val BLURRED_SCRIM_ALPHA = 0.2f
 private const val SCRIM_ALPHA = 0.32f
+private const val TABULAR_FIGURES = "tnum"
 
 @Serializable
 private sealed interface Screen : NavKey {
@@ -605,7 +607,10 @@ private fun AppUpdateItem(status: SelfUpdate, onUpdate: () -> Unit, modifier: Mo
     val supporting = @Composable {
         when (status) {
             is SelfUpdate.Downloading -> Column {
-                Text(text = stringResource(R.string.self_update_downloading, (status.progress * 100).roundToInt()))
+                Text(
+                    text = stringResource(R.string.self_update_downloading, (status.progress * 100).roundToInt()),
+                    style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES)
+                )
                 LinearWavyProgressIndicator(progress = { status.progress }, modifier = Modifier.fillMaxWidth())
             }
             SelfUpdate.Installing -> Column {
