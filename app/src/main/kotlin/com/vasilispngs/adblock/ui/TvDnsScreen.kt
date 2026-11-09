@@ -68,6 +68,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.LocalContentColor
+import androidx.tv.material3.LocalTextStyle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Switch
@@ -80,7 +81,6 @@ import com.vasilispngs.adblock.vpn.dohUrl
 import com.vasilispngs.adblock.vpn.errorCode
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
-import kotlin.math.roundToInt
 
 private val TvOverscanHorizontal = 48.dp
 private val TvOverscanVertical = 27.dp
@@ -295,7 +295,10 @@ private fun TvSettings(themeMode: ThemeMode, onThemeChange: (ThemeMode) -> Unit,
                             Text(text = stringResource(if (item == SettingsSection.AppUpdate) R.string.self_update_available else R.string.theme))
                         },
                         supportingContent = {
-                            Text(text = if (item == SettingsSection.AppUpdate) selfUpdate.text() else stringResource(themeMode.labelRes))
+                            Text(
+                                text = if (item == SettingsSection.AppUpdate) selfUpdate.text() else stringResource(themeMode.labelRes),
+                                style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES)
+                            )
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -490,12 +493,4 @@ private fun rememberInitialFocus(): FocusRequester {
         if (inputModeManager.inputMode == InputMode.Keyboard) focus.requestFocus()
     }
     return focus
-}
-
-@Composable
-private fun SelfUpdate.text(): String = when (this) {
-    is SelfUpdate.Downloading -> stringResource(R.string.self_update_downloading, (progress * 100).roundToInt())
-    SelfUpdate.Installing -> stringResource(R.string.self_update_installing)
-    is SelfUpdate.Failed -> stringResource(R.string.self_update_failed).withCode(code, LocalResources.current)
-    else -> stringResource(R.string.self_update_install)
 }
