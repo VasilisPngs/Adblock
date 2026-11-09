@@ -11,6 +11,7 @@ import android.content.res.Resources
 import android.net.VpnService
 import android.os.PowerManager
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -33,7 +34,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -44,7 +44,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.onConsumedWindowInsetsChanged
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -137,6 +136,8 @@ import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.data.ErrorCode
 import com.vasilispngs.adblock.data.SelfUpdate
 import com.vasilispngs.adblock.data.ThemeMode
+import com.vasilispngs.adblock.ui.theme.AdblockTheme
+import com.vasilispngs.adblock.ui.theme.AdblockTvTheme
 import com.vasilispngs.adblock.vpn.DohResult
 import com.vasilispngs.adblock.vpn.TunnelState
 import com.vasilispngs.adblock.vpn.dohUrl
@@ -154,8 +155,6 @@ private val MaxListWidth = WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND.dp
 private val SmallSpacing = 8.dp
 private val HeaderSpacing = 20.dp
 private val OptionHeight = 56.dp
-private val TvOverscanHorizontal = 48.dp
-private val TvOverscanVertical = 27.dp
 private val ForwardSlide = 96.dp
 private const val PREDICTIVE_BACK_EXIT_SCALE = 0.9f
 private const val PREDICTIVE_BACK_ENTER_SCALE = 1.1f
@@ -197,6 +196,7 @@ fun DnsScreen(
     ReportDrawnWhen { uiState.loaded }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val television = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
     val resources = LocalResources.current
     val connect = {
         viewModel.connect()
@@ -228,31 +228,53 @@ fun DnsScreen(
 
     uiState.failure?.let { failure ->
         LaunchedEffect(failure) {
-            snackbarHostState.showSnackbar(failure.text(resources))
+            val message = failure.text(resources)
+            if (television) Toast.makeText(context, message, Toast.LENGTH_LONG).show() else snackbarHostState.showSnackbar(message)
             viewModel.failureShown()
         }
     }
 
-    if (uiState.loaded) {
-        DnsScreen(
-            uiState = uiState,
-            snackbarHostState = snackbarHostState,
-            onEnabledChange = { enabled ->
-                when {
-                    !enabled -> viewModel.turnOff()
-                    askForNotifications(context, activity) -> notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    else -> viewModel.turnOn()
-                }
-            },
-            onUrlChange = viewModel::setUrl,
-            onPrivateDns = { openSettings(context, Settings.ACTION_WIRELESS_SETTINGS) },
-            onVpnSettings = { openSettings(context, Settings.ACTION_VPN_SETTINGS) },
-            themeMode = themeMode,
-            onThemeChange = viewModel::setThemeMode,
-            selfUpdate = selfUpdate,
-            onUpdateApp = viewModel::updateApp,
-            modifier = modifier
-        )
+    if (!uiState.loaded) return
+    val onEnabledChange: (Boolean) -> Unit = { enabled ->
+        when {
+            !enabled -> viewModel.turnOff()
+            askForNotifications(context, activity) -> notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+            else -> viewModel.turnOn()
+        }
+    }
+    val onPrivateDns = { openSettings(context, Settings.ACTION_WIRELESS_SETTINGS) }
+    val onVpnSettings = { openSettings(context, Settings.ACTION_VPN_SETTINGS) }
+    if (television) {
+        AdblockTvTheme {
+            TvDnsScreen(
+                uiState = uiState,
+                onEnabledChange = onEnabledChange,
+                onUrlChange = viewModel::setUrl,
+                onPrivateDns = onPrivateDns,
+                onVpnSettings = onVpnSettings,
+                themeMode = themeMode,
+                onThemeChange = viewModel::setThemeMode,
+                selfUpdate = selfUpdate,
+                onUpdateApp = viewModel::updateApp,
+                modifier = modifier
+            )
+        }
+    } else {
+        AdblockTheme {
+            DnsScreen(
+                uiState = uiState,
+                snackbarHostState = snackbarHostState,
+                onEnabledChange = onEnabledChange,
+                onUrlChange = viewModel::setUrl,
+                onPrivateDns = onPrivateDns,
+                onVpnSettings = onVpnSettings,
+                themeMode = themeMode,
+                onThemeChange = viewModel::setThemeMode,
+                selfUpdate = selfUpdate,
+                onUpdateApp = viewModel::updateApp,
+                modifier = modifier
+            )
+        }
     }
 }
 
@@ -300,19 +322,11 @@ internal fun DnsScreen(
     val navigationBarScrim = WindowInsets.navigationBars.getBottom(LocalDensity.current) > 0
     SideEffect(window, navigationBarScrim) { window?.isNavigationBarContrastEnforced = navigationBarScrim }
 
-    val context = LocalContext.current
-    val television = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
-    val overscan = if (television) {
-        WindowInsets(TvOverscanHorizontal, TvOverscanVertical, TvOverscanHorizontal, TvOverscanVertical)
-    } else {
-        WindowInsets(0)
-    }
-
     val motion = MaterialTheme.motionScheme
     val slide = with(LocalDensity.current) { ForwardSlide.roundToPx() }
     val content: @Composable (Screen) -> Unit = { screen ->
         val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(if (screen == Screen.Home) homeBarState else settingsBarState)
-        val contentInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+        val contentInsets = ScaffoldDefaults.contentWindowInsets
         var consumedInsets by remember { mutableStateOf(WindowInsets(0)) }
         BoxWithConstraints(modifier = Modifier.onConsumedWindowInsetsChanged { consumedInsets = it }) {
             val layoutDirection = LocalLayoutDirection.current
@@ -343,7 +357,6 @@ internal fun DnsScreen(
                                 )
                             }
                         },
-                        windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
                         contentPadding = PaddingValues(horizontal = sideMargin - CompactMargin),
                         scrollBehavior = scrollBehavior
                     )
@@ -796,14 +809,14 @@ private fun listItemColors() = MaterialTheme.colorScheme.surfaceContainer.let { 
 }
 
 @get:StringRes
-private val ThemeMode.labelRes: Int
+internal val ThemeMode.labelRes: Int
     get() = when (this) {
         ThemeMode.System -> R.string.theme_system
         ThemeMode.Light -> R.string.theme_light
         ThemeMode.Dark -> R.string.theme_dark
     }
 
-private val TunnelState.labelRes: Int
+internal val TunnelState.labelRes: Int
     get() = when (this) {
         TunnelState.Off -> R.string.tunnel_off
         TunnelState.Connecting -> R.string.tunnel_connecting
