@@ -2,7 +2,6 @@ package com.vasilispngs.adblock.ui.theme
 
 import android.app.UiModeManager
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Typography
@@ -13,46 +12,20 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
-import androidx.tv.material3.ColorScheme as TvColorScheme
-import androidx.tv.material3.MaterialTheme as TvMaterialTheme
-import androidx.tv.material3.Typography as TvTypography
 
 private val GoogleSans = GoogleFont("Google Sans")
 
-private val AppFontFamily = FontFamily(
-    listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.Bold).map { weight ->
-        Font(googleFont = GoogleSans, weight = weight)
-    }
-)
-
-private val AppTypography = Typography(fontFamily = AppFontFamily)
-
-private fun TextStyle.inAppFont() = copy(fontFamily = AppFontFamily)
-
-private val AppTvTypography = TvTypography().run {
-    copy(
-        displayLarge = displayLarge.inAppFont(),
-        displayMedium = displayMedium.inAppFont(),
-        displaySmall = displaySmall.inAppFont(),
-        headlineLarge = headlineLarge.inAppFont(),
-        headlineMedium = headlineMedium.inAppFont(),
-        headlineSmall = headlineSmall.inAppFont(),
-        titleLarge = titleLarge.inAppFont(),
-        titleMedium = titleMedium.inAppFont(),
-        titleSmall = titleSmall.inAppFont(),
-        bodyLarge = bodyLarge.inAppFont(),
-        bodyMedium = bodyMedium.inAppFont(),
-        bodySmall = bodySmall.inAppFont(),
-        labelLarge = labelLarge.inAppFont(),
-        labelMedium = labelMedium.inAppFont(),
-        labelSmall = labelSmall.inAppFont()
+private val AppTypography = Typography(
+    fontFamily = FontFamily(
+        listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.Bold).map { weight ->
+            Font(googleFont = GoogleSans, weight = weight)
+        }
     )
-}
+)
 
 private const val MEDIUM_CONTRAST = 1 / 3f
 private const val HIGH_CONTRAST = 2 / 3f
@@ -368,63 +341,19 @@ fun AdblockTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    val contrast = systemContrast()
+    val colorScheme = when {
+        contrast >= HIGH_CONTRAST -> if (darkTheme) DarkHighContrastColorScheme else LightHighContrastColorScheme
+        contrast >= MEDIUM_CONTRAST -> if (darkTheme) DarkMediumContrastColorScheme else LightMediumContrastColorScheme
+        else -> if (darkTheme) DarkDefaultColorScheme else LightDefaultColorScheme
+    }
     MaterialExpressiveTheme(
-        colorScheme = colorScheme(darkTheme),
+        colorScheme = colorScheme,
         motionScheme = MotionScheme.expressive(),
         typography = AppTypography,
         content = content
     )
 }
-
-@Composable
-fun AdblockTvTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
-) {
-    TvMaterialTheme(colorScheme = colorScheme(darkTheme).forTv(), typography = AppTvTypography, content = content)
-}
-
-@Composable
-private fun colorScheme(darkTheme: Boolean): ColorScheme {
-    val contrast = systemContrast()
-    return when {
-        contrast >= HIGH_CONTRAST -> if (darkTheme) DarkHighContrastColorScheme else LightHighContrastColorScheme
-        contrast >= MEDIUM_CONTRAST -> if (darkTheme) DarkMediumContrastColorScheme else LightMediumContrastColorScheme
-        else -> if (darkTheme) DarkDefaultColorScheme else LightDefaultColorScheme
-    }
-}
-
-private fun ColorScheme.forTv() = TvColorScheme(
-    primary = primary,
-    onPrimary = onPrimary,
-    primaryContainer = primaryContainer,
-    onPrimaryContainer = onPrimaryContainer,
-    inversePrimary = inversePrimary,
-    secondary = secondary,
-    onSecondary = onSecondary,
-    secondaryContainer = secondaryContainer,
-    onSecondaryContainer = onSecondaryContainer,
-    tertiary = tertiary,
-    onTertiary = onTertiary,
-    tertiaryContainer = tertiaryContainer,
-    onTertiaryContainer = onTertiaryContainer,
-    background = background,
-    onBackground = onBackground,
-    surface = surface,
-    onSurface = onSurface,
-    surfaceVariant = surfaceVariant,
-    onSurfaceVariant = onSurfaceVariant,
-    surfaceTint = surfaceTint,
-    inverseSurface = inverseSurface,
-    inverseOnSurface = inverseOnSurface,
-    error = error,
-    onError = onError,
-    errorContainer = errorContainer,
-    onErrorContainer = onErrorContainer,
-    border = outline,
-    borderVariant = outlineVariant,
-    scrim = scrim
-)
 
 @Composable
 private fun systemContrast(): Float {

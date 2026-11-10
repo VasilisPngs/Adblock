@@ -1,5 +1,6 @@
 package com.vasilispngs.adblock.ui
 
+import android.content.pm.PackageManager
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.BackEventCompat
@@ -15,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -41,13 +43,17 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.graphics.get
+import androidx.window.core.layout.WindowSizeClass
 import com.vasilispngs.adblock.R
 import com.vasilispngs.adblock.data.ErrorCode
 import com.vasilispngs.adblock.data.SelfUpdate
@@ -62,6 +68,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -316,6 +323,19 @@ class DnsScreenTest {
     }
 
     @Test
+    @Config(qualifiers = "w960dp-h540dp-television")
+    fun `centers the content inside the television overscan as wide as a compact window`() {
+        shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
+        show(DnsUiState(url = SERVER))
+
+        val width = compose.onRoot().getBoundsInRoot().right
+        val item = compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot()
+        assertEquals(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND.dp, item.right - item.left)
+        assertEquals(item.left - 48.dp, width - 48.dp - item.right)
+        assertEquals(item.left, text(string(R.string.home)).left)
+    }
+
+    @Test
     fun `keeps DNS-over-HTTPS on Home and the appearance in Settings`() {
         show(DnsUiState(url = SERVER))
         compose.onAllNodesWithText(string(R.string.theme)).assertCountEquals(0)
@@ -449,6 +469,20 @@ class DnsScreenTest {
         compose.onNodeWithText(string(R.string.self_update_available)).performClick()
 
         assertEquals(1, appUpdates)
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-television")
+    fun `reaches the app update with the d-pad on television`() {
+        selfUpdate = SelfUpdate.Available
+        show(DnsUiState(url = SERVER), keyboard = true)
+        openSettings()
+        compose.onNodeWithText(string(R.string.theme)).requestFocus()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        compose.onNodeWithText(string(R.string.self_update_available)).assertIsFocused()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithText(string(R.string.theme)).assertIsFocused()
     }
 
     @Test

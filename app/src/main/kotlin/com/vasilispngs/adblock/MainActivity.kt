@@ -13,6 +13,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vasilispngs.adblock.ui.DnsScreen
 import com.vasilispngs.adblock.ui.DnsViewModel
+import com.vasilispngs.adblock.ui.theme.AdblockTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: DnsViewModel by viewModels { DnsViewModel.Factory }
@@ -24,7 +25,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             themeMode?.let { current ->
-                DnsScreen(viewModel = viewModel, themeMode = current)
+                AdblockTheme {
+                    DnsScreen(viewModel = viewModel, themeMode = current)
+                }
                 SideEffect { ready = true }
             }
         }
