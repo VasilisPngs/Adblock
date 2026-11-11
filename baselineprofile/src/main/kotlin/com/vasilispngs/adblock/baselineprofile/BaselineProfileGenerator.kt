@@ -23,10 +23,10 @@ class BaselineProfileGenerator {
         pressHome()
         startActivityAndWait()
         uiAutomator {
-            onElement { contentDescription?.toString() == "Settings" }.click()
+            onElement { textAsString() == "Settings" }.click()
             onElement { textAsString() == "Theme" }.click()
             onElement { textAsString() == "Cancel" }.click()
-            onElement { contentDescription?.toString() == "Back" }.click()
+            pressBack()
         }
     }
 }

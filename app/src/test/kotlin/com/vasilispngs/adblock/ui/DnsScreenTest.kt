@@ -29,17 +29,19 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -267,6 +269,7 @@ class DnsScreenTest {
     }
 
     @Test
+    @Config(qualifiers = "w411dp-h891dp")
     fun `warns below the server until it answers again`() {
         show(DnsUiState(url = SERVER, tunnel = TunnelState.On, vpnSettings = true, serverFailure = DohResult.Rejected(503)))
 
@@ -329,9 +332,10 @@ class DnsScreenTest {
         show(DnsUiState(url = SERVER))
 
         val width = compose.onRoot().getBoundsInRoot().right
+        val rail = compose.onNode(tab(R.string.settings)).getBoundsInRoot()
         val item = compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot()
         assertEquals(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND.dp, item.right - item.left)
-        assertEquals(item.left - 48.dp, width - 48.dp - item.right)
+        assertEquals(item.left - rail.right, width - 48.dp - item.right)
         assertEquals(item.left, text(string(R.string.home)).left)
     }
 
@@ -350,21 +354,23 @@ class DnsScreenTest {
     }
 
     @Test
-    fun `slides Settings in from the end edge`() {
+    fun `fades through between Home and Settings from the navigation bar`() {
         show(DnsUiState(url = SERVER))
         val home = compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot()
         openSettings()
         val settings = compose.onNodeWithText(string(R.string.theme)).getBoundsInRoot()
-        compose.onNodeWithContentDescription(string(R.string.back)).performClick()
+        compose.onNode(tab(R.string.home)).performClick()
         compose.waitForIdle()
 
         compose.mainClock.autoAdvance = false
         openSettings()
         compose.mainClock.advanceTimeBy(TRANSITION_PEEK_MILLIS)
-        val homeShift = home.left - compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot().left
-        val settingsShift = compose.onNodeWithText(string(R.string.theme)).getBoundsInRoot().left - settings.left
-        assertTrue(homeShift > 0.dp && homeShift < ForwardSlide)
-        assertTrue(settingsShift > 0.dp && settingsShift < ForwardSlide)
+        val leaving = compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot()
+        val entering = compose.onNodeWithText(string(R.string.theme)).getBoundsInRoot()
+        assertEquals(((home.left + home.right) / 2).value, ((leaving.left + leaving.right) / 2).value, 0.5f)
+        assertEquals(((settings.left + settings.right) / 2).value, ((entering.left + entering.right) / 2).value, 0.5f)
+        assertTrue(leaving.right - leaving.left > home.right - home.left)
+        assertTrue(entering.right - entering.left < settings.right - settings.left)
     }
 
     @Test
@@ -486,15 +492,28 @@ class DnsScreenTest {
     }
 
     @Test
-    fun `opens Settings from the top app bar and returns with its back arrow`() {
+    fun `returns to Home from the navigation bar`() {
         show(DnsUiState(url = SERVER))
 
         openSettings()
-        compose.onNodeWithText(string(R.string.theme)).assertIsDisplayed()
-        compose.onNodeWithContentDescription(string(R.string.back)).performClick()
+        compose.onNode(tab(R.string.settings)).assertIsSelected()
+        compose.onNode(tab(R.string.home)).performClick()
 
+        compose.onNode(tab(R.string.home)).assertIsSelected()
         compose.onNodeWithText(string(R.string.dns_over_https)).assertIsDisplayed()
         compose.onAllNodesWithText(string(R.string.theme)).assertCountEquals(0)
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-television")
+    fun `moves between the navigation rail and the list with the d-pad on television`() {
+        show(DnsUiState(url = SERVER), keyboard = true)
+        compose.onNodeWithText(string(R.string.dns_over_https)).assertIsFocused()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionLeft) }
+        compose.onNodeWithText(string(R.string.dns_over_https)).assertIsNotFocused()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        compose.onNodeWithText(string(R.string.dns_over_https)).assertIsFocused()
     }
 
     @Test
@@ -507,7 +526,7 @@ class DnsScreenTest {
         val themeTitle = text(string(R.string.theme))
         val title = text(string(R.string.settings))
 
-        assertEquals(56.dp, title.left)
+        assertEquals(16.dp, title.left)
         assertEquals(themeTitle.left, heading.left)
         assertEquals(themeItem.left + 16.dp, themeTitle.left)
         assertEquals(72.dp, themeItem.bottom - themeItem.top)
@@ -546,18 +565,19 @@ class DnsScreenTest {
     }
 
     private fun openSettings() {
-        compose.onNodeWithContentDescription(string(R.string.settings)).performClick()
+        compose.onNode(tab(R.string.settings)).performClick()
     }
+
+    private fun tab(@StringRes label: Int) =
+        hasText(string(label)) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
 
     private fun assertContentEdge(margin: Dp) {
         show(DnsUiState(url = SERVER))
 
         val width = compose.onRoot().getBoundsInRoot().right
         val item = compose.onNodeWithText(string(R.string.dns_over_https)).getBoundsInRoot()
-        val trailing = compose.onNodeWithContentDescription(string(R.string.settings), useUnmergedTree = true).getBoundsInRoot()
         val title = text(string(R.string.home))
         assertEquals(width - margin, item.right)
-        assertEquals(width - margin, trailing.right)
         assertEquals(item.left, title.left)
     }
 
@@ -593,7 +613,6 @@ class DnsScreenTest {
         const val SERVER = "https://adblock.example.workers.dev/dns-query/0123abcd"
         const val OTHER = "https://dns.adguard-dns.com/dns-query"
         const val TRANSITION_PEEK_MILLIS = 50L
-        val ForwardSlide = 96.dp
         val SwitchRole = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)
         val PredictiveBack = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
     }
