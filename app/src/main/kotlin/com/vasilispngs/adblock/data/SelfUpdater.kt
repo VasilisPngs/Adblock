@@ -127,27 +127,30 @@ class SelfUpdater(
         apk.delete()
     }
 
-    private suspend fun commit(): SelfUpdate.Failed? {
+    internal suspend fun commit(
+        requireUserAction: Int = PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED
+    ): SelfUpdate.Failed? {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setSize(apk.length())
-            setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+            setRequireUserAction(requireUserAction)
         }
         val id = installer.createSession(params)
         val action = "${context.packageName}.SELF_UPDATE_$id"
-        val result = CompletableDeferred<SelfUpdate.Failed?>()
+        val result = CompletableDeferred<Intent>()
+        var prompted = false
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(receiverContext: Context, intent: Intent) {
-                when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
-                    PackageInstaller.STATUS_PENDING_USER_ACTION ->
-                        pendingConfirmation.value = intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
-                    PackageInstaller.STATUS_SUCCESS -> result.complete(null)
-                    else -> result.complete(SelfUpdate.Failed(installerCode(intent)))
+                if (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE) == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+                    prompted = true
+                    pendingConfirmation.value = intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+                } else {
+                    result.complete(intent)
                 }
             }
         }
         context.registerReceiver(receiver, IntentFilter(action), Context.RECEIVER_NOT_EXPORTED)
-        return try {
+        val status = try {
             installer.openSession(id).use { session ->
                 apk.inputStream().use { input ->
                     session.openWrite(APK_NAME, 0, apk.length()).use { output ->
@@ -167,10 +170,18 @@ class SelfUpdater(
             result.await()
         } catch (exception: IOException) {
             installer.abandonSession(id)
-            SelfUpdate.Failed(exception.errorCode())
+            return SelfUpdate.Failed(exception.errorCode())
         } finally {
             pendingConfirmation.value = null
             context.unregisterReceiver(receiver)
+        }
+        val code = status.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        return when {
+            code == PackageInstaller.STATUS_SUCCESS -> null
+            code == PackageInstaller.STATUS_FAILURE_ABORTED && !prompted &&
+                requireUserAction == PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED ->
+                commit(PackageInstaller.SessionParams.USER_ACTION_REQUIRED)
+            else -> SelfUpdate.Failed(installerCode(status))
         }
     }
 
