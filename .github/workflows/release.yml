@@ -86,6 +86,8 @@ jobs:
             gh release upload "$TAG_NAME" Adblock.apk --repo "$REPO" --clobber
             gh api --method PATCH "repos/$REPO/git/refs/tags/$TAG_NAME" \
               -f sha="$GITHUB_SHA" -F force=true --silent
+            gh release edit "$TAG_NAME" --repo "$REPO" --draft
+            gh release edit "$TAG_NAME" --repo "$REPO" --draft=false
           else
             gh release create "$TAG_NAME" Adblock.apk \
               --repo "$REPO" \
