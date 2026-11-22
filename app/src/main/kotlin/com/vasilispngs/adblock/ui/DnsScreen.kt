@@ -17,10 +17,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -57,12 +55,12 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FadeThroughNavigationTransitions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
@@ -155,10 +153,6 @@ private val HeaderSpacing = 20.dp
 private val OptionHeight = 56.dp
 private val TvOverscanHorizontal = 48.dp
 private val TvOverscanVertical = 27.dp
-private const val FADE_OUT_MILLIS = 90
-private const val FADE_IN_MILLIS = 210
-private const val FADE_THROUGH_ENTER_SCALE = 0.8f
-private const val FADE_THROUGH_EXIT_SCALE = 1.05f
 private const val PREDICTIVE_BACK_EXIT_SCALE = 0.9f
 private const val PREDICTIVE_BACK_ENTER_SCALE = 1.1f
 private const val PREDICTIVE_BACK_FADE_THRESHOLD = 0.35f
@@ -288,7 +282,6 @@ internal fun DnsScreen(
     val settingsFocus = remember { FocusRequester() }
     val inputModeManager = LocalInputModeManager.current
     val coroutineScope = rememberCoroutineScope()
-    var backNavigation by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (inputModeManager.inputMode == InputMode.Keyboard) homeFocus.requestFocus()
@@ -299,7 +292,6 @@ internal fun DnsScreen(
     val activeFocus = if (current == Screen.Home) homeFocus else settingsFocus
     val navigate: (Screen) -> Unit = { screen ->
         if (screen != current) {
-            backNavigation = false
             backStack.subList(1, backStack.size).clear()
             if (screen != Screen.Home) backStack.add(screen)
         } else {
@@ -362,7 +354,6 @@ internal fun DnsScreen(
         navigationSuiteType = navigationSuiteType,
         navigationItemVerticalArrangement = Arrangement.Center
     ) {
-        val motion = MaterialTheme.motionScheme
         val content: @Composable (Screen) -> Unit = { screen ->
             val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(if (screen == Screen.Home) homeBarState else settingsBarState)
             val contentInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
@@ -418,12 +409,8 @@ internal fun DnsScreen(
         }
         NavDisplay(
             backStack = backStack,
-            onBack = {
-                backNavigation = true
-                backStack.removeLastOrNull()
-            },
-            transitionSpec = { fadeThrough() },
-            popTransitionSpec = { if (backNavigation) backTransition(motion) else fadeThrough() },
+            transitionSpec = { FadeThroughNavigationTransitions.transform() },
+            popTransitionSpec = { FadeThroughNavigationTransitions.transform() },
             predictivePopTransitionSpec = { predictiveBackTransition() }
         ) { screen -> NavEntry(screen, content = content) }
     }
@@ -795,15 +782,6 @@ private fun dialogProperties() = DialogProperties(
     blurBehindRadius = DialogBlurRadius,
     scrimAlpha = if (LocalWindowInfo.current.isCrossWindowBlurEnabled) BLURRED_SCRIM_ALPHA else ScrimDefaults.color.alpha
 )
-
-private fun fadeThrough(): ContentTransform =
-    (fadeIn(tween(durationMillis = FADE_IN_MILLIS, delayMillis = FADE_OUT_MILLIS, easing = LinearEasing)) +
-        scaleIn(initialScale = FADE_THROUGH_ENTER_SCALE))
-        .togetherWith(fadeOut(tween(durationMillis = FADE_OUT_MILLIS, easing = LinearEasing)) + scaleOut(targetScale = FADE_THROUGH_EXIT_SCALE))
-
-private fun backTransition(motion: MotionScheme) =
-    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), PREDICTIVE_BACK_ENTER_SCALE))
-        .togetherWith(fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), PREDICTIVE_BACK_EXIT_SCALE))
 
 private fun predictiveBackTransition() =
     (fadeIn(tween(easing = PredictiveBackEnterFade)) + scaleIn(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_ENTER_SCALE))
