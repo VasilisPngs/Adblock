@@ -4,15 +4,13 @@ import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageInstaller
 import android.os.Looper
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -30,7 +28,6 @@ import java.net.URL
 @Config(shadows = [SilentUpdateTest.Installer::class, SilentUpdateTest.Session::class])
 class SilentUpdateTest {
     private val context = RuntimeEnvironment.getApplication()
-    private val updater = SelfUpdater(context, CoroutineScope(Dispatchers.Default)) { url: URL -> url.openConnection() }
 
     @After
     fun reset() {
@@ -39,7 +36,7 @@ class SilentUpdateTest {
     }
 
     @Test
-    fun `asks the user when the system refuses to update without asking`() {
+    fun `asks the user when the system refuses to update without asking`() = runTest {
         Session.statuses += listOf(status(PackageInstaller.STATUS_FAILURE_ABORTED, "INSTALL_FAILED_ABORTED: Permission denied"))
         Session.statuses += listOf(status(PackageInstaller.STATUS_SUCCESS))
 
@@ -51,7 +48,7 @@ class SilentUpdateTest {
     }
 
     @Test
-    fun `does not ask again after the user cancels`() {
+    fun `does not ask again after the user cancels`() = runTest {
         Session.statuses += listOf(
             status(PackageInstaller.STATUS_PENDING_USER_ACTION).putExtra(Intent.EXTRA_INTENT, Intent(CONFIRM)),
             status(PackageInstaller.STATUS_FAILURE_ABORTED, "INSTALL_FAILED_ABORTED: User rejected permissions")
@@ -61,16 +58,15 @@ class SilentUpdateTest {
         assertEquals(listOf(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED), Installer.requested)
     }
 
-    private fun commit(): SelfUpdate.Failed? {
+    private suspend fun TestScope.commit(): SelfUpdate.Failed? {
         File(context.cacheDir, "Adblock.apk").writeText("apk")
-        val result: Deferred<SelfUpdate.Failed?> = CoroutineScope(Dispatchers.Default).async { updater.commit() }
-        val deadline = System.currentTimeMillis() + TIMEOUT_MS
-        while (!result.isCompleted && System.currentTimeMillis() < deadline) {
+        val updater = SelfUpdater(context, backgroundScope) { url: URL -> url.openConnection() }
+        val result = async { updater.commit() }
+        while (!result.isCompleted) {
             shadowOf(Looper.getMainLooper()).idle()
-            Thread.sleep(POLL_MS)
+            yield()
         }
-        assertTrue(result.isCompleted)
-        return runBlocking { result.await() }
+        return result.await()
     }
 
     private fun status(code: Int, message: String? = null) =
@@ -103,7 +99,5 @@ class SilentUpdateTest {
 
     private companion object {
         const val CONFIRM = "android.content.pm.action.CONFIRM_INSTALL"
-        const val TIMEOUT_MS = 10_000L
-        const val POLL_MS = 10L
     }
 }

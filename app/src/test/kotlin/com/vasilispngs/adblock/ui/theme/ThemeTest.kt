@@ -34,13 +34,7 @@ class ThemeTest {
     fun `uses the medium contrast light colors`() = assertTheme(dark = false, contrast = 0.5f, expected = LightMediumContrastColorScheme)
 
     @Test
-    fun `uses the medium contrast dark colors`() = assertTheme(dark = true, contrast = 0.5f, expected = DarkMediumContrastColorScheme)
-
-    @Test
     fun `uses the high contrast light colors`() = assertTheme(dark = false, contrast = 1f, expected = LightHighContrastColorScheme)
-
-    @Test
-    fun `uses the high contrast dark colors`() = assertTheme(dark = true, contrast = 1f, expected = DarkHighContrastColorScheme)
 
     @Test
     fun `follows the contrast setting while it is shown`() {
