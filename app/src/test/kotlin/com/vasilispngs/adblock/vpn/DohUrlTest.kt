@@ -14,6 +14,14 @@ class DohUrlTest {
     }
 
     @Test
+    fun `accepts an IPv6 https endpoint`() {
+        assertEquals(
+            "https://[2606:4700:4700::1111]/dns-query",
+            dohUrl("https://[2606:4700:4700::1111]/dns-query")
+        )
+    }
+
+    @Test
     fun `rejects anything that is not an https endpoint`() {
         listOf(
             "",
@@ -22,7 +30,9 @@ class DohUrlTest {
             "https://",
             "https:///dns-query",
             "https://bad host/dns-query",
-            "https://adblock.example.workers.dev/dns-query#fragment"
+            "https://adblock.example.workers.dev/dns-query#fragment",
+            "https://${"a".repeat(64)}.example/dns-query",
+            "https://${List(4) { "a".repeat(63) }.joinToString(".")}.example/dns-query"
         ).forEach { assertNull(it, dohUrl(it)) }
     }
 

@@ -11,6 +11,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageInstaller
 import com.vasilispngs.adblock.MainActivity
 import com.vasilispngs.adblock.R
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,10 +65,12 @@ class SelfUpdater(
     }
 
     fun update() {
+        if (work?.isActive == true) return
         val newer = release ?: return
         if (state.value != SelfUpdate.Available && state.value !is SelfUpdate.Failed) return
+        state.value = SelfUpdate.Downloading(0f)
         work = scope.launch {
-            if (download(newer)) install()
+            if (download(newer)) install(newer)
         }
     }
 
@@ -77,6 +80,9 @@ class SelfUpdater(
 
     private suspend fun newerRelease(): Release? = withContext(Dispatchers.IO) {
         apk.delete()
+        if (context.packageManager.packageInstaller.mySessions.isEmpty()) {
+            File(context.noBackupFilesDir, UPDATED_MARKER).delete()
+        }
         val assets = fetch(RELEASE_URL, GITHUB_HEADERS) { input, _ -> JSONObject(input.reader().readText()).getJSONArray("assets") }
         val asset = (0 until assets.length()).map(assets::getJSONObject).firstOrNull { it.getString("name") == APK_NAME }
             ?: throw IOException("No $APK_NAME in the release")
@@ -109,15 +115,19 @@ class SelfUpdater(
         return downloaded
     }
 
-    private suspend fun install() {
+    private suspend fun install(release: Release) {
         state.value = SelfUpdate.Installing
         val marker = File(context.noBackupFilesDir, UPDATED_MARKER)
         val failure = try {
             withContext(Dispatchers.IO) {
-                marker.createNewFile()
+                marker.writeText(release.digest)
                 commit()
             }
-        } catch (exception: IOException) {
+        } catch (exception: CancellationException) {
+            marker.delete()
+            apk.delete()
+            throw exception
+        } catch (exception: Exception) {
             SelfUpdate.Failed(exception.errorCode())
         }
         if (failure != null) {
@@ -135,7 +145,11 @@ class SelfUpdater(
             setSize(apk.length())
             setRequireUserAction(requireUserAction)
         }
-        val id = installer.createSession(params)
+        val id = try {
+            installer.createSession(params)
+        } catch (exception: Exception) {
+            return SelfUpdate.Failed(exception.errorCode())
+        }
         val action = "${context.packageName}.SELF_UPDATE_$id"
         val result = CompletableDeferred<Intent>()
         var prompted = false
@@ -168,8 +182,11 @@ class SelfUpdater(
                 )
             }
             result.await()
-        } catch (exception: IOException) {
-            installer.abandonSession(id)
+        } catch (exception: CancellationException) {
+            val _ = runCatching { installer.abandonSession(id) }
+            throw exception
+        } catch (exception: Exception) {
+            val _ = runCatching { installer.abandonSession(id) }
             return SelfUpdate.Failed(exception.errorCode())
         } finally {
             pendingConfirmation.value = null
@@ -219,6 +236,16 @@ internal fun sha256(input: InputStream, onRead: (ByteArray, Int) -> Unit = { _, 
         onRead(buffer, read)
     }
     return "sha256:" + digest.digest().toHexString()
+}
+
+internal fun Context.consumeSelfUpdate(): Boolean {
+    val marker = File(noBackupFilesDir, UPDATED_MARKER)
+    if (!marker.isFile) return false
+    val expected = runCatching { marker.readText() }.getOrNull()
+    marker.delete()
+    if (expected.isNullOrEmpty()) return false
+    val installed = runCatching { File(applicationInfo.sourceDir).inputStream().use(::sha256) }.getOrNull()
+    return installed == expected
 }
 
 internal fun Context.notifyUpdated() {

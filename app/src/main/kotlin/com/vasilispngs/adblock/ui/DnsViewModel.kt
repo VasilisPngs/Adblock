@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -31,6 +30,7 @@ import kotlinx.coroutines.launch
 import java.net.URI
 
 private const val STOP_TIMEOUT_MILLIS = 5_000L
+private const val PROBE_HOST = "example.com"
 private val Running = setOf(TunnelState.On, TunnelState.AlwaysOn, TunnelState.Lockdown)
 
 data class DnsUiState(
@@ -93,12 +93,13 @@ class DnsViewModel(
     }
 
     fun setUrl(value: String) {
+        val normalized = dohUrl(value) ?: return
         urlCheck?.cancel()
         urlCheck = viewModelScope.launch {
-            if (tunnel.state.value !in Running) return@launch preferences.setUrl(value)
-            val result = ask(value)
+            if (tunnel.state.value !in Running) return@launch preferences.setUrl(normalized)
+            val result = ask(normalized)
             if (result is DohResult.Answer) {
-                preferences.setUrl(value)
+                preferences.setUrl(normalized)
             } else {
                 request.update { it.copy(failure = result) }
             }
@@ -107,6 +108,7 @@ class DnsViewModel(
 
     fun turnOn() {
         val server = dohUrl(uiState.value.url) ?: return
+        probe?.cancel()
         request.update { it.copy(starting = true) }
         probe = viewModelScope.launch {
             val result = ask(server)
@@ -122,10 +124,7 @@ class DnsViewModel(
 
     fun connect() {
         tunnel.start()
-        viewModelScope.launch {
-            tunnel.state.first { it != TunnelState.Off }
-            request.update { it.copy(starting = false) }
-        }
+        request.update { it.copy(starting = false) }
     }
 
     fun cancel() {
@@ -155,7 +154,10 @@ class DnsViewModel(
 
     fun updateConfirmationShown(intent: Intent) = selfUpdater.confirmationShown(intent)
 
-    private suspend fun ask(server: String): DohResult = resolve(server, addressQuery(URI(server).host))
+    private suspend fun ask(server: String): DohResult {
+        val host = URI(server).host
+        return resolve(server, addressQuery(if (host.startsWith('[')) PROBE_HOST else host))
+    }
 
     companion object {
         val Factory = viewModelFactory {

@@ -10,12 +10,17 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 
 private const val DNS_MESSAGE = "application/dns-message"
 private const val HTTP_OK = 200
 private const val READ_SIZE = 4096
 private const val QR = 0x80
+private const val REQUEST_TIMEOUT_MILLIS = 10_000L
+private const val ERROR_TIMED_OUT = "ERROR_TIMED_OUT"
 
 sealed interface DohResult {
     class Answer(val message: ByteArray) : DohResult
@@ -38,28 +43,52 @@ internal fun dnsAnswer(query: ByteArray, response: ByteArray): DohResult =
         DohResult.Failed
     }
 
-class DohClient(private val engine: HttpEngine) {
-    private val executor = Executors.newSingleThreadExecutor()
+class DohClient(private val engine: HttpEngine, private val timeoutMillis: Long = REQUEST_TIMEOUT_MILLIS) {
+    private val executor = Executors.newSingleThreadScheduledExecutor()
 
     fun resolve(url: String, query: ByteArray, onResult: (DohResult) -> Unit) {
-        request(url, query, onResult).start()
+        val _ = start(url, query, onResult)
     }
 
     suspend fun resolve(url: String, query: ByteArray): DohResult = suspendCancellableCoroutine { continuation ->
-        val request = request(url, query) { continuation.resume(it) }
+        val request = start(url, query) { if (continuation.isActive) continuation.resume(it) }
         continuation.invokeOnCancellation { request.cancel() }
-        request.start()
     }
 
-    private fun request(url: String, query: ByteArray, onResult: (DohResult) -> Unit): UrlRequest =
-        engine.newUrlRequestBuilder(dohRequest(url, query), executor, Exchange(query, onResult))
+    private fun start(url: String, query: ByteArray, onResult: (DohResult) -> Unit): UrlRequest {
+        val exchange = Exchange(query, onResult)
+        val request = engine.newUrlRequestBuilder(dohRequest(url, query), executor, exchange)
             .addHeader("Accept", DNS_MESSAGE)
             .build()
+        exchange.timeout = executor.schedule(
+            { exchange.expire(request) },
+            timeoutMillis,
+            TimeUnit.MILLISECONDS
+        )
+        request.start()
+        return request
+    }
 
     private class Exchange(private val query: ByteArray, private val onResult: (DohResult) -> Unit) : UrlRequest.Callback {
         private val body = ByteArrayOutputStream()
         private val buffer = ByteBuffer.allocateDirect(READ_SIZE)
+        private val done = AtomicBoolean()
         private var result: DohResult = DohResult.Failed
+
+        @Volatile
+        var timeout: ScheduledFuture<*>? = null
+
+        fun expire(request: UrlRequest) {
+            val timedOut = DohResult.Unreachable(ErrorCode.Named(ERROR_TIMED_OUT))
+            result = timedOut
+            request.cancel()
+            finish(timedOut)
+        }
+
+        private fun finish(outcome: DohResult) {
+            timeout?.cancel(false)
+            if (done.compareAndSet(false, true)) onResult(outcome)
+        }
 
         override fun onRedirectReceived(request: UrlRequest, info: UrlResponseInfo, newLocationUrl: String) =
             request.followRedirect()
@@ -80,11 +109,11 @@ class DohClient(private val engine: HttpEngine) {
             if (body.size() > MAX_DNS_MESSAGE) request.cancel() else request.read(byteBuffer)
         }
 
-        override fun onSucceeded(request: UrlRequest, info: UrlResponseInfo) = onResult(dnsAnswer(query, body.toByteArray()))
+        override fun onSucceeded(request: UrlRequest, info: UrlResponseInfo) = finish(dnsAnswer(query, body.toByteArray()))
 
         override fun onFailed(request: UrlRequest, info: UrlResponseInfo?, error: HttpException) =
-            onResult(DohResult.Unreachable(error.errorCode()))
+            finish(DohResult.Unreachable(error.errorCode()))
 
-        override fun onCanceled(request: UrlRequest, info: UrlResponseInfo?) = onResult(result)
+        override fun onCanceled(request: UrlRequest, info: UrlResponseInfo?) = finish(result)
     }
 }

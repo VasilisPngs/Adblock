@@ -11,7 +11,8 @@ private const val FRAGMENT_MASK = 0x3FFF
 private const val TYPE_A = 1
 private const val CLASS_IN = 1
 private const val RECURSION_DESIRED = 0x0100
-private const val MAX_LABEL = 63
+internal const val MAX_DNS_LABEL = 63
+internal const val MAX_DNS_NAME = 255
 internal const val MAX_DNS_MESSAGE = 0xFFFF - IP_HEADER - UDP_HEADER
 
 internal class DnsQuery(
@@ -62,7 +63,7 @@ internal fun serverFailure(query: ByteArray): ByteArray = query.copyOf().apply {
 
 internal fun addressQuery(name: String): ByteArray {
     val labels = name.trimEnd('.').split('.').map(String::toByteArray)
-    require(labels.all { it.size in 1..MAX_LABEL })
+    require(labels.all { it.size in 1..MAX_DNS_LABEL } && labels.sumOf { it.size + 1 } + 1 <= MAX_DNS_NAME)
     val question = labels.fold(byteArrayOf()) { bytes, label -> bytes + label.size.toByte() + label }
     return ByteArray(DNS_HEADER).apply {
         put16(2, RECURSION_DESIRED)

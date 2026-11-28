@@ -210,9 +210,19 @@ class DnsViewModelTest {
 
         assertEquals(DnsVpnService::class.java.name, shadowOf(context).nextStartedService.component?.className)
         assertEquals(TunnelState.Connecting, viewModel.uiState.value.tunnel)
-        tunnel.update(TunnelState.Connecting)
         tunnel.update(TunnelState.Off)
-        assertEquals(TunnelState.Off, viewModel.uiState.first { it.tunnel == TunnelState.Off }.tunnel)
+        assertEquals(TunnelState.Off, viewModel.uiState.value.tunnel)
+    }
+
+    @Test
+    fun `probes an IPv6 server with a valid DNS question`() = runTest {
+        val ipv6 = "https://[2606:4700:4700::1111]/dns-query"
+        val viewModel = viewModel(preferences(), DohResult.Answer(ByteArray(12)), url = ipv6)
+
+        viewModel.turnOn()
+
+        assertEquals(ipv6, asked.single().first)
+        assertArrayEquals(addressQuery("example.com"), asked.single().second)
     }
 
     @Test

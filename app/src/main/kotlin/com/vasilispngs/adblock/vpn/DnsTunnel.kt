@@ -19,6 +19,7 @@ class DnsTunnel(private val context: Context) {
     val vpnSettings = Intent(Settings.ACTION_VPN_SETTINGS).resolveActivity(context.packageManager) != null
 
     fun start() {
+        if (_state.value == TunnelState.Off) update(TunnelState.Connecting)
         context.startForegroundService(Intent(context, DnsVpnService::class.java))
     }
 

@@ -10,7 +10,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -32,7 +34,9 @@ class SilentUpdateTest {
     @After
     fun reset() {
         Installer.requested.clear()
+        Installer.failure = null
         Session.statuses.clear()
+        File(context.noBackupFilesDir, UPDATED_MARKER).delete()
     }
 
     @Test
@@ -58,6 +62,28 @@ class SilentUpdateTest {
         assertEquals(listOf(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED), Installer.requested)
     }
 
+    @Test
+    fun `reports failure when the system refuses to open a session`() = runTest {
+        Installer.failure = SecurityException("Denied")
+
+        assertEquals(SelfUpdate.Failed(ErrorCode.Named("SecurityException")), commit())
+    }
+
+    @Test
+    fun `confirms a self-update only when the installed APK matches the expected digest`() {
+        val source = File(context.cacheDir, "installed.apk").apply { writeText("installed-apk") }
+        context.applicationInfo.sourceDir = source.path
+        val marker = File(context.noBackupFilesDir, UPDATED_MARKER)
+
+        marker.writeText("sha256:stale")
+        assertFalse(context.consumeSelfUpdate())
+        assertFalse(marker.exists())
+
+        marker.writeText(source.inputStream().use(::sha256))
+        assertTrue(context.consumeSelfUpdate())
+        assertFalse(marker.exists())
+    }
+
     private suspend fun TestScope.commit(): SelfUpdate.Failed? {
         File(context.cacheDir, "Adblock.apk").writeText("apk")
         val updater = SelfUpdater(context, backgroundScope) { url: URL -> url.openConnection() }
@@ -76,12 +102,14 @@ class SilentUpdateTest {
     class Installer : ShadowPackageInstaller() {
         @Implementation
         override fun createSession(params: PackageInstaller.SessionParams): Int {
+            failure?.let { throw it }
             requested += ReflectionHelpers.getField<Int>(params, "requireUserAction")
             return super.createSession(params)
         }
 
         companion object {
             val requested = mutableListOf<Int>()
+            var failure: RuntimeException? = null
         }
     }
 
